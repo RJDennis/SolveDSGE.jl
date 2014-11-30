@@ -10,8 +10,8 @@ SolveDSGE allows rational expectations equilibria to be computed using a variety
 
 - Blanchard and Kahn (1980)
 - Klein (2000)
-- Sims(2001)
-- Structural
+- Sims (2001)
+- Structural (Binder and Pesaran, 1995)
 
 Second-order-accurate methods
 -----------------------------
