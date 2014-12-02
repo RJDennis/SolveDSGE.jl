@@ -1,16 +1,20 @@
 module SolveDSGE
 
 include("types.jl")
-include("utility_functions.jl")
+include("extra_functions.jl")
 include("givens.jl")
 include("householder.jl")
 include("vec_to_vech.jl")
 include("vech_to_vec.jl")
+include("derivative.jl")
+include("hessian.jl")
 include("reorder_complex_schur.jl")
 include("check_model.jl")
 include("solve_re.jl")
 
-export solve_re,
+export derivative,
+       hessian,
+       solve_re,
        check_model_form,
        convert_second_order
 
