@@ -35,7 +35,7 @@ type Klein_Soln{T<:FloatingPoint,S<:Integer}
   soln_type::String                   # "determinate", "indeterminate", or "explosive"
 end
 
-type Structural_Form{T<:FloatingPoint}
+type Binder_Pesaran_Form{T<:FloatingPoint}
   # A*Y[t] = A1*Y[t-1]+ B*E_tY[t+1] + C*V[t]
   a::Array{T,2}                       # Contemporaneous matrix
   a1::Array{T,2}                      # Lag matrix matrix
@@ -44,7 +44,7 @@ type Structural_Form{T<:FloatingPoint}
   sigma::Union(Array{T,2},Array{T,1}) # Innovation variance-covariance matrix
 end
 
-type Structural_Soln{T<:FloatingPoint,S<:Integer}
+type Binder_Pesaran_Soln{T<:FloatingPoint,S<:Integer}
   p::Union(Array{T,2},Array{T,1})     # Transition matrix for predetermined and nonpredetermined variables
   k::Union(Array{T,2},Array{T,1})     # Innovation loading matrix
   sigma::Union(Array{T,2},Array{T,1}) # Innovation variance-covariance matrix

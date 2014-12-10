@@ -145,17 +145,17 @@ a4 = [1.0 0.0; 0.0 1.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]
 
 # Put the model in Structural_Form type
 
-m_s = Structural_Form(a0,a1,a2,a4,sigma)
+m_bp = Binder_Pesaran_Form(a0,a1,a2,a4,sigma)
 
 # Do some basic checking to determine whether the model matrices are conformable
 
-assessment = check_model_form(m_s)
+assessment = check_model_form(m_bp)
 println(assessment)
 
 # Solve the by by solving a generalized eigenvalue problem
 
-soln_s_1 = solve_re(m_s,cutoff)
+soln_bp_1 = solve_re(m_bp,cutoff)
 
 # Solve the model using Binder and Pesaran's (1995) brute force method
 
-soln_s_2 = solve_re(m_s,cutoff,tol)
+soln_bp_2 = solve_re(m_bp,cutoff,tol)

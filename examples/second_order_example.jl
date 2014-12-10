@@ -1,5 +1,5 @@
 # This code demonstrates the use of SolveDSGE for solving rational expectations models
-# to second-order accuracy.  The demonstration models are the first ans second examples
+# to second-order accuracy.  The demonstration models are the first and second examples
 # from Schmitt-Grohe and Uribe (2004)
 
 #-------------------------------------------------------------------------------------------#

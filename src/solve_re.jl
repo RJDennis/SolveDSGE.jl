@@ -159,7 +159,7 @@ function solve_re{T<:FloatingPoint}(model::Klein_Form{T},cutoff::T)
 
 end
 
-function solve_re{T<:FloatingPoint}(model::Structural_Form{T},cutoff::T)
+function solve_re{T<:FloatingPoint}(model::Binder_Pesaran_Form{T},cutoff::T)
 
   a     = copy(model.a)
   a1    = copy(model.a1)
@@ -219,13 +219,13 @@ function solve_re{T<:FloatingPoint}(model::Structural_Form{T},cutoff::T)
   p = real((z11/t11)*(s11/z11))
   k = real((z11/t11)*(s12/s22)*qcu-(z11/t11)*(s11/z11)*(z12/s22)*qcu-(z11/t11)*qcs)
 
-  soln = Structural_Soln(p,k,sigma,grc,soln_type)
+  soln = Binder_Pesaran_Soln(p,k,sigma,grc,soln_type)
 
   return soln
 
 end
 
-function solve_re{T<:FloatingPoint}(model::Structural_Form{T},cutoff::T,tol::T)
+function solve_re{T<:FloatingPoint}(model::Binder_Pesaran_Form{T},cutoff::T,tol::T)
 
   a     = copy(model.a)
   a1    = copy(model.a1)
@@ -269,7 +269,7 @@ function solve_re{T<:FloatingPoint}(model::Structural_Form{T},cutoff::T,tol::T)
     soln_type = "explosive"
   end
 
-  soln = Structural_Soln(p,k,sigma,grc,soln_type)
+  soln = Binder_Pesaran_Soln(p,k,sigma,grc,soln_type)
 
   return soln
 
