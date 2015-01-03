@@ -21,7 +21,17 @@ SolveDSGE can also solve DSGE models to second-order-accuracy.  The two solution
 - Gomme and Klein (2011)
 - Lombardo and Sutherland (2007)
 
-Futher information
+Optimal policy
 ------------------
 
-Further information on how to use SolveDSGE is contained in the Package Guide included in the respository.
+In addition to solving rational expectations models, SolveDSGE also computes optimal policies for a range of model forms.  Specifically, The following policies can be computed for linear-quadratic models
+
+- Discretion
+- Commitment
+- Quasi-commitment
+- Timeless-perspective commitment
+
+Further information
+------------------- 
+
+Further information on how to use SolveDSGE is contained in the Package Guide included in the repository.
