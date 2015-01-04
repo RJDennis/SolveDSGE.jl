@@ -1,8 +1,9 @@
 function solve_quasi{T<:FloatingPoint,S<:Int}(model::State_Space_Form{T},obj::State_Space_Objective{T},commit_prob::T,tol::T,maxiters::S)
 
-  nx   = copy(model.nx)
-  ny   = copy(model.ny)
-  beta = copy(obj.beta)
+  nx    = copy(model.nx)
+  ny    = copy(model.ny)
+  beta  = copy(obj.beta)
+  sigma = copy(model.sigma)
 
   a  = copy(model.a)
   b  = copy(model.b)
@@ -78,7 +79,7 @@ function solve_quasi{T<:FloatingPoint,S<:Int}(model::State_Space_Form{T},obj::St
 
   # v = dlyap(sqrt(beta)*p',h'q*h+h'u*f+f'u'h+f'r*f)
 
-  soln = State_Space_Soln(p,k,h,f,v,retcode)
+  soln = State_Space_Soln(p,k,h,f,v,sigma,retcode)
 
   return soln
 
@@ -86,9 +87,10 @@ end
 
 function solve_quasi{T<:FloatingPoint,S<:Int}(model::Generalized_State_Space_Form{T},obj::State_Space_Objective{T},commit_prob::T,tol::T,maxiters::S)
 
-  nx   = copy(model.nx)
-  ny   = copy(model.ny)
-  beta = copy(obj.beta)
+  nx    = copy(model.nx)
+  ny    = copy(model.ny)
+  beta  = copy(obj.beta)
+  sigma = copy(model.sigma)
 
   a0 = copy(model.a0)
   a  = copy(model.a)
@@ -165,7 +167,7 @@ function solve_quasi{T<:FloatingPoint,S<:Int}(model::Generalized_State_Space_For
 
   # v = dlyap(sqrt(beta)*p',h'q*h+h'u*f+f'u'h+f'r*f)
 
-  soln = State_Space_Soln(p,k,h,f,v,retcode)
+  soln = State_Space_Soln(p,k,h,f,v,sigma,retcode)
 
   return soln
 

@@ -1,8 +1,9 @@
 function solve_disc{T<:FloatingPoint,S<:Int}(model::State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
 
-  nx   = copy(model.nx)
-  ny   = copy(model.ny)
-  beta = copy(obj.beta)
+  nx    = copy(model.nx)
+  ny    = copy(model.ny)
+  beta  = copy(obj.beta)
+  sigma = copy(model.sigma)
 
   a = copy(model.a)
   b = copy(model.b)
@@ -71,7 +72,7 @@ function solve_disc{T<:FloatingPoint,S<:Int}(model::State_Space_Form{T},obj::Sta
   h = [eye(nx); h]
   k = c[1:nx,:]
 
-  soln = State_Space_Soln(p,k,h,f,v,retcode)
+  soln = State_Space_Soln(p,k,h,f,v,sigma,retcode)
 
   return soln
 
@@ -79,9 +80,10 @@ end
 
 function solve_disc{T<:FloatingPoint,S<:Int}(model::Generalized_State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
 
-  nx   = copy(model.nx)
-  ny   = copy(model.ny)
-  beta = copy(obj.beta)
+  nx    = copy(model.nx)
+  ny    = copy(model.ny)
+  beta  = copy(obj.beta)
+  sigma = copy(model.sigma)
 
   a0 = copy(model.a0)
   a  = copy(model.a)
@@ -151,7 +153,7 @@ function solve_disc{T<:FloatingPoint,S<:Int}(model::Generalized_State_Space_Form
   h = [eye(nx); h]
   k = c[1:nx,:]
 
-  soln = State_Space_Soln(p,k,h,f,v,retcode)
+  soln = State_Space_Soln(p,k,h,f,v,sigma,retcode)
 
   return soln
 
@@ -159,11 +161,12 @@ end
 
 function solve_disc{T<:FloatingPoint,S<:Int}(model::Structural_Form{T},obj::Structural_Objective{T},tol::T,maxiters::S)
 
-  a0 = copy(model.a0)
-  a1 = copy(model.a1)
-  a2 = copy(model.a2)
-  a3 = copy(model.a3)
-  a5 = copy(model.a5)
+  a0    = copy(model.a0)
+  a1    = copy(model.a1)
+  a2    = copy(model.a2)
+  a3    = copy(model.a3)
+  a5    = copy(model.a5)
+  sigma = copy(model.sigma)
 
   q = copy(obj.q)
   r = copy(obj.r)
@@ -215,7 +218,7 @@ function solve_disc{T<:FloatingPoint,S<:Int}(model::Structural_Form{T},obj::Stru
 
   g = [h2; f2]
 
-  soln = Structural_Soln(h,g,v,retcode)
+  soln = Structural_Soln(h,g,v,sigma,retcode)
 
   return soln
 
@@ -223,12 +226,13 @@ end
 
 function solve_disc{T<:FloatingPoint,S<:Int}(model::Generalized_Structural_Form{T},obj::Structural_Objective{T},tol::T,maxiters::S)
 
-  a0 = copy(model.a0)
-  a1 = copy(model.a1)
-  a2 = copy(model.a2)
-  a3 = copy(model.a3)
-  a4 = copy(model.a4)
-  a5 = copy(model.a5)
+  a0    = copy(model.a0)
+  a1    = copy(model.a1)
+  a2    = copy(model.a2)
+  a3    = copy(model.a3)
+  a4    = copy(model.a4)
+  a5    = copy(model.a5)
+  sigma = copy(model.sigma)
 
   q = copy(obj.q)
   r = copy(obj.r)
@@ -270,6 +274,6 @@ function solve_disc{T<:FloatingPoint,S<:Int}(model::Generalized_Structural_Form{
 
   g = [h2; f2]
 
-  soln = Structural_Soln(h,g,v,retcode)
+  soln = Structural_Soln(h,g,v,sigma,retcode)
 
 end

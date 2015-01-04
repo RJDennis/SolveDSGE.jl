@@ -1,8 +1,9 @@
 function solve_commit{T<:FloatingPoint,S<:Int}(model::State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
 
-  nx   = copy(model.nx)
-  ny   = copy(model.ny)
-  beta = copy(obj.beta)
+  nx    = copy(model.nx)
+  ny    = copy(model.ny)
+  beta  = copy(obj.beta)
+  sigma = copy(model.sigma)
 
   a = copy(model.a)
   b = copy(model.b)
@@ -48,7 +49,7 @@ function solve_commit{T<:FloatingPoint,S<:Int}(model::State_Space_Form{T},obj::S
   v = h'v*h
   f = -f*h
 
-  soln = State_Space_Soln(p,k,h,f,v,retcode)
+  soln = State_Space_Soln(p,k,h,f,v,sigma,retcode)
 
   return soln
 
@@ -56,9 +57,10 @@ end
 
 function solve_commit{T<:FloatingPoint,S<:Int}(model::Generalized_State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
 
-  nx   = copy(model.nx)
-  ny   = copy(model.ny)
-  beta = copy(obj.beta)
+  nx    = copy(model.nx)
+  ny    = copy(model.ny)
+  beta  = copy(obj.beta)
+  sigma = copy(model.sigma)
 
   a0 = copy(model.a0)
   a  = copy(model.a)
@@ -128,7 +130,7 @@ function solve_commit{T<:FloatingPoint,S<:Int}(model::Generalized_State_Space_Fo
   h = [[eye(nx) zeros(nx,ny)]; f[1:ny,:]]
   f = f[(ny+1):(ny+np),:]
 
-  soln = State_Space_Soln(p,k,h,f,v,retcode)
+  soln = State_Space_Soln(p,k,h,f,v,sigma,retcode)
 
   return soln
 
@@ -136,11 +138,12 @@ end
 
 function solve_commit{T<:FloatingPoint,S<:Int}(model::Structural_Form{T},obj::Structural_Objective{T},tol::T,maxiters::S)
 
-  a0 = copy(model.a0)
-  a1 = copy(model.a1)
-  a2 = copy(model.a2)
-  a3 = copy(model.a3)
-  a5 = copy(model.a5)
+  a0    = copy(model.a0)
+  a1    = copy(model.a1)
+  a2    = copy(model.a2)
+  a3    = copy(model.a3)
+  a5    = copy(model.a5)
+  sigma = copy(model.sigma)
 
   q = copy(obj.q)
   r = copy(obj.r)
@@ -194,7 +197,7 @@ function solve_commit{T<:FloatingPoint,S<:Int}(model::Structural_Form{T},obj::St
 
   (v,retcode_doubling) = doubling(sqrt(beta)*h',sqrt(beta)*h,q_hat,tol,maxiters)
 
-  soln = Structural_Soln(h,g,v,retcode)
+  soln = Structural_Soln(h,g,v,sigma,retcode)
 
   return soln
 
@@ -202,12 +205,13 @@ end
 
 function solve_commit{T<:FloatingPoint,S<:Int}(model::Generalized_Structural_Form{T},obj::Structural_Objective{T},tol::T,maxiters::S)
 
-  a0 = copy(model.a0)
-  a1 = copy(model.a1)
-  a2 = copy(model.a2)
-  a3 = copy(model.a3)
-  a4 = copy(model.a4)
-  a5 = copy(model.a5)
+  a0    = copy(model.a0)
+  a1    = copy(model.a1)
+  a2    = copy(model.a2)
+  a3    = copy(model.a3)
+  a4    = copy(model.a4)
+  a5    = copy(model.a5)
+  sigma = copy(model.sigma)
 
   q = copy(obj.q)
   r = copy(obj.r)
@@ -261,6 +265,6 @@ function solve_commit{T<:FloatingPoint,S<:Int}(model::Generalized_Structural_For
 
   (v,retcode_doubling) = doubling(sqrt(beta)*h',sqrt(beta)*h,q_hat,tol,maxiters)
 
-  soln = Structural_Soln(h,g,v,retcode)
+  soln = Structural_Soln(h,g,v,sigma,retcode)
 
 end

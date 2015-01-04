@@ -1,8 +1,9 @@
 function solve_timeless{T<:FloatingPoint,S<:Int}(model::State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
 
-  nx   = copy(model.nx)
-  ny   = copy(model.ny)
-  beta = copy(obj.beta)
+  nx    = copy(model.nx)
+  ny    = copy(model.ny)
+  beta  = copy(obj.beta)
+  sigma = copy(model.sigma)
 
   a = copy(model.a)
   b = copy(model.b)
@@ -86,7 +87,7 @@ function solve_timeless{T<:FloatingPoint,S<:Int}(model::State_Space_Form{T},obj:
   f = p[(2*nx+ny+1):(2*nx+ny+np),:]
   k = [k11; zeros((nx+ny+np),ns)]
 
-  soln = State_Space_Soln(p,k,h,f,v,retcode)
+  soln = State_Space_Soln(p,k,h,f,v,sigma,retcode)
 
   return soln
 
@@ -94,9 +95,10 @@ end
 
 function solve_timeless{T<:FloatingPoint,S<:Int}(model::Generalized_State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
 
-  nx   = copy(model.nx)
-  ny   = copy(model.ny)
-  beta = copy(obj.beta)
+  nx    = copy(model.nx)
+  ny    = copy(model.ny)
+  beta  = copy(obj.beta)
+  sigma = copy(model.sigma)
 
   a0 = copy(model.a0)
   a  = copy(model.a)
@@ -203,7 +205,7 @@ function solve_timeless{T<:FloatingPoint,S<:Int}(model::Generalized_State_Space_
   f = p[(2*nx+ny+1):(2*nx+ny+np),:]
   k = [k11; zeros((nx+ny+np),ns)]
 
-  soln = State_Space_Soln(p,k,h,f,v,retcode)
+  soln = State_Space_Soln(p,k,h,f,v,sigma,retcode)
 
   return soln
 
