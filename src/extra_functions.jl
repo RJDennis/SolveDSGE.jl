@@ -60,6 +60,7 @@ function convert_second_order{M<:Lombardo_Sutherland_Soln}(model::M)
   ssg       = copy(model.ssg)
   gx        = copy(model.gx)
   gxx       = copy(model.gxx)
+  eta       = copy(model.eta)
   sigma     = copy(model.sigma)
   grc       = copy(model.grc)
   soln_type = copy(model.soln_type)
@@ -111,7 +112,7 @@ function convert_second_order{M<:Lombardo_Sutherland_Soln}(model::M)
 
   new_gxx = new_gxx/2
 
-  soln = Gomme_Klein_Soln(ssh,hx,new_hxx,ssg,gx,new_gxx,sigma,grc,soln_type)
+  soln = Gomme_Klein_Soln(ssh,hx,new_hxx,ssg,gx,new_gxx,eta,sigma,grc,soln_type)
 
   return soln
 

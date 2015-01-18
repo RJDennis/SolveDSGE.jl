@@ -1,4 +1,4 @@
-function  householder{T<:FloatingPoint}(a::Array{T,1})
+function householder{T<:FloatingPoint}(a::Array{T,1})
 
   n = length(a)
   m = 1

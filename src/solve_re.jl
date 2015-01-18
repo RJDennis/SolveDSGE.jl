@@ -43,9 +43,9 @@ function solve_re{T<:FloatingPoint}(model::Blanchard_Kahn_Form{T},cutoff::T)
 
   p = real((q11-(q12/q22)*q21)\s11*(q11-(q12/q22)*q21))
   k = c[1:nx,:]
-  f = -real(q22\q21)
+  h = -real(q22\q21)
 
-  soln = Blanchard_Kahn_Soln(p,k,f,sigma,grc,soln_type)
+  soln = Blanchard_Kahn_Soln(p,k,h,sigma,grc,soln_type)
 
   return soln
 
@@ -86,21 +86,21 @@ function solve_re{T<:FloatingPoint}(model::Blanchard_Kahn_Form{T},cutoff::T,tol:
   a21 = a[(nx+1):n,1:nx]
   a22 = a[(nx+1):n,(nx+1):n]
 
-  f0 = -a22\a21
-  f = Array(T,ny,nx)
+  h0 = -a22\a21
+  h = Array(T,ny,nx)
   len = Inf
   while len > tol
 
-    f = (a22-f0*a12)\(f0*a11-a21)
-    len = maxabs(f0-f)
-    f0 = copy(f)
+    h = (a22-h0*a12)\(h0*a11-a21)
+    len = maxabs(h-h0)
+    h0 = h
 
   end
 
-  p = a11+a12*f
+  p = a11+a12*h
   k = c[1:nx,:]
 
-  soln = Blanchard_Kahn_Soln(p,k,f,sigma,grc,soln_type)
+  soln = Blanchard_Kahn_Soln(p,k,h,sigma,grc,soln_type)
 
   return soln
 
@@ -151,9 +151,9 @@ function solve_re{T<:FloatingPoint}(model::Klein_Form{T},cutoff::T)
 
   p = real((z11/t11)*(s11/z11))
   k = c[1:nx,:]
-  f = real(z21/z11)
+  h = real(z21/z11)
 
-  soln = Klein_Soln(p,k,f,sigma,grc,soln_type)
+  soln = Klein_Soln(p,k,h,sigma,grc,soln_type)
 
   return soln
 
@@ -241,9 +241,10 @@ function solve_re{T<:FloatingPoint}(model::Binder_Pesaran_Form{T},cutoff::T,tol:
 
     p = (a-b*p0)\a1
     len = maxabs(p-p0)
-    p0 = copy(p)
+    p0 = p
 
   end
+
   k = (a-b*p0)\c
 
   nx = size(a1,1)
@@ -454,7 +455,7 @@ function solve_re{T<:FloatingPoint}(model::Gomme_Klein_Form,cutoff::T)
   first_order_soln  = solve_re(first_order_model,cutoff)
 
   hx = first_order_soln.p
-  gx = first_order_soln.f
+  gx = first_order_soln.h
   grc = first_order_soln.grc
 
   soln_type = "determinate"
@@ -488,7 +489,7 @@ function solve_re{T<:FloatingPoint}(model::Gomme_Klein_Form,cutoff::T)
   ssh = ss[1:nx]
   ssg = ss[nx+1:n]
 
-  soln = Gomme_Klein_Soln(ssh,hx,hxx,ssg,gx,gxx,sigma,grc,soln_type)
+  soln = Gomme_Klein_Soln(ssh,hx,hxx,ssg,gx,gxx,eta,sigma,grc,soln_type)
 
   return soln
 
@@ -643,7 +644,7 @@ function solve_re{T<:FloatingPoint}(model::Lombardo_Sutherland_Form,cutoff::T)
   ssg = p4*sig
   ssh = real(r2\(d4-r4-r3*gamma_tilda))*sig
 
-  soln = Lombardo_Sutherland_Soln(ssh,hx,hxx,ssg,gx,gxx,phi_tilda,gamma_tilda,psi_tilda,sigma,grc,soln_type)
+  soln = Lombardo_Sutherland_Soln(ssh,hx,hxx,ssg,gx,gxx,eta,phi_tilda,gamma_tilda,psi_tilda,sigma,grc,soln_type)
 
   return soln
 

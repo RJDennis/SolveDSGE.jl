@@ -1,7 +1,6 @@
 module SolveDSGE
 
-include("types_re.jl")
-include("types_op.jl")
+include("types.jl")
 include("extra_functions.jl")
 include("givens.jl")
 include("householder.jl")
@@ -18,6 +17,7 @@ include("solve_disc.jl")
 include("solve_commit.jl")
 include("solve_quasi.jl")
 include("solve_timeless.jl")
+include("impulses.jl")
 
 export derivative,
        hessian,
@@ -54,5 +54,10 @@ export State_Space_Form,
        Generalized_Structural_Form,
        State_Space_Soln,
        Structural_Soln
+
+export Perturbable_Soln,
+       Second_Order_State_Space_Soln
+
+export impulses
 
 end
