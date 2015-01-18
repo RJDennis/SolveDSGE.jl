@@ -54,10 +54,12 @@ println(assessment)
 # Solve the model by solving an eigenvalue problem
 
 soln_bk_1 = solve_re(m_bk,cutoff)
+responses_bk_1 = impulses(soln_bk_1,5,1)
 
 # Solve the model by solving an algebraic Riccati equation
 
 soln_bk_2 = solve_re(m_bk,cutoff,tol)
+responses_bk_2 = impulses(soln_bk_2,5,1)
 
 # Solve the model using Klein (2000)
 
@@ -82,6 +84,7 @@ println(assessment)
 # Solve the model by solving a generalized eigenvalue problem
 
 soln_k = solve_re(m_k,cutoff)
+responses_k = impulses(soln_k,5,1)
 
 # Solve the model using Sims (2001)
 
@@ -155,7 +158,9 @@ println(assessment)
 # Solve the by by solving a generalized eigenvalue problem
 
 soln_bp_1 = solve_re(m_bp,cutoff)
+responses_bp_1 = impulses(soln_bp_1,5,1)
 
 # Solve the model using Binder and Pesaran's (1995) brute force method
 
 soln_bp_2 = solve_re(m_bp,cutoff,tol)
+responses_bp_2 = impulses(soln_bp_2,5,1)

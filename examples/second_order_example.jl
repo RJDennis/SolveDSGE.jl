@@ -130,6 +130,7 @@ println(assessment)
 # Solve the model using Gomme and Klein (2011)
 
 soln_gk = solve_re(m_gk,cutoff)
+responses_gk = impulses(soln_gk,5,1)
 
 # Put the model into Lombardo_Sutherland_Form type
 
@@ -138,15 +139,19 @@ m_ls = Lombardo_Sutherland_Form(nx,ny,deriv1,deriv2,eta,sigma)
 # Solve the model using Lombardo and Sutherland (2007)
 
 soln_ls = solve_re(m_ls,cutoff)
+responses_ls_1 = impulses(soln_ls,5,1)
 
 # Convert Lombardo_Sutherland_Soln to Gomme_Klein_Soln
 
 new_soln_ls = convert_second_order(soln_ls)
+responses_ls_2 = impulses(new_soln_ls,5,1)
 
 # Check to see that the two solutions are the same
 
 println(maxabs(new_soln_ls.hxx-soln_gk.hxx))
 println(maxabs(new_soln_ls.gxx-soln_gk.gxx))
+
+println(maxabs(responses_gk-responses_ls_1))
 
 # Example two from Schmitt-Grohe and Uribe (2004)
 
@@ -314,6 +319,7 @@ println(assessment)
 # Solve the model using Gomme and Klein (2011)
 
 soln_gk = solve_re(m_gk,cutoff)
+responses_gk = impulses(soln_gk,5,1)
 
 # Put the model into Lombard_Sutherland_Form type
 
@@ -322,12 +328,16 @@ m_ls = Lombardo_Sutherland_Form(nx,ny,deriv1,deriv2,eta,sigma)
 # Solve the model using Lombardo and Sutherland (2007)
 
 soln_ls = solve_re(m_ls,cutoff)
+responses_ls_1 = impulses(soln_ls,5,1)
 
 # Convert Lombardo_Sutherland_Soln to Gomme_Klein_Soln
 
 new_soln_ls = convert_second_order(soln_ls)
+responses_ls_2 = impulses(new_soln_ls,5,1)
 
 # Check to see that the two solutions are the same
 
 println(maxabs(new_soln_ls.hxx-soln_gk.hxx))
 println(maxabs(new_soln_ls.gxx-soln_gk.gxx))
+
+println(maxabs(responses_gk-responses_ls_1))
