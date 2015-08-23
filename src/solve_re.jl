@@ -278,8 +278,11 @@ end
 
 function solve_re{T<:FloatingPoint}(model::Sims_Form{T},cutoff::T)
 
-  # This function is modeled on a routine written by
+  # This function is an implementation of a routine written by
   # Christopher A. Sims (http://www.princeton.edu/~sims/)
+
+  # Permission to release this function under an MIT licence has
+  # been granted by Chris Sims, 23/8/2015.
 
   gamma0 = copy(model.gamma0)
   gamma1 = copy(model.gamma1)
