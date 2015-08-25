@@ -14,7 +14,7 @@
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
 %TCIDATA{Created=Tue Nov 13 06:24:53 2001}
-%TCIDATA{LastRevised=Saturday, January 03, 2015 15:21:44}
+%TCIDATA{LastRevised=Tuesday, August 25, 2015 17:04:11}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -26,7 +26,7 @@ Email: richard.dennis@glasgow.ac.uk} \\
 %EndAName
 University of Glasgow}
 \title{\textbf{Package Guide for SolveDSGE}\vspace{0.2in}}
-\date{January 3, 2015}
+\date{August 25, 2015}
 \maketitle
 
 \thispagestyle{empty}\newpage \setlength{\baselineskip}{18.95pt}%
@@ -48,13 +48,11 @@ dynamic representations.
 
 \section{Installation}
 
-To date I have not requested that SolveDSGE be an official Julia package. \
-Therefore, to install SolveDSGE you will need to type the following into the
-Julia REPL
+To install SolveDSGE you will need to type the following into the Julia REPL
 
 \bigskip
 
-\textbf{Pkg.clone("git://github.com/RJDennis/SolveDSGE.git")}
+\textbf{Pkg.add("SolveDSGE")}
 
 \bigskip
 
@@ -426,7 +424,7 @@ the quadratic objective function%
 Loss=\text{E}\left[ \dsum\limits_{t=0}^{\infty }\beta ^{t}\left( \mathbf{z}%
 _{t}^{^{\prime }}\mathbf{Qz}_{t}+\mathbf{z}_{t}^{^{\prime }}\mathbf{Uu}_{t}+%
 \mathbf{u}_{t}^{^{\prime }}\mathbf{U}^{^{\prime }}\mathbf{z}_{t}+\mathbf{u}%
-_{t}^{^{\prime }}\mathbf{Ru}_{t}\right) \right] ,
+_{t}^{^{\prime }}\mathbf{Ru}_{t}\right) \right] , 
 \]%
 and the linear constraints%
 \[
@@ -440,7 +438,7 @@ and the linear constraints%
 \mathbf{x}_{t} \\ 
 \mathbf{y}_{t}%
 \end{array}%
-\right] +\mathbf{Bu}_{t}+\mathbf{C}\left[ \mathbf{\epsilon }_{t+1}\right] ,
+\right] +\mathbf{Bu}_{t}+\mathbf{C}\left[ \mathbf{\epsilon }_{t+1}\right] , 
 \]%
 where $\mathbf{x}_{t}$ contains $n_{x}$ predetermined variables, $\mathbf{y}%
 _{t}$ contains $n_{y}$ non-predetermined variables, $\mathbf{u}_{t}$
@@ -459,7 +457,7 @@ For this model form the following policies are supported:
 \end{array}%
 \right] \right) $
 
-\item Quasi-commitment  $\left( \mathbf{s}_{t}=\left[ 
+\item Quasi-commitment $\left( \mathbf{s}_{t}=\left[ 
 \begin{array}{c}
 \mathbf{x}_{t} \\ 
 \mathbf{\lambda }_{t}%
@@ -487,7 +485,7 @@ State\_Space\_Soln}.
 To solve a model for each of the policies above we would use code like the
 following
 
-\bigskip 
+\bigskip
 
 \textbf{obj = State\_Space\_Objective(beta,q,u,r)}
 
@@ -507,7 +505,7 @@ following
 
 \textbf{soln\_timeless = solve\_timeless(model,obj,tol,maxiters)}
 
-\bigskip 
+\bigskip
 
 \subsection{Generalized state space form}
 
@@ -517,7 +515,7 @@ described by the quadratic objective function%
 Loss=\text{E}\left[ \dsum\limits_{t=0}^{\infty }\beta ^{t}\left( \mathbf{z}%
 _{t}^{^{\prime }}\mathbf{Qz}_{t}+\mathbf{z}_{t}^{^{\prime }}\mathbf{Uu}_{t}+%
 \mathbf{u}_{t}^{^{\prime }}\mathbf{U}^{^{\prime }}\mathbf{z}_{t}+\mathbf{u}%
-_{t}^{^{\prime }}\mathbf{Ru}_{t}\right) \right] ,
+_{t}^{^{\prime }}\mathbf{Ru}_{t}\right) \right] , 
 \]%
 and the linear constraints%
 \[
@@ -531,7 +529,7 @@ and the linear constraints%
 \mathbf{x}_{t} \\ 
 \mathbf{y}_{t}%
 \end{array}%
-\right] +\mathbf{Bu}_{t}+\mathbf{C}\left[ \mathbf{\epsilon }_{t+1}\right] ,
+\right] +\mathbf{Bu}_{t}+\mathbf{C}\left[ \mathbf{\epsilon }_{t+1}\right] , 
 \]%
 where $\mathbf{x}_{t}$ contains $n_{x}$ predetermined variables, $\mathbf{y}%
 _{t}$ contains $n_{y}$ non-predetermined variables, $\mathbf{u}_{t}$
@@ -580,7 +578,7 @@ State\_Space\_Soln}.
 To solve a model for each of the policies above we would use code like the
 following
 
-\bigskip 
+\bigskip
 
 \textbf{obj = State\_Space\_Objective(beta,q,u,r)}
 
@@ -600,7 +598,7 @@ following
 
 \textbf{soln\_timeless = solve\_timeless(model,obj,tol,maxiters)}
 
-\bigskip 
+\bigskip
 
 \subsection{Structural form}
 
@@ -609,17 +607,17 @@ the quadratic objective function%
 \[
 Loss=\text{E}\left[ \dsum\limits_{t=0}^{\infty }\beta ^{t}\left( \mathbf{y}%
 _{t}^{^{\prime }}\mathbf{Qy}_{t}+\mathbf{u}_{t}^{^{\prime }}\mathbf{Ru}%
-_{t}\right) \right] ,
+_{t}\right) \right] , 
 \]%
 and the linear constraints%
 \[
 \mathbf{A}_{0}\mathbf{y}_{t}=\mathbf{A}_{1}\mathbf{y}_{t-1}+\mathbf{A}_{2}%
 \text{E}_{t}\mathbf{y}_{t+1}+\mathbf{A}_{3}\mathbf{u}_{t}+\mathbf{A}_{5}%
-\mathbf{\epsilon }_{t},
+\mathbf{\epsilon }_{t}, 
 \]%
 where $\mathbf{y}_{t}$ contains $n$ variables, $\mathbf{u}_{t}$ contains $%
 n_{p}$ policy instruments, and $\mathbf{\epsilon }_{t}$ contains $n_{s}$
-stochastic innovarions. 
+stochastic innovarions.
 
 For this model form the following policies are supported:
 
@@ -645,7 +643,7 @@ Structural\_Soln}.
 To solve a model for each of the policies above we would use code like the
 following
 
-\bigskip 
+\bigskip
 
 \textbf{obj = Structural\_Objective(beta,q,r)}
 
@@ -659,7 +657,7 @@ following
 
 \textbf{soln\_commit = solve\_commit(model,obj,tol,maxiters)}
 
-\bigskip 
+\bigskip
 
 \subsection{Generalized structural form}
 
@@ -668,17 +666,17 @@ described by the quadratic objective function%
 \[
 Loss=\text{E}\left[ \dsum\limits_{t=0}^{\infty }\beta ^{t}\left( \mathbf{y}%
 _{t}^{^{\prime }}\mathbf{Qy}_{t}+\mathbf{u}_{t}^{^{\prime }}\mathbf{Ru}%
-_{t}\right) \right] ,
+_{t}\right) \right] , 
 \]%
 and the linear constraints%
 \[
 \mathbf{A}_{0}\mathbf{y}_{t}=\mathbf{A}_{1}\mathbf{y}_{t-1}+\mathbf{A}_{2}%
 \text{E}_{t}\mathbf{y}_{t+1}+\mathbf{A}_{3}\mathbf{u}_{t}+\mathbf{A}_{4}%
-\text{E}_{t}\mathbf{u}_{t+1}+\mathbf{A}_{5}\mathbf{\epsilon }_{t},
+\text{E}_{t}\mathbf{u}_{t+1}+\mathbf{A}_{5}\mathbf{\epsilon }_{t}, 
 \]%
 where $\mathbf{y}_{t}$ contains $n$ variables, $\mathbf{u}_{t}$ contains $%
 n_{p}$ policy instruments, and $\mathbf{\epsilon }_{t}$ contains $n_{s}$
-stochastic innovarions. 
+stochastic innovarions.
 
 For this model form the following policies are supported:
 
@@ -704,7 +702,7 @@ Structural\_Soln}.
 To solve a model for each of the policies above we would use code like the
 following
 
-\bigskip 
+\bigskip
 
 \textbf{obj = Structural\_Objective(beta,q,r)}
 
@@ -718,7 +716,7 @@ following
 
 \textbf{soln\_commit = solve\_commit(model,obj,tol,maxiters)}
 
-\bigskip 
+\bigskip
 
 \setlength{\baselineskip}{10pt}
 
