@@ -1,4 +1,4 @@
-function solve_disc{T<:FloatingPoint,S<:Int}(model::State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
+function solve_disc{T<:AbstractFloat,S<:Int}(model::State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)
@@ -78,7 +78,7 @@ function solve_disc{T<:FloatingPoint,S<:Int}(model::State_Space_Form{T},obj::Sta
 
 end
 
-function solve_disc{T<:FloatingPoint,S<:Int}(model::Generalized_State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
+function solve_disc{T<:AbstractFloat,S<:Int}(model::Generalized_State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)
@@ -159,7 +159,7 @@ function solve_disc{T<:FloatingPoint,S<:Int}(model::Generalized_State_Space_Form
 
 end
 
-function solve_disc{T<:FloatingPoint,S<:Int}(model::Structural_Form{T},obj::Structural_Objective{T},tol::T,maxiters::S)
+function solve_disc{T<:AbstractFloat,S<:Int}(model::Structural_Form{T},obj::Structural_Objective{T},tol::T,maxiters::S)
 
   a0    = copy(model.a0)
   a1    = copy(model.a1)
@@ -224,7 +224,7 @@ function solve_disc{T<:FloatingPoint,S<:Int}(model::Structural_Form{T},obj::Stru
 
 end
 
-function solve_disc{T<:FloatingPoint,S<:Int}(model::Generalized_Structural_Form{T},obj::Structural_Objective{T},tol::T,maxiters::S)
+function solve_disc{T<:AbstractFloat,S<:Int}(model::Generalized_Structural_Form{T},obj::Structural_Objective{T},tol::T,maxiters::S)
 
   a0    = copy(model.a0)
   a1    = copy(model.a1)

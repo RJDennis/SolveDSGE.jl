@@ -1,5 +1,4 @@
-
-function hessian{T<:FloatingPoint}(f::Function,x::Array{T,1})
+function hessian{T<:AbstractFloat}(f::Function,x::Array{T,1})
 
     m = length(x)
 

@@ -1,4 +1,4 @@
-function householder{T<:FloatingPoint}(a::Array{T,1})
+function householder{T<:AbstractFloat}(a::Array{T,1})
 
   n = length(a)
   m = 1
@@ -23,7 +23,7 @@ function householder{T<:FloatingPoint}(a::Array{T,1})
 
 end
 
-function  householder{T<:FloatingPoint}(a::Array{Complex{T},1})
+function  householder{T<:AbstractFloat}(a::Array{Complex{T},1})
 
   n = length(a)
   m = 1
@@ -48,7 +48,7 @@ function  householder{T<:FloatingPoint}(a::Array{Complex{T},1})
 
 end
 
-function  householder{T<:FloatingPoint}(a::Array{T,2})
+function  householder{T<:AbstractFloat}(a::Array{T,2})
 
   (n,m) = size(a)
 
@@ -72,7 +72,7 @@ function  householder{T<:FloatingPoint}(a::Array{T,2})
 
 end
 
-function  householder{T<:FloatingPoint}(a::Array{Complex{T},2})
+function  householder{T<:AbstractFloat}(a::Array{Complex{T},2})
 
   (n,m) = size(a)
 

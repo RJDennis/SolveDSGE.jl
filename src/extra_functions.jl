@@ -1,4 +1,4 @@
-function tracem{T<:FloatingPoint}(x::Array{T,2})
+function tracem{T<:AbstractFloat}(x::Array{T,2})
 
   # We require the number of rows to be greater than the number of columns, so that m is greater than one.
 

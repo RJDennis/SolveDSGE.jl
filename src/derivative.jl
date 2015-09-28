@@ -1,4 +1,4 @@
-function derivative{T<:FloatingPoint}(f::Function,x::Array{T,1})
+function derivative{T<:AbstractFloat}(f::Function,x::Array{T,1})
 
     n = length(f(x))
     m = length(x)

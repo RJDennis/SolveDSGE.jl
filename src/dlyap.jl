@@ -14,7 +14,7 @@ Based on Octave code written by A.S. Hodel.
 
 =#
 
-function dlyap{T<:FloatingPoint}(a::Array{T,2},b::Array{T,2})
+function dlyap{T<:AbstractFloat}(a::Array{T,2},b::Array{T,2})
 
   n = size(a,1)
   x = zeros(n,n)

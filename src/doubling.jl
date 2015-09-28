@@ -1,4 +1,4 @@
-function doubling{T<:FloatingPoint,S<:Int}(a::Array{T,2},b::Array{T,2},g::Array{T,2},tol::T,maxiters::S)
+function doubling{T<:AbstractFloat,S<:Int}(a::Array{T,2},b::Array{T,2},g::Array{T,2},tol::T,maxiters::S)
 
   retcode = 0
   j = 1
