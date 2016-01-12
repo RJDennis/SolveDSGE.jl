@@ -30,7 +30,7 @@ function compute_first_order_state_space_re_impulses(solution,impulse_length,inn
   s = chol(sigma[:,:])'
 
   responses = zeros(nx+ny,impulse_length)
-  responses[1:nx,1]           = k[:,:]*s[:,innovation_to_shock]
+  responses[1:nx,1]           = (k*s)[:,innovation_to_shock]
   responses[(nx+1):(nx+ny),1] = h*responses[1:nx,1]
 
   for i = 2:impulse_length
@@ -59,7 +59,7 @@ function compute_state_space_op_impulses(solution,impulse_length,innovation_to_s
   s = chol(sigma[:,:])'
 
   responses = zeros(nx+ny+np,impulse_length)
-  responses[1:nx,1]                 = k[:,:]*s[:,innovation_to_shock]
+  responses[1:nx,1]                 = (k*s)[:,innovation_to_shock]
   responses[(nx+1):(nx+ny),1]       = h*responses[1:nx,1]
   responses[(nx+ny+1):(nx+ny+np),1] = f*responses[1:nx,1]
 
@@ -86,7 +86,7 @@ function compute_structural_re_impulses(solution,impulse_length,innovation_to_sh
   n = size(p,1)
 
   responses = zeros(n,impulse_length)
-  responses[1:n,1] = k[:,:]*s[:,innovation_to_shock]
+  responses[1:n,1] = (k*s)[:,innovation_to_shock]
 
   for i = 2:impulse_length
 
@@ -109,7 +109,7 @@ function compute_structural_op_impulses(solution,impulse_length,innovation_to_sh
   n = size(p,1)
 
   responses = zeros(n,impulse_length)
-  responses[1:n,1] = k[:,:]*s[:,innovation_to_shock]
+  responses[1:n,1] = (k*s)[:,innovation_to_shock]
 
   for i = 2:impulse_length
 
@@ -136,7 +136,7 @@ function compute_second_order_state_space_re_impulses(solution,impulse_length,in
   ny = size(gx,1)
 
   responses = zeros(nx+ny,impulse_length)
-  responses[1:nx,1]           = eta[:,:]*s[:,innovation_to_shock]
+  responses[1:nx,1]           = (eta*s)[:,innovation_to_shock]
   responses[(nx+1):(nx+ny),1] = gx*responses[1:nx,1] + 0.5*(kron(eye(ny),responses[1:nx,1]'))*gxx*responses[1:nx,1]
 
   for i = 2:impulse_length
