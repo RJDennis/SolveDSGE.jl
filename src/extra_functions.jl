@@ -10,7 +10,7 @@ function tracem{T<:AbstractFloat}(x::Array{T,2})
   end
 
   n = size(x,2)
-  m = int(size(x,1)/n)
+  m = round(Int,size(x,1)/n)
 
   y = zeros(m,1)  # We want this to be a 2-d array for subsequent matrix multiplication
 
