@@ -9,22 +9,27 @@ function solve_re{T<:AbstractFloat}(model::Blanchard_Kahn_Form{T},cutoff::T)
   n = nx+ny
 
   (s,q) = schur(complex(a))
-  q = q'  # So now q*a*q' = s
+#  q = q'  # So now q*a*q' = s
 
   # Reorder the eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  (s,q) = reorder_complex_schur(s,q)
+  sel = (abs(diag(s)) .< cutoff)
+  ordschur!(q,s,sel)
+  q = q'  # So now q*a*q' = s
+
+#  (s,q) = reorder_complex_schur(s,q)
 
   # Calculate the number of unstable eigenvalues
 
-  grc = 0
-  for i = 1:n
+  grc = n-sum(sel)
+#  grc = 0
+#  for i = 1:n
 
-    if norm(s[i,i]) > cutoff
-      grc += 1
-    end
+#    if norm(s[i,i]) > cutoff
+#      grc += 1
+#    end
 
-  end
+#  end
 
   soln_type = "determinate"
   if grc < ny
@@ -118,22 +123,27 @@ function solve_re{T<:AbstractFloat}(model::Klein_Form{T},cutoff::T)
   n = nx+ny
 
   (s,t,q,z) = schur(complex(a),complex(b))
-  q = q'  # So now q*a*z = s and q*b*z = t
+#  q = q'  # So now q*a*z = s and q*b*z = t
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  (s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
+  sel = (abs(diag(s)./diag(t)).<cutoff)
+  ordschur!(s,t,q,z,sel)
+  q = q'  # So now q*a*z = s and q*b*z = t
+
+#  (s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
 
   # Calculate the number of unstable eigenvalues
 
-  grc = 0
-  for i = 1:n
+  grc = n-sum(sel)
+#  grc = 0
+#  for i = 1:n
 
-    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
-      grc += 1
-    end
+#    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
+#      grc += 1
+#    end
 
-  end
+#  end
 
   soln_type = "determinate"
   if grc < ny
@@ -177,22 +187,27 @@ function solve_re{T<:AbstractFloat}(model::Binder_Pesaran_Form{T},cutoff::T)
   c = [zeros(nx,size(c,2)); -c]
 
   (s,t,q,z) = schur(complex(a),complex(b))
-  q = q'  # So now q*a*z = s and q*b*z = t
+#  q = q'  # So now q*a*z = s and q*b*z = t
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  (s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
+  sel = (abs(diag(s)./diag(t)).<cutoff)
+  ordschur!(s,t,q,z,sel)
+  q = q'  # So now q*a*z = s and q*b*z = t
+
+  #(s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
 
   # Calculate the number of unstable eigenvalues
 
-  grc = 0
-  for i = 1:n
+  grc = n-sum(sel)
+#  grc = 0
+#  for i = 1:n
 
-    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
-      grc += 1
-    end
+#    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
+#      grc += 1
+#    end
 
-  end
+#  end
 
   soln_type = "determinate"
   if grc < ny
@@ -294,22 +309,27 @@ function solve_re{T<:AbstractFloat}(model::Sims_Form{T},cutoff::T)
   n  = size(gamma0,1)
 
   (s,t,q,z) = schur(complex(gamma1),complex(gamma0))
-  q = q'  # So now q*gamma1*z = s and q*gamma0*z = t
+#  q = q'  # So now q*a*z = s and q*b*z = t
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  (s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
+  sel = (abs(diag(s)./diag(t)).<cutoff)
+  ordschur!(s,t,q,z,sel)
+  q = q'  # So now q*a*z = s and q*b*z = t
+
+#  (s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
 
   # Calculate the number of unstable eigenvalues
 
-  grc = 0
-  for i = 1:n
+  grc = n-sum(sel)
+#  grc = 0
+#  for i = 1:n
 
-    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
-      grc += 1
-    end
+#    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
+#      grc += 1
+#    end
 
-  end
+#  end
 
   # Define some ingredients that are needed for any solution
 
@@ -516,23 +536,28 @@ function solve_re{T<:AbstractFloat}(model::Lombardo_Sutherland_Form,cutoff::T)
   a2 = deriv1[1:n,1:n]
   c  = [eta; zeros(ny,size(eta,2))]
 
-  (s,t,q,z) = schur(complex(a2),complex(a1))
-  q = q'  # So now q*a*z = s and q*b*z = t
+  (s,t,q,z) = schur(complex(a),complex(b))
+#  q = q'  # So now q*a*z = s and q*b*z = t
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  (s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
+  sel = (abs(diag(s)./diag(t)).<cutoff)
+  ordschur!(s,t,q,z,sel)
+  q = q'  # So now q*a*z = s and q*b*z = t
+
+#  (s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
 
   # Calculate the number of unstable eigenvalues
 
-  grc = 0
-  for i = 1:n
+  grc = n-sum(sel)
+#  grc = 0
+#  for i = 1:n
 
-    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
-      grc += 1
-    end
+#    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
+#      grc += 1
+#    end
 
-  end
+#  end
 
   soln_type = "determinate"
   if grc < ny
