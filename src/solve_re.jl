@@ -9,7 +9,6 @@ function solve_re{T<:AbstractFloat}(model::Blanchard_Kahn_Form{T},cutoff::T)
   n = nx+ny
 
   (s,q) = schur(complex(a))
-#  q = q'  # So now q*a*q' = s
 
   # Reorder the eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
@@ -17,19 +16,9 @@ function solve_re{T<:AbstractFloat}(model::Blanchard_Kahn_Form{T},cutoff::T)
   ordschur!(q,s,sel)
   q = q'  # So now q*a*q' = s
 
-#  (s,q) = reorder_complex_schur(s,q)
-
   # Calculate the number of unstable eigenvalues
 
   grc = n-sum(sel)
-#  grc = 0
-#  for i = 1:n
-
-#    if norm(s[i,i]) > cutoff
-#      grc += 1
-#    end
-
-#  end
 
   soln_type = "determinate"
   if grc < ny
@@ -123,7 +112,6 @@ function solve_re{T<:AbstractFloat}(model::Klein_Form{T},cutoff::T)
   n = nx+ny
 
   (s,t,q,z) = schur(complex(a),complex(b))
-#  q = q'  # So now q*a*z = s and q*b*z = t
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
@@ -131,19 +119,9 @@ function solve_re{T<:AbstractFloat}(model::Klein_Form{T},cutoff::T)
   ordschur!(s,t,q,z,sel)
   q = q'  # So now q*a*z = s and q*b*z = t
 
-#  (s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
-
   # Calculate the number of unstable eigenvalues
 
   grc = n-sum(sel)
-#  grc = 0
-#  for i = 1:n
-
-#    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
-#      grc += 1
-#    end
-
-#  end
 
   soln_type = "determinate"
   if grc < ny
@@ -187,7 +165,6 @@ function solve_re{T<:AbstractFloat}(model::Binder_Pesaran_Form{T},cutoff::T)
   c = [zeros(nx,size(c,2)); -c]
 
   (s,t,q,z) = schur(complex(a),complex(b))
-#  q = q'  # So now q*a*z = s and q*b*z = t
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
@@ -195,19 +172,9 @@ function solve_re{T<:AbstractFloat}(model::Binder_Pesaran_Form{T},cutoff::T)
   ordschur!(s,t,q,z,sel)
   q = q'  # So now q*a*z = s and q*b*z = t
 
-  #(s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
-
   # Calculate the number of unstable eigenvalues
 
   grc = n-sum(sel)
-#  grc = 0
-#  for i = 1:n
-
-#    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
-#      grc += 1
-#    end
-
-#  end
 
   soln_type = "determinate"
   if grc < ny
@@ -296,7 +263,7 @@ function solve_re{T<:AbstractFloat}(model::Sims_Form{T},cutoff::T)
   # This function is an implementation of a routine written by
   # Christopher A. Sims (http://www.princeton.edu/~sims/)
 
-  # Permission to release this function under an MIT licence has
+  # Permission to release this function under a MIT licence has
   # been granted by Chris Sims, 23/8/2015.
 
   gamma0 = copy(model.gamma0)
@@ -309,7 +276,6 @@ function solve_re{T<:AbstractFloat}(model::Sims_Form{T},cutoff::T)
   n  = size(gamma0,1)
 
   (s,t,q,z) = schur(complex(gamma1),complex(gamma0))
-#  q = q'  # So now q*a*z = s and q*b*z = t
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
@@ -317,19 +283,9 @@ function solve_re{T<:AbstractFloat}(model::Sims_Form{T},cutoff::T)
   ordschur!(s,t,q,z,sel)
   q = q'  # So now q*a*z = s and q*b*z = t
 
-#  (s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
-
   # Calculate the number of unstable eigenvalues
 
   grc = n-sum(sel)
-#  grc = 0
-#  for i = 1:n
-
-#    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
-#      grc += 1
-#    end
-
-#  end
 
   # Define some ingredients that are needed for any solution
 
@@ -537,7 +493,6 @@ function solve_re{T<:AbstractFloat}(model::Lombardo_Sutherland_Form,cutoff::T)
   c  = [eta; zeros(ny,size(eta,2))]
 
   (s,t,q,z) = schur(complex(a),complex(b))
-#  q = q'  # So now q*a*z = s and q*b*z = t
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
@@ -545,19 +500,9 @@ function solve_re{T<:AbstractFloat}(model::Lombardo_Sutherland_Form,cutoff::T)
   ordschur!(s,t,q,z,sel)
   q = q'  # So now q*a*z = s and q*b*z = t
 
-#  (s,t,q,z) = reorder_generalized_complex_schur(s,t,q,z)
-
   # Calculate the number of unstable eigenvalues
 
   grc = n-sum(sel)
-#  grc = 0
-#  for i = 1:n
-
-#    if norm(t[i,i]) < 2*eps(T)*norm(t) || norm(s[i,i]/t[i,i]) > cutoff
-#      grc += 1
-#    end
-
-#  end
 
   soln_type = "determinate"
   if grc < ny
