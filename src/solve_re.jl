@@ -8,13 +8,14 @@ function solve_re{T<:AbstractFloat}(model::Blanchard_Kahn_Form{T},cutoff::T)
 
   n = nx+ny
 
-  (s,q) = schur(complex(a))
+  r = schurfact(complex(a))
 
   # Reorder the eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs(diag(s)) .< cutoff)
-  ordschur!(q,s,sel)
-  q = q'  # So now q*a*q' = s
+  sel = (abs(r[:values]) .< cutoff)
+  ordschur!(r,sel)
+  s = r[:T]
+  q = r[:Z]' # So now q*a*q' = s
 
   # Calculate the number of unstable eigenvalues
 
@@ -111,13 +112,16 @@ function solve_re{T<:AbstractFloat}(model::Klein_Form{T},cutoff::T)
 
   n = nx+ny
 
-  (s,t,q,z) = schur(complex(a),complex(b))
+  r = schurfact(complex(a),complex(b))
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs(diag(s)./diag(t)).<cutoff)
-  ordschur!(s,t,q,z,sel)
-  q = q'  # So now q*a*z = s and q*b*z = t
+  sel = (abs(diag(r[:S])./diag(r[:T])).<cutoff)
+  ordschur!(r,sel)
+  s = r[:S]
+  t = r[:T]
+  q = r[:Q]'  # So now q*a*z = s and q*b*z = t
+  z = r[:Z]
 
   # Calculate the number of unstable eigenvalues
 
@@ -164,13 +168,16 @@ function solve_re{T<:AbstractFloat}(model::Binder_Pesaran_Form{T},cutoff::T)
   b = [eye(nx) zeros(nx,ny); zeros(ny,nx) b]
   c = [zeros(nx,size(c,2)); -c]
 
-  (s,t,q,z) = schur(complex(a),complex(b))
+  r = schurfact(complex(a),complex(b))
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs(diag(s)./diag(t)).<cutoff)
-  ordschur!(s,t,q,z,sel)
-  q = q'  # So now q*a*z = s and q*b*z = t
+  sel = (abs(diag(r[:S])./diag(r[:T])).<cutoff)
+  ordschur!(r,sel)
+  s = r[:S]
+  t = r[:T]
+  q = r[:Q]'  # So now q*a*z = s and q*b*z = t
+  z = r[:Z]
 
   # Calculate the number of unstable eigenvalues
 
@@ -275,13 +282,16 @@ function solve_re{T<:AbstractFloat}(model::Sims_Form{T},cutoff::T)
 
   n  = size(gamma0,1)
 
-  (s,t,q,z) = schur(complex(gamma1),complex(gamma0))
+  r = schurfact(complex(gamma1),complex(gamma0))
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs(diag(s)./diag(t)).<cutoff)
-  ordschur!(s,t,q,z,sel)
-  q = q'  # So now q*a*z = s and q*b*z = t
+  sel = (abs(diag(r[:S])./diag(r[:T])).<cutoff)
+  ordschur!(r,sel)
+  s = r[:S]
+  t = r[:T]
+  q = r[:Q]'  # So now q*a*z = s and q*b*z = t
+  z = r[:Z]
 
   # Calculate the number of unstable eigenvalues
 
@@ -492,13 +502,16 @@ function solve_re{T<:AbstractFloat}(model::Lombardo_Sutherland_Form,cutoff::T)
   a2 = deriv1[1:n,1:n]
   c  = [eta; zeros(ny,size(eta,2))]
 
-  (s,t,q,z) = schur(complex(a),complex(b))
+  r = schurfact(complex(a2),complex(a1))
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs(diag(s)./diag(t)).<cutoff)
-  ordschur!(s,t,q,z,sel)
-  q = q'  # So now q*a*z = s and q*b*z = t
+  sel = (abs(diag(r[:S])./diag(r[:T])).<cutoff)
+  ordschur!(r,sel)
+  s = r[:S]
+  t = r[:T]
+  q = r[:Q]'  # So now q*a*z = s and q*b*z = t
+  z = r[:Z]
 
   # Calculate the number of unstable eigenvalues
 
@@ -592,7 +605,7 @@ function solve_re{T<:AbstractFloat}(model::Lombardo_Sutherland_Form,cutoff::T)
   hs = h[1:nx,:]
   hu = h[nx+1:n,:]
 
-  m = reshape((kron(phi_tilda',t22)-kron(eye(int(nx*(nx+1)/2)),s22))\vec(gu),ny,int(nx*(nx+1)/2))
+  m = reshape((kron(phi_tilda',t22)-kron(eye(round(Int,(nx*(nx+1)/2))),s22))\vec(gu),ny,round(Int,(nx*(nx+1)/2)))
 
   hx  = real(z11*(t11\s11)/z11)
   hxx = real(-(z11*(t11\s11)/z11)*z12*m + z11*(t11\(s12*m-t12*m*phi_tilda+gs)) + z12*m*phi_tilda)
@@ -600,9 +613,9 @@ function solve_re{T<:AbstractFloat}(model::Lombardo_Sutherland_Form,cutoff::T)
   gx  = real(z21/z11)
   gxx = real((z22-z21*(z11\z12))*m)
 
-  vbar = (eye(int(nx*(nx+1)/2))-phi_tilda)\gamma_tilda
+  vbar = (eye(round(Int,(nx*(nx+1)/2)))-phi_tilda)\gamma_tilda
   m3   = (eye(ny)-s22\t22)\(s22\(gu*vbar+hu))
-  m2   = reshape((eye(int(nx*(nx+1)/2)*ny)-kron(phi_tilda',s22\t22))\(vec(s22\gu)),ny,int(nx*(nx+1)/2))
+  m2   = reshape((eye(round(Int,(nx*(nx+1)/2)*ny))-kron(phi_tilda',s22\t22))\(vec(s22\gu)),ny,round(Int,(nx*(nx+1)/2)))
 
   p4 = -real(z22'\(m3-m2*vbar))
   p3 = -z22'\m2

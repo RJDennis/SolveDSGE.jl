@@ -136,7 +136,7 @@ function compute_second_order_state_space_re_impulses(solution,impulse_length,in
   ny = size(gx,1)
 
   responses = zeros(nx+ny,impulse_length)
-  responses[1:nx,1]           = (eta*s)[:,innovation_to_shock]
+  responses[1:nx,1]           = (eta*convert(Array,s))[:,innovation_to_shock]
   responses[(nx+1):(nx+ny),1] = gx*responses[1:nx,1] + 0.5*(kron(eye(ny),responses[1:nx,1]'))*gxx*responses[1:nx,1]
 
   for i = 2:impulse_length

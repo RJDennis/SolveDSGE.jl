@@ -1,6 +1,6 @@
 function vec_to_vech{S<:Int}(n::S)
 
-  x = zeros(Int,int(n*(n+1)/2),n*n)
+  x = zeros(Int,round(Int,(n*(n+1)/2)),n*n)
 
   c = 1
   r = 1

@@ -20,7 +20,7 @@ function vech_to_vec{S<:Int}(n::S)
 
   gi = vec(a)
 
-  x = zeros(Int,n*n,int(n*(n+1)/2))
+  x = zeros(Int,n*n,round(Int,(n*(n+1)/2)))
 
   for r = 1:size(x,1)
     x[r,gi[r]] = 1
