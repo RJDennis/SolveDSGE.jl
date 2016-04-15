@@ -3,6 +3,17 @@ SolveDSGE
 
 SolveDSGE is a Julia package for solving Dynamic Stochastic General Equilibrium (DSGE) models.  The package is aimed at macroeconomists interested in first-order-accurate or second-order-accurate solutions to their general equilibrium models.  SolveDSGE offers a broad array of solution methods that can be applied provided the DSGE model can be expressed in one of several standard dynamic representations.
 
+Installation
+------------
+
+You can install SolveDSGE by typing in REPL
+
+Pkg.add("SolveDSGE")
+
+After this you will want to get the latest version from master by typing
+
+Pkg.checkout("SolveDSGE")
+
 First-order-accurate methods
 ----------------------------
 
