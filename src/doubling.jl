@@ -4,15 +4,13 @@ function doubling{T<:AbstractFloat,S<:Int}(a::Array{T,2},b::Array{T,2},g::Array{
   j = 1
   len = Inf
 
-  gn = copy(g)
+  gn = zeros(g)
 
   while len > tol && j <= maxiters
-    an = a*a
-    bn = b*b
     gn = g+a*g*b
     len = maxabs(gn-g)
-    a = an
-    b = bn
+    a = a*a
+    b = b*b
     g = copy(gn)
     j += 1
   end
