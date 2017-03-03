@@ -1,7 +1,9 @@
 function impulses{S<:Int}(solution::Perturbable_Soln,impulse_length::S,innovation_to_shock::S)
 
-  if isa(solution,Union(Blanchard_Kahn_Soln,Klein_Soln)) == true
+  if isa(solution,Blanchard_Kahn_Soln) == true
     responses = compute_first_order_state_space_re_impulses(solution,impulse_length,innovation_to_shock)
+  elseif isa(solution,Klein_Soln) == true
+      responses = compute_first_order_state_space_re_impulses(solution,impulse_length,innovation_to_shock)
   elseif isa(solution,State_Space_Soln) == true
     responses = compute_state_space_op_impulses(solution,impulse_length,innovation_to_shock)
   elseif isa(solution,Binder_Pesaran_Soln) == true
