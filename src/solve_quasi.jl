@@ -53,7 +53,7 @@ function solve_quasi{T<:AbstractFloat,S<:Int}(model::State_Space_Form{T},obj::St
     f  = -(r_tilda+beta*b_tilda'*(commit_prob*v+(1-commit_prob)*(s'*pinv(s')*v*pinv(s)*s))*b_tilda)\(u_tilda'+beta*b_tilda'*(commit_prob*v+(1-commit_prob)*(s'*pinv(s')*v*pinv(s)*s))*a_tilda)
     vn = q_tilda+u_tilda*f+f'*u_tilda'+f'*r_tilda*f+beta*(a_tilda+b_tilda*f)'*(commit_prob*v+(1-commit_prob)*(s'*pinv(s')*v*pinv(s)*s))*(a_tilda+b_tilda*f)
 
-    len = maxabs(vn-v)
+    len = maximum(abs,vn-v)
     v = vn
 
     h_reopt = f[1:ny,1:nx]
@@ -141,7 +141,7 @@ function solve_quasi{T<:AbstractFloat,S<:Int}(model::Generalized_State_Space_For
     f  = -(r_tilda+beta*b_tilda'*(commit_prob*v+(1-commit_prob)*(s'*pinv(s')*v*pinv(s)*s))*b_tilda)\(u_tilda'+beta*b_tilda'*(commit_prob*v+(1-commit_prob)*(s'*pinv(s')*v*pinv(s)*s))*a_tilda)
     vn = q_tilda+u_tilda*f+f'*u_tilda'+f'*r_tilda*f+beta*(a_tilda+b_tilda*f)'*(commit_prob*v+(1-commit_prob)*(s'*pinv(s')*v*pinv(s)*s))*(a_tilda+b_tilda*f)
 
-    len = maxabs(vn-v)
+    len = maximum(abs,vn-v)
     v = vn
 
     h_reopt = f[1:ny,1:nx]

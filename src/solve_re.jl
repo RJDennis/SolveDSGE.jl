@@ -82,12 +82,12 @@ function solve_re{T<:AbstractFloat}(model::Blanchard_Kahn_Form{T},cutoff::T,tol:
   a22 = a[(nx+1):n,(nx+1):n]
 
   h0 = -a22\a21
-  h = Array(T,ny,nx)
+  h = Array{T}(ny,nx)
   len = Inf
   while len > tol
 
     h = (a22-h0*a12)\(h0*a11-a21)
-    len = maxabs(h-h0)
+    len = maximum(abs,h-h0)
     h0 = h
 
   end
@@ -229,7 +229,7 @@ function solve_re{T<:AbstractFloat}(model::Binder_Pesaran_Form{T},cutoff::T,tol:
   while len > tol
 
     p = (a-b*p0)\a1
-    len = maxabs(p-p0)
+    len = maximum(abs,p-p0)
     p0 = p
 
   end
@@ -421,9 +421,7 @@ function solve_re{T<:AbstractFloat}(model::Gomme_Klein_Form,cutoff::T)
 
   hes = [deriv2[(n+1):2*n,:]; deriv2[1:n,:]]
   for i = 2:n
-
     hes = [hes; deriv2[2*n*(i-1)+n+1:2*n*i,:]; deriv2[2*n*(i-1)+1:2*n*(i-1)+n,:]]
-
   end
   hes = [hes[:,(n+1):2*n] hes[:,1:n]]
 
@@ -553,15 +551,10 @@ function solve_re{T<:AbstractFloat}(model::Lombardo_Sutherland_Form,cutoff::T)
   # Set up the matrices for the second order terms
 
   for i = 1:n
-
     for  j = 1:2*n
-
       deriv2[(i-1)*2*n+j,j] = deriv2[(i-1)*2*n+j,j]/2
-
     end
-
     deriv2[(i-1)*2*n+1:i*2*n,:] = 2*deriv2[(i-1)*2*n+1:i*2*n,:]
-
   end
 
   v2vh_n = vec_to_vech(n)
@@ -569,10 +562,8 @@ function solve_re{T<:AbstractFloat}(model::Lombardo_Sutherland_Form,cutoff::T)
   a4 = v2vh_n*vec(deriv2[1:n,1:n])
   a5 = v2vh_n*vec(deriv2[(n+1):2*n,(n+1):2*n])
   for i = 2:n
-
     a4 = [a4 v2vh_n*vec(deriv2[(i-1)*2*n+1:(i-1)*2*n+n,1:n])]
     a5 = [a5 v2vh_n*vec(deriv2[(i-1)*2*n+n+1:i*2*n,(n+1):2*n])]
-
   end
 
   a4 = a4'

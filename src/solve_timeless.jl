@@ -27,7 +27,7 @@ function solve_timeless{T<:AbstractFloat,S<:Int}(model::State_Space_Form{T},obj:
     vn = q-u*f-f'u'+f'r*f+beta*(a-b*f)'v*(a-b*f)
     fn = (r+beta*b'vn*b)\(u'+beta*b'vn*a)
 
-    len = max(maxabs(vn-v), maxabs(fn-f))
+    len = maximum(maximum(abs,vn-v), maximum(abs,fn-f))
     f = fn
     v = vn
 
@@ -146,7 +146,7 @@ function solve_timeless{T<:AbstractFloat,S<:Int}(model::Generalized_State_Space_
     f  = -(r_tilda+beta*b_tilda'v*b_tilda)\(u_tilda'+beta*b_tilda'v*a_tilda)
     vn = q_tilda+u_tilda*f+f'u_tilda'+f'r_tilda*f+beta*(a_tilda+b_tilda*f)'v*(a_tilda+b_tilda*f)
 
-    len   = maxabs(vn-v)
+    len   = maximum(abs,vn-v)
     v     = vn
 
     iters += 1

@@ -107,7 +107,7 @@ function solve_commit{T<:AbstractFloat,S<:Int}(model::Generalized_State_Space_Fo
     f  = -(r_tilda+beta*b_tilda'v*b_tilda)\(u_tilda'+beta*b_tilda'v*a_tilda)
     vn = q_tilda+u_tilda*f+f'u_tilda'+f'r_tilda*f+beta*(a_tilda+b_tilda*f)'v*(a_tilda+b_tilda*f)
 
-    len = maxabs(vn-v)
+    len = maximum(abs,vn-v)
     v   = vn
 
     iters += 1
@@ -176,7 +176,7 @@ function solve_commit{T<:AbstractFloat,S<:Int}(model::Structural_Form{T},obj::St
 
     hn = (a-c*h)\b
 
-    len = maxabs(hn-h)
+    len = maximum(abs,hn-h)
     h = hn
 
     iters += 1
@@ -244,7 +244,7 @@ function solve_commit{T<:AbstractFloat,S<:Int}(model::Generalized_Structural_For
 
     hn = (a-c*h)\b
 
-    len = maxabs(hn-h)
+    len = maximum(abs,hn-h)
     h = hn
 
     iters += 1

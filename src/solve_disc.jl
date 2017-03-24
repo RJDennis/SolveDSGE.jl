@@ -52,7 +52,7 @@ function solve_disc{T<:AbstractFloat,S<:Int}(model::State_Space_Form{T},obj::Sta
     vn   = beta*(abar-bbar*fn)'v*(abar-bbar*fn)+qbar-fn'ubar'-ubar*fn+fn'rbar*fn
     hn   = j-k*fn
 
-    len = max(maxabs(vn-v), maxabs(vn-v), maxabs(fn-f))
+    len = maximum(maximum(abs,vn-v), maximum(abs,vn-v), maximum(abs,fn-f))
     h = hn
     v = vn
     f = fn
@@ -133,7 +133,7 @@ function solve_disc{T<:AbstractFloat,S<:Int}(model::Generalized_State_Space_Form
     vn   = beta*(abar-bbar*fn)'v*(abar-bbar*fn)+qbar-fn'ubar'-ubar*fn+fn'rbar*fn
     hn   = j-k*fn
 
-    len = max(maxabs(vn-v), maxabs(vn-v), maxabs(fn-f))
+    len = maximum(maximum(abs,vn-v), maximum(abs,vn-v), maximum(abs,fn-f))
     h = hn
     v = vn
     f = fn
@@ -195,7 +195,7 @@ function solve_disc{T<:AbstractFloat,S<:Int}(model::Structural_Form{T},obj::Stru
     f1n = -(r+a3_bar'vn*a3_bar)\(a3_bar'vn*a1_bar)
     h1n = a1_bar+a3_bar*f1
 
-    len = max(maxabs(vn-v), maxabs(h1n-h1), maxabs(f1n-f1))
+    len = maximum(maximum(abs,vn-v), maximum(abs,h1n-h1), maximum(abs,f1n-f1))
     h1 = h1n
     f1 = f1n
     v  = vn
@@ -253,7 +253,7 @@ function solve_disc{T<:AbstractFloat,S<:Int}(model::Generalized_Structural_Form{
     f1n = -(r+a3'di'v*di*a3)\(a3'di'v*di*a1)
     h1  = di*(a1+a3*f1n)
 
-    len = maxabs(f1n-f1)
+    len = maximum(abs,f1n-f1)
     f1 = f1n
 
     iters += 1
