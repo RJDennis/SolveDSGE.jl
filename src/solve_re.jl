@@ -12,7 +12,7 @@ function solve_re{T<:AbstractFloat}(model::Blanchard_Kahn_Form{T},cutoff::T)
 
   # Reorder the eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs(r[:values]) .< cutoff)
+  sel = (abs.(r[:values]) .< cutoff)
   ordschur!(r,sel)
   s = r[:T]
   q = r[:Z]' # So now q*a*q' = s
@@ -116,7 +116,7 @@ function solve_re{T<:AbstractFloat}(model::Klein_Form{T},cutoff::T)
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs(diag(r[:S])./diag(r[:T])).<cutoff)
+  sel = (abs.(diag(r[:S])./diag(r[:T])).<cutoff)
   ordschur!(r,sel)
   s = r[:S]
   t = r[:T]
@@ -172,7 +172,7 @@ function solve_re{T<:AbstractFloat}(model::Binder_Pesaran_Form{T},cutoff::T)
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs(diag(r[:S])./diag(r[:T])).<cutoff)
+  sel = (abs.(diag(r[:S])./diag(r[:T])).<cutoff)
   ordschur!(r,sel)
   s = r[:S]
   t = r[:T]
@@ -286,7 +286,7 @@ function solve_re{T<:AbstractFloat}(model::Sims_Form{T},cutoff::T)
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs(diag(r[:S])./diag(r[:T])).<cutoff)
+  sel = (abs.(diag(r[:S])./diag(r[:T])).<cutoff)
   ordschur!(r,sel)
   s = r[:S]
   t = r[:T]
@@ -385,7 +385,7 @@ function solve_re{T<:AbstractFloat}(model::Sims_Form{T},cutoff::T)
   else
     resid = vq1pi-vq2pi*vq2pi'vq1pi
     (u1,d1,v1) = svd(resid)
-    unique = ((sumabs(d1) > 2*eps(T)*n) != true)
+    unique = ((sum(abs,d1) > 2*eps(T)*n) != true)
   end
   tmat = [eye(n-grc) -(uq2pi*(dq2pi\vq2pi')*vq1pi*dq1pi*uq1pi')']
   g0   = [tmat*t; zeros(grc,(n-grc)) eye(grc)]
