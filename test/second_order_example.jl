@@ -99,7 +99,7 @@ x = [x, x]
 
 # Solve for the nonstochastic steady state
 
-soln = nlsolve(model_eqns,x,autodiff = true,ftol = 1e-16)
+soln = nlsolve(model_eqns,x,ftol = 1e-16)
 ss = soln.zero
 
 # Compute the model's first derivatives at the nonstochastic steady state
@@ -148,10 +148,10 @@ responses_ls_2 = impulses(new_soln_ls,5,1)
 
 # Check to see that the two solutions are the same
 
-println(maxabs(new_soln_ls.hxx-soln_gk.hxx))
-println(maxabs(new_soln_ls.gxx-soln_gk.gxx))
+println(maximum(abs,new_soln_ls.hxx-soln_gk.hxx))
+println(maximum(abs,new_soln_ls.gxx-soln_gk.gxx))
 
-println(maxabs(responses_gk-responses_ls_1))
+println(maximum(abs,responses_gk-responses_ls_1))
 
 # Example two from Schmitt-Grohe and Uribe (2004)
 
@@ -285,7 +285,7 @@ x = [x, x]
 
 # Solve for the nonstochastic steady state
 
-soln = nlsolve(model2_eqns,x,autodiff = true, ftol = 1e-16)
+soln = nlsolve(model2_eqns,x,ftol = 1e-16)
 ss = soln.zero
 
 # Compute model's first derivatives at steady state
@@ -337,7 +337,7 @@ responses_ls_2 = impulses(new_soln_ls,5,1)
 
 # Check to see that the two solutions are the same
 
-println(maxabs(new_soln_ls.hxx-soln_gk.hxx))
-println(maxabs(new_soln_ls.gxx-soln_gk.gxx))
+println(maximum(abs,new_soln_ls.hxx-soln_gk.hxx))
+println(maximum(abs,new_soln_ls.gxx-soln_gk.gxx))
 
-println(maxabs(responses_gk-responses_ls_1))
+println(maximum(abs,responses_gk-responses_ls_1))

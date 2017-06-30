@@ -16,17 +16,17 @@ using SolveDSGE
 
 # Assign values to model parameters
 
-const beta = 0.99
-const mu = 0.5
-const phi_pi = 1.5
-const rho_u = 0.8
-const rho_v = 0.8
-const kappa = 0.1
-const phi_y = 0.5
-const sigma = [1.0 0.0; 0.0 1.0]
+beta = 0.99
+mu = 0.5
+phi_pi = 1.5
+rho_u = 0.8
+rho_v = 0.8
+kappa = 0.1
+phi_y = 0.5
+sigma = [1.0 0.0; 0.0 1.0]
 
-const cutoff = 1.0
-const tol    = 1e-8
+cutoff = 1.0
+tol    = 1e-8
 
 # Solve the model using Blanchard and Kahn (1980)
 
