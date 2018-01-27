@@ -504,7 +504,7 @@ function solve_re{T<:AbstractFloat}(model::Lombardo_Sutherland_Form,cutoff::T)
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs(diag(r[:S])./diag(r[:T])).<cutoff)
+  sel = (abs.(diag(r[:S])./diag(r[:T])).<cutoff)
   ordschur!(r,sel)
   s = r[:S]
   t = r[:T]

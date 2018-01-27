@@ -59,14 +59,14 @@ function convert_second_order{M<:Lombardo_Sutherland_Soln}(model::M)
   eta       = copy(model.eta)
   sigma     = copy(model.sigma)
   grc       = copy(model.grc)
-  soln_type = copy(model.soln_type)
+  soln_type = model.soln_type
 
   (n1,n2) = size(hx)
   (n3,n4) = size(gx)
 
-  new_hxx = reshape(vech_to_vec(n2)*hxx[1,:]',n2,n2)
+  new_hxx = reshape(vech_to_vec(n2)*hxx[1,:],n2,n2)
   for i = 2:n1
-    new_hxx = [new_hxx; reshape(vech_to_vec(n2)*hxx[i,:]',n2,n2)]
+    new_hxx = [new_hxx; reshape(vech_to_vec(n2)*hxx[i,:],n2,n2)]
   end
 
   (n5,n6) = size(new_hxx)
@@ -82,9 +82,9 @@ function convert_second_order{M<:Lombardo_Sutherland_Soln}(model::M)
 
   new_hxx = new_hxx/2
 
-  new_gxx = reshape(vech_to_vec(n4)*gxx[1,:]',n4,n4)
+  new_gxx = reshape(vech_to_vec(n4)*gxx[1,:],n4,n4)
   for i = 2:n3
-    new_gxx = [new_gxx; reshape(vech_to_vec(n4)*gxx[i,:]',n4,n4)]
+    new_gxx = [new_gxx; reshape(vech_to_vec(n4)*gxx[i,:],n4,n4)]
   end
 
   (n7,n8) = size(new_gxx)

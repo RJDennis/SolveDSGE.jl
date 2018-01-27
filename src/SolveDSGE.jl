@@ -6,6 +6,7 @@ include("vec_to_vech.jl")
 include("vech_to_vec.jl")
 include("derivative.jl")
 include("hessian.jl")
+include("newton.jl")
 include("doubling.jl")
 include("dlyap.jl")
 include("check_model.jl")
@@ -18,6 +19,7 @@ include("impulses.jl")
 
 export derivative,
        hessian,
+       newton,
        solve_re,
        check_model_form,
        convert_second_order
