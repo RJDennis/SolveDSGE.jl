@@ -1,4 +1,4 @@
-function reorder_complex_schur{T<:AbstractFloat}(s::Array{T,2},q::Array{T,2})
+function reorder_complex_schur(s::Array{T,2},q::Array{T,2}) where T<:AbstractFloat
 
   n = size(s,1)
 
@@ -33,7 +33,7 @@ function reorder_complex_schur{T<:AbstractFloat}(s::Array{T,2},q::Array{T,2})
 
 end
 
-function reorder_complex_schur{T<:AbstractFloat}(s::Array{Complex{T},2},q::Array{Complex{T},2})
+function reorder_complex_schur(s::Array{Complex{T},2},q::Array{Complex{T},2}) where T<:AbstractFloat
 
   n = size(s,1)
 
@@ -68,7 +68,7 @@ function reorder_complex_schur{T<:AbstractFloat}(s::Array{Complex{T},2},q::Array
 
 end
 
-function reorder_generalized_complex_schur{T<:AbstractFloat}(s::Array{T,2},t::Array{T,2},q::Array{T,2},z::Array{T,2})
+function reorder_generalized_complex_schur(s::Array{T,2},t::Array{T,2},q::Array{T,2},z::Array{T,2}) where T<:AbstractFloat
 
   # This draws on draws on Kressner, D., (2006), "BLOCK ALGORITHMS FOR REORDERING STANDARD AND GENERALIZED SCHUR FORMS", LAPACK WORKING NOTE 171
 
@@ -149,7 +149,7 @@ function reorder_generalized_complex_schur{T<:AbstractFloat}(s::Array{T,2},t::Ar
 
 end
 
-function reorder_generalized_complex_schur{T<:AbstractFloat}(s::Array{Complex{T},2},t::Array{Complex{T},2},q::Array{Complex{T},2},z::Array{Complex{T},2})
+function reorder_generalized_complex_schur(s::Array{Complex{T},2},t::Array{Complex{T},2},q::Array{Complex{T},2},z::Array{Complex{T},2}) where T<:AbstractFloat
 
   # This method draws on Kressner, D., (2006), "BLOCK ALGORITHMS FOR REORDERING STANDARD AND GENERALIZED SCHUR FORMS", LAPACK WORKING NOTE 171
 
