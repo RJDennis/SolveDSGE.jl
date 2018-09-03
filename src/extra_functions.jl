@@ -15,7 +15,7 @@ function tracem(x::Array{T, 2}) where T <: AbstractFloat
   y = zeros(m,1)  # We want this to be a 2-d array for subsequent matrix multiplication
 
   for i = 1:m
-    y[i,1] = trace(x[(n*(i-1)+1):i*n,1:n])
+    y[i,1] = tr(x[(n*(i-1)+1):i*n,1:n])
   end
 
   if trans == true
