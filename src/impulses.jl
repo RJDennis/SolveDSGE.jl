@@ -83,7 +83,7 @@ function compute_structural_re_impulses(solution,impulse_length,innovation_to_sh
   k     = copy(solution.k)
   sigma = copy(solution.sigma)
 
-  s = chol(sigma[:,:])'
+  s = cholesky(sigma[:,:]).U'
 
   n = size(p,1)
 

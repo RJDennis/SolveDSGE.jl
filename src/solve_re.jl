@@ -164,8 +164,8 @@ function solve_re(model::Binder_Pesaran_Form{T}, cutoff::T) where T <: AbstractF
 
   n = nx+ny
 
-  a = [zeros(nx,nx) eye(ny); -a1 a]
-  b = [eye(nx) zeros(nx,ny); zeros(ny,nx) b]
+  a = [zeros(nx,nx) I; -a1 a]
+  b = [I zeros(nx,ny); zeros(ny,nx) b]
   c = [zeros(nx,size(c,2)); -c]
 
   r = schur(complex(a),complex(b))
@@ -238,8 +238,8 @@ function solve_re(model::Binder_Pesaran_Form{T}, cutoff::T, tol::T) where T <: A
 
   nx = size(a1,1)
   ny = size(b,1)
-  aa = [zeros(nx,nx) eye(ny); -a1 a]
-  bb = [eye(nx) zeros(nx,ny); zeros(ny,nx) b]
+  aa = [zeros(nx,nx) I; -a1 a]
+  bb = [I zeros(nx,ny); zeros(ny,nx) b]
 
   lambda = eigvals(bb,aa)
 
@@ -330,13 +330,13 @@ function solve_re(model::Sims_Form{T}, cutoff::T) where T <: AbstractFloat
     non_zero_index_pi = findall(dq2pi .> 2*eps(T)*norm(q2pi))
     uq2pi = uq2pi[:,non_zero_index_pi]
     vq2pi = vq2pi[:,non_zero_index_pi]
-    dq2pi = diagm(dq2pi[non_zero_index_pi])
+    dq2pi = Matrix(Diagonal(dq2pi[non_zero_index_pi]))
 
     (uq2psi,dq2psi,vq2psi) = svd(q2psi)
     non_zero_index_psi = findall(dq2psi .> 2*eps(T)*norm(q2psi))
     uq2psi = uq2psi[:,non_zero_index_psi]
     vq2psi = vq2psi[:,non_zero_index_psi]
-    dq2psi = diagm(dq2psi[non_zero_index_psi])
+    dq2psi = Matrix(Diagonal(dq2psi[non_zero_index_psi]))
   end
 
   if isempty(non_zero_index_psi)
@@ -377,7 +377,7 @@ function solve_re(model::Sims_Form{T}, cutoff::T) where T <: AbstractFloat
     non_zero_index_dq1pi = findall(dq1pi .> 2*eps(T)*norm(q1pi))
     uq1pi = uq1pi[:,non_zero_index_dq1pi]
     vq1pi = vq1pi[:,non_zero_index_dq1pi]
-    dq1pi = diagm(dq1pi[non_zero_index_dq1pi])
+    dq1pi = Matrix(Diagonal(dq1pi[non_zero_index_dq1pi]))
   end
 
   if isempty(vq1pi)
@@ -387,8 +387,8 @@ function solve_re(model::Sims_Form{T}, cutoff::T) where T <: AbstractFloat
     (u1,d1,v1) = svd(resid)
     unique = ((sum(abs,d1) > 2*eps(T)*n) != true)
   end
-  tmat = [eye(n-grc) -(uq2pi*(dq2pi\vq2pi')*vq1pi*dq1pi*uq1pi')']
-  g0   = [tmat*t; zeros(grc,(n-grc)) eye(grc)]
+  tmat = [I -(uq2pi*(dq2pi\vq2pi')*vq1pi*dq1pi*uq1pi')']
+  g0   = [tmat*t; zeros(grc,(n-grc)) I]
   g1   = [tmat*s; zeros(grc,n)]
 
   g0i    = inv(g0)
