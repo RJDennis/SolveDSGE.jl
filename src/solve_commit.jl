@@ -1,4 +1,4 @@
-function solve_commit{T<:AbstractFloat,S<:Int}(model::State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
+function solve_commit(model::State_Space_Form{T}, obj::State_Space_Objective{T}, tol::T, maxiters::S) where {T <: AbstractFloat, S <: Int}
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)
@@ -55,7 +55,7 @@ function solve_commit{T<:AbstractFloat,S<:Int}(model::State_Space_Form{T},obj::S
 
 end
 
-function solve_commit{T<:AbstractFloat,S<:Int}(model::Generalized_State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
+function solve_commit(model::Generalized_State_Space_Form{T}, obj::State_Space_Objective{T}, tol::T, maxiters::S) where {T <: AbstractFloat, S <: Int}
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)
@@ -136,7 +136,7 @@ function solve_commit{T<:AbstractFloat,S<:Int}(model::Generalized_State_Space_Fo
 
 end
 
-function solve_commit{T<:AbstractFloat,S<:Int}(model::Structural_Form{T},obj::Structural_Objective{T},tol::T,maxiters::S)
+function solve_commit(model::Structural_Form{T}, obj::Structural_Objective{T}, tol::T, maxiters::S) where {T <: AbstractFloat, S <: Int}
 
   a0    = copy(model.a0)
   a1    = copy(model.a1)
@@ -203,7 +203,7 @@ function solve_commit{T<:AbstractFloat,S<:Int}(model::Structural_Form{T},obj::St
 
 end
 
-function solve_commit{T<:AbstractFloat,S<:Int}(model::Generalized_Structural_Form{T},obj::Structural_Objective{T},tol::T,maxiters::S)
+function solve_commit(model::Generalized_Structural_Form{T}, obj::Structural_Objective{T}, tol::T, maxiters::S) where {T <: AbstractFloat, S <: Int}
 
   a0    = copy(model.a0)
   a1    = copy(model.a1)

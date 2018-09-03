@@ -1,4 +1,4 @@
-function impulses{S<:Int}(solution::Perturbable_Soln,impulse_length::S,innovation_to_shock::S)
+function impulses(solution::Perturbable_Soln, impulse_length::S, innovation_to_shock::S) where S <: Int
 
   if isa(solution,Blanchard_Kahn_Soln) == true
     responses = compute_first_order_state_space_re_impulses(solution,impulse_length,innovation_to_shock)

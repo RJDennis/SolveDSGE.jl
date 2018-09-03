@@ -1,4 +1,4 @@
-function solve_timeless{T<:AbstractFloat,S<:Int}(model::State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
+function solve_timeless(model::State_Space_Form{T}, obj::State_Space_Objective{T}, tol::T, maxiters::S) where {T <: AbstractFloat, S <: Int}
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)
@@ -93,7 +93,7 @@ function solve_timeless{T<:AbstractFloat,S<:Int}(model::State_Space_Form{T},obj:
 
 end
 
-function solve_timeless{T<:AbstractFloat,S<:Int}(model::Generalized_State_Space_Form{T},obj::State_Space_Objective{T},tol::T,maxiters::S)
+function solve_timeless(model::Generalized_State_Space_Form{T}, obj::State_Space_Objective{T}, tol::T, maxiters::S) where {T <: AbstractFloat, S <: Int}
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)

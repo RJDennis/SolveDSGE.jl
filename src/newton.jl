@@ -1,4 +1,4 @@
-function newton(f::Function,x::Array{Float64,1},tol::Float64,maxiters::Int64)
+function newton(f::Function,x::Array{T,1},tol::T,maxiters::S) where {T<: AbstractFloat, S<: Int}
 
   n = length(x)
   x_new = similar(x)

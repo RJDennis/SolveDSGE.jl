@@ -1,4 +1,4 @@
-function solve_quasi{T<:AbstractFloat,S<:Int}(model::State_Space_Form{T},obj::State_Space_Objective{T},commit_prob::T,tol::T,maxiters::S)
+function solve_quasi(model::State_Space_Form{T}, obj::State_Space_Objective{T}, commit_prob::T, tol::T, maxiters::S) where {T <: AbstractFloat, S <: Int}
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)
@@ -85,7 +85,7 @@ function solve_quasi{T<:AbstractFloat,S<:Int}(model::State_Space_Form{T},obj::St
 
 end
 
-function solve_quasi{T<:AbstractFloat,S<:Int}(model::Generalized_State_Space_Form{T},obj::State_Space_Objective{T},commit_prob::T,tol::T,maxiters::S)
+function solve_quasi(model::Generalized_State_Space_Form{T}, obj::State_Space_Objective{T}, commit_prob::T, tol::T, maxiters::S) where {T <: AbstractFloat, S <: Int}
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)

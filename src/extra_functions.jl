@@ -1,4 +1,4 @@
-function tracem{T<:AbstractFloat}(x::Array{T,2})
+function tracem(x::Array{T, 2}) where T <: AbstractFloat
 
   # We require the number of rows to be greater than the number of columns, so that m is greater than one.
 
@@ -26,7 +26,7 @@ function tracem{T<:AbstractFloat}(x::Array{T,2})
 
 end
 
-function permutation{S<:Int}(n1::S,n2::S)
+function permutation(n1::S, n2::S) where S <: Int
 
   nn = n1*n2
   p = zeros(S,nn,nn)
@@ -48,7 +48,7 @@ function permutation{S<:Int}(n1::S,n2::S)
 
 end
 
-function convert_second_order{M<:Lombardo_Sutherland_Soln}(model::M)
+function convert_second_order(model::M) where M <: Lombardo_Sutherland_Soln
 
   ssh       = copy(model.ssh)
   hx        = copy(model.hx)

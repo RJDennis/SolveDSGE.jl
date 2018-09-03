@@ -1,4 +1,4 @@
-function vech_to_vec{S<:Int}(n::S)
+function vech_to_vec(n::S) where S <: Int
 
   a = zeros(Int,n,n)
   tracker = 1

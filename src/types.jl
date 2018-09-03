@@ -1,6 +1,6 @@
 # Types used for rational expectations
 
-type Blanchard_Kahn_Form{T<:AbstractFloat,S<:Integer}
+mutable struct Blanchard_Kahn_Form{T<:AbstractFloat,S<:Integer}
   # E_tY[t+1] = A*Y[t] + C*V[t+1]
   nx::S                               # Number of predetermined variables
   ny::S                               # Number of nonpredetermined variables
@@ -9,7 +9,7 @@ type Blanchard_Kahn_Form{T<:AbstractFloat,S<:Integer}
   sigma::Union{Array{T,2},Array{T,1}} # Innovation variance-covariance matrix
 end
 
-type Blanchard_Kahn_Soln{T<:AbstractFloat,S<:Integer}
+mutable struct Blanchard_Kahn_Soln{T<:AbstractFloat,S<:Integer}
   p::Union{Array{T,2},Array{T,1}}     # Transition matrix for predetermined variables
   k::Union{Array{T,2},Array{T,1}}     # Innovation loading matrix
   h::Union{Array{T,2},Array{T,1}}     # Decision rule matrix linking nonpredetermined variables to predetermined variables
@@ -18,7 +18,7 @@ type Blanchard_Kahn_Soln{T<:AbstractFloat,S<:Integer}
   soln_type::AbstractString                   # "determinate", "indeterminate", or "explosive"
 end
 
-type Klein_Form{T<:AbstractFloat,S<:Integer}
+mutable struct Klein_Form{T<:AbstractFloat,S<:Integer}
   # B*E_tY[t+1] = A*Y[t] + C*V[t+1]
   nx::S                               # Number of predetermined variables
   ny::S                               # Number of nonpredetermined variables
@@ -28,7 +28,7 @@ type Klein_Form{T<:AbstractFloat,S<:Integer}
   sigma::Union{Array{T,2},Array{T,1}} # Innovation variance-covariance matrix
 end
 
-type Klein_Soln{T<:AbstractFloat,S<:Integer}
+mutable struct Klein_Soln{T<:AbstractFloat,S<:Integer}
   p::Union{Array{T,2},Array{T,1}}     # Transition matrix for predetermined variables
   k::Union{Array{T,2},Array{T,1}}     # Innovation loading matrix
   h::Union{Array{T,2},Array{T,1}}     # Decision rule matrix linking nonpredetermined variables to predetermined variables
@@ -37,7 +37,7 @@ type Klein_Soln{T<:AbstractFloat,S<:Integer}
   soln_type::AbstractString                   # "determinate", "indeterminate", or "explosive"
 end
 
-type Binder_Pesaran_Form{T<:AbstractFloat}
+mutable struct Binder_Pesaran_Form{T<:AbstractFloat}
   # A*Y[t] = A1*Y[t-1]+ B*E_tY[t+1] + C*V[t]
   a::Array{T,2}                       # Contemporaneous matrix
   a1::Array{T,2}                      # Lag matrix matrix
@@ -46,7 +46,7 @@ type Binder_Pesaran_Form{T<:AbstractFloat}
   sigma::Union{Array{T,2},Array{T,1}} # Innovation variance-covariance matrix
 end
 
-type Binder_Pesaran_Soln{T<:AbstractFloat,S<:Integer}
+mutable struct Binder_Pesaran_Soln{T<:AbstractFloat,S<:Integer}
   p::Union{Array{T,2},Array{T,1}}     # Transition matrix for predetermined and nonpredetermined variables
   k::Union{Array{T,2},Array{T,1}}     # Innovation loading matrix
   sigma::Union{Array{T,2},Array{T,1}} # Innovation variance-covariance matrix
@@ -54,7 +54,7 @@ type Binder_Pesaran_Soln{T<:AbstractFloat,S<:Integer}
   soln_type::AbstractString                   # "determinate", "indeterminate", or "explosive"
 end
 
-type Sims_Form{T<:AbstractFloat}
+mutable struct Sims_Form{T<:AbstractFloat}
   # gamma0*Y[t] = gamma1*Y[t-1] + C + psi*V[t] + pi*Eta[t]
   gamma0::Array{T,2}                  # Lead matrix
   gamma1::Array{T,2}                  # Companion matrix
@@ -64,7 +64,7 @@ type Sims_Form{T<:AbstractFloat}
   sigma::Union{Array{T,2},Array{T,1}} # Innovation variance-covariance matrix
 end
 
-type Sims_Soln{T<:AbstractFloat,S<:Integer}
+mutable struct Sims_Soln{T<:AbstractFloat,S<:Integer}
   # y(t) = g1*y(t-1) + c + impact*z(t) + ywt*inv(I-fmat*inv(L))*fwt*z(t+1)
   g1::Union{Array{T,2},Array{T,1}}     # Transition matrix
   c::Array{T,1}                        # Constant vector
@@ -79,7 +79,7 @@ type Sims_Soln{T<:AbstractFloat,S<:Integer}
   uniqueness::Bool                     # true or false
 end
 
-type Gomme_Klein_Form{T<:AbstractFloat,S<:Integer}
+mutable struct Gomme_Klein_Form{T<:AbstractFloat,S<:Integer}
   nx::S                                # Number of predetermined variables
   ny::S                                # Number of nonpredetermined variables
   derivs::Array{T,2}                   # Matrix of first derivatives (n*2n, where n = nx+ny)
@@ -88,7 +88,7 @@ type Gomme_Klein_Form{T<:AbstractFloat,S<:Integer}
   sigma::Union{Array{T,2},Array{T,1}} # Innovation variance-covariance matrix
 end
 
-type Gomme_Klein_Soln{T<:AbstractFloat,S<:Integer}
+mutable struct Gomme_Klein_Soln{T<:AbstractFloat,S<:Integer}
   # x(t+1) = ssh + hx*x(t) + [kron(I,x(t))]'hxx*[kron(I,x(t))] + v(t+1)
   #   y(t) = ssg + gx*x(t) + [kron(I,x(t))]'gxx*[kron(I,x(t))]
   ssh::Array{T,1}                     # Intercepts in predetermined block
@@ -103,7 +103,7 @@ type Gomme_Klein_Soln{T<:AbstractFloat,S<:Integer}
   soln_type::AbstractString                   # "determinate", "indeterminate", or "explosive"
 end
 
-type Lombardo_Sutherland_Form{T<:AbstractFloat,S<:Integer}
+mutable struct Lombardo_Sutherland_Form{T<:AbstractFloat,S<:Integer}
   nx::S                                # Number of predetermined variables
   ny::S                                # Number of nonpredetermined variables
   derivs::Array{T,2}                   # Matrix of first derivatives (n*2n, where n = nx+ny)
@@ -112,7 +112,7 @@ type Lombardo_Sutherland_Form{T<:AbstractFloat,S<:Integer}
   sigma::Union{Array{T,2},Array{T,1}}  # Innovation variance-covariance matrix
 end
 
-type Lombardo_Sutherland_Soln{T<:AbstractFloat,S<:Integer}
+mutable struct Lombardo_Sutherland_Soln{T<:AbstractFloat,S<:Integer}
   ssh::Union{Array{T,2},Array{T,1}}   # Intercepts in predetermined block
   hx::Union{Array{T,2},Array{T,1}}    # Linear component in predetermined block
   hxx::Array{T,2}                     # Quadratic component in predetermined block
@@ -130,14 +130,14 @@ end
 
 # Types used for optimal policy
 
-type State_Space_Objective{T<:AbstractFloat}
+mutable struct State_Space_Objective{T<:AbstractFloat}
   beta::T
   q::Array{T,2}
   u::Array{T,2}
   r::Array{T,2}
 end
 
-type State_Space_Form{T<:AbstractFloat,S<:Integer}
+mutable struct State_Space_Form{T<:AbstractFloat,S<:Integer}
   # E_tY[t+1] = A*Y[t] + B*U[t] + C*V[t+1]
   nx::S             # Number of predetermined variables
   ny::S             # Number of nonpredetermined variables
@@ -147,7 +147,7 @@ type State_Space_Form{T<:AbstractFloat,S<:Integer}
   sigma::Array{T,2} # Innovation variance-covariance matrix
 end
 
-type Generalized_State_Space_Form{T<:AbstractFloat,S<:Integer}
+mutable struct Generalized_State_Space_Form{T<:AbstractFloat,S<:Integer}
   # E_tY[t+1] = A*Y[t] + B*U[t] + C*V[t+1]
   nx::S             # Number of predetermined variables
   ny::S             # Number of nonpredetermined variables
@@ -158,7 +158,7 @@ type Generalized_State_Space_Form{T<:AbstractFloat,S<:Integer}
   sigma::Array{T,2} # Innovation variance-covariance matrix
 end
 
-type State_Space_Soln{T<:AbstractFloat}
+mutable struct State_Space_Soln{T<:AbstractFloat}
   p::Array{T,2}     # Transition matrix for predetermined variables
   k::Array{T,2}     # Innovation loading matrix
   h::Array{T,2}
@@ -168,13 +168,13 @@ type State_Space_Soln{T<:AbstractFloat}
   converged::Bool
 end
 
-type Structural_Objective{T<:AbstractFloat}
+mutable struct Structural_Objective{T<:AbstractFloat}
   beta::T
   q::Array{T,2}
   r::Array{T,2}
 end
 
-type Structural_Form{T<:AbstractFloat}
+mutable struct Structural_Form{T<:AbstractFloat}
   # E_tY[t+1] = A*Y[t] + B*U[t] + C*V[t+1]
   a0::Array{T,2}     # Companion matrix
   a1::Array{T,2}     # Policy loadings
@@ -184,7 +184,7 @@ type Structural_Form{T<:AbstractFloat}
   sigma::Array{T,2}  # Innovation variance-covariance matrix
 end
 
-type Generalized_Structural_Form{T<:AbstractFloat}
+mutable struct Generalized_Structural_Form{T<:AbstractFloat}
   # E_tY[t+1] = A*Y[t] + B*U[t] + C*V[t+1]
   a0::Array{T,2}     # Companion matrix
   a1::Array{T,2}     # Policy loadings
@@ -195,7 +195,7 @@ type Generalized_Structural_Form{T<:AbstractFloat}
   sigma::Array{T,2}  # Innovation variance-covariance matrix
 end
 
-type Structural_Soln{T<:AbstractFloat}
+mutable struct Structural_Soln{T<:AbstractFloat}
   p::Array{T,2}     # Transition matrix for predetermined variables
   k::Array{T,2}     # Innovation loading matrix
   v::Array{T,2}

@@ -1,4 +1,4 @@
-function hessian{T<:AbstractFloat}(f::Function,x::Array{T,1})
+function hessian(f::Function, x::Array{T, 1}) where T <: AbstractFloat
 
   m = length(x)
 

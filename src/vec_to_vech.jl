@@ -1,4 +1,4 @@
-function vec_to_vech{S<:Int}(n::S)
+function vec_to_vech(n::S) where S <: Int
 
   x = zeros(Int,round(Int,(n*(n+1)/2)),n*n)
 

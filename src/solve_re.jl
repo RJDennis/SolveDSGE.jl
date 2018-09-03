@@ -1,4 +1,4 @@
-function solve_re{T<:AbstractFloat}(model::Blanchard_Kahn_Form{T},cutoff::T)
+function solve_re(model::Blanchard_Kahn_Form{T}, cutoff::T) where T <: AbstractFloat
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)
@@ -46,7 +46,7 @@ function solve_re{T<:AbstractFloat}(model::Blanchard_Kahn_Form{T},cutoff::T)
 
 end
 
-function solve_re{T<:AbstractFloat}(model::Blanchard_Kahn_Form{T},cutoff::T,tol::T)
+function solve_re(model::Blanchard_Kahn_Form{T}, cutoff::T, tol::T) where T <: AbstractFloat
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)
@@ -101,7 +101,7 @@ function solve_re{T<:AbstractFloat}(model::Blanchard_Kahn_Form{T},cutoff::T,tol:
 
 end
 
-function solve_re{T<:AbstractFloat}(model::Klein_Form{T},cutoff::T)
+function solve_re(model::Klein_Form{T}, cutoff::T) where T <: AbstractFloat
 
   nx    = copy(model.nx)
   ny    = copy(model.ny)
@@ -151,7 +151,7 @@ function solve_re{T<:AbstractFloat}(model::Klein_Form{T},cutoff::T)
 
 end
 
-function solve_re{T<:AbstractFloat}(model::Binder_Pesaran_Form{T},cutoff::T)
+function solve_re(model::Binder_Pesaran_Form{T}, cutoff::T) where T <: AbstractFloat
 
   a     = copy(model.a)
   a1    = copy(model.a1)
@@ -214,7 +214,7 @@ function solve_re{T<:AbstractFloat}(model::Binder_Pesaran_Form{T},cutoff::T)
 
 end
 
-function solve_re{T<:AbstractFloat}(model::Binder_Pesaran_Form{T},cutoff::T,tol::T)
+function solve_re(model::Binder_Pesaran_Form{T}, cutoff::T, tol::T) where T <: AbstractFloat
 
   a     = copy(model.a)
   a1    = copy(model.a1)
@@ -265,7 +265,7 @@ function solve_re{T<:AbstractFloat}(model::Binder_Pesaran_Form{T},cutoff::T,tol:
 
 end
 
-function solve_re{T<:AbstractFloat}(model::Sims_Form{T},cutoff::T)
+function solve_re(model::Sims_Form{T}, cutoff::T) where T <: AbstractFloat
 
   # This function is an implementation of a routine written by
   # Christopher A. Sims (http://www.princeton.edu/~sims/)
@@ -405,7 +405,7 @@ function solve_re{T<:AbstractFloat}(model::Sims_Form{T},cutoff::T)
 
 end
 
-function solve_re{T<:AbstractFloat}(model::Gomme_Klein_Form,cutoff::T)
+function solve_re(model::Gomme_Klein_Form, cutoff::T) where T <: AbstractFloat
 
   nx     = copy(model.nx)
   ny     = copy(model.ny)
@@ -482,7 +482,7 @@ function solve_re{T<:AbstractFloat}(model::Gomme_Klein_Form,cutoff::T)
 
 end
 
-function solve_re{T<:AbstractFloat}(model::Lombardo_Sutherland_Form,cutoff::T)
+function solve_re(model::Lombardo_Sutherland_Form, cutoff::T) where T <: AbstractFloat
 
   nx     = copy(model.nx)
   ny     = copy(model.ny)

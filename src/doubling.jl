@@ -1,4 +1,4 @@
-function doubling{T<:AbstractFloat,S<:Int}(a::Array{T,2},b::Array{T,2},g::Array{T,2},tol::T,maxiters::S)
+function doubling(a::Array{T, 2}, b::Array{T, 2}, g::Array{T, 2}, tol::T, maxiters::S) where {T <: AbstractFloat, S <: Int}
 
   retcode = 0
   iters = 1
