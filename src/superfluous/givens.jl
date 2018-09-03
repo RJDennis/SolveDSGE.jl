@@ -1,6 +1,6 @@
 import Base.givens
 
-function givens{T<:AbstractFloat}(u::Array{T,1})
+function givens(u::Array{T,1}) where T<:AbstractFloat
 
   if length(u) != 2
     error("givens: u should contain just two elements")
@@ -28,7 +28,7 @@ function givens{T<:AbstractFloat}(u::Array{T,1})
 
 end
 
-function givens{T<:AbstractFloat}(u::Array{Complex{T},1})
+function givens(u::Array{Complex{T},1}) where T<:AbstractFloat
 
   if length(u) != 2
     error("givens: u should contain just two elements")

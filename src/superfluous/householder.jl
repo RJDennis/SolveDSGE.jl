@@ -1,4 +1,4 @@
-function householder{T<:AbstractFloat}(a::Array{T,1})
+function householder(a::Array{T,1}) where T<:AbstractFloat
 
   n = length(a)
   m = 1
@@ -23,7 +23,7 @@ function householder{T<:AbstractFloat}(a::Array{T,1})
 
 end
 
-function  householder{T<:AbstractFloat}(a::Array{Complex{T},1})
+function  householder(a::Array{Complex{T},1}) where T<:AbstractFloat
 
   n = length(a)
   m = 1
@@ -48,7 +48,7 @@ function  householder{T<:AbstractFloat}(a::Array{Complex{T},1})
 
 end
 
-function  householder{T<:AbstractFloat}(a::Array{T,2})
+function  householder(a::Array{T,2}) where T<:AbstractFloat
 
   (n,m) = size(a)
 
@@ -72,7 +72,7 @@ function  householder{T<:AbstractFloat}(a::Array{T,2})
 
 end
 
-function  householder{T<:AbstractFloat}(a::Array{Complex{T},2})
+function  householder(a::Array{Complex{T},2}) where T<:AbstractFloat
 
   (n,m) = size(a)
 
