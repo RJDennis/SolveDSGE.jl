@@ -327,13 +327,13 @@ function solve_re(model::Sims_Form{T}, cutoff::T) where T <: AbstractFloat
     non_zero_index_psi = []
   else
     (uq2pi,dq2pi,vq2pi) = svd(q2pi)
-    non_zero_index_pi = find(dq2pi .> 2*eps(T)*norm(q2pi))
+    non_zero_index_pi = findall(dq2pi .> 2*eps(T)*norm(q2pi))
     uq2pi = uq2pi[:,non_zero_index_pi]
     vq2pi = vq2pi[:,non_zero_index_pi]
     dq2pi = diagm(dq2pi[non_zero_index_pi])
 
     (uq2psi,dq2psi,vq2psi) = svd(q2psi)
-    non_zero_index_psi = find(dq2psi .> 2*eps(T)*norm(q2psi))
+    non_zero_index_psi = findall(dq2psi .> 2*eps(T)*norm(q2psi))
     uq2psi = uq2psi[:,non_zero_index_psi]
     vq2psi = vq2psi[:,non_zero_index_psi]
     dq2psi = diagm(dq2psi[non_zero_index_psi])
@@ -357,7 +357,7 @@ function solve_re(model::Sims_Form{T}, cutoff::T) where T <: AbstractFloat
 
     end
     (uh,dh,vh) = svd(h)
-    non_zero_index_dh = find(dh .> 2*eps(T)*norm(h))
+    non_zero_index_dh = findall(dh .> 2*eps(T)*norm(h))
     uh = uh[:,non_zero_index_dh]
     vh = vh[:,non_zero_index_dh]
     dh = diagm(dh[non_zero_index_dh])
@@ -374,7 +374,7 @@ function solve_re(model::Sims_Form{T}, cutoff::T) where T <: AbstractFloat
   else
     q1pi = q1*pi
     (uq1pi,dq1pi,vq1pi) = svd(q1pi)
-    non_zero_index_dq1pi = find(dq1pi .> 2*eps(T)*norm(q1pi))
+    non_zero_index_dq1pi = findall(dq1pi .> 2*eps(T)*norm(q1pi))
     uq1pi = uq1pi[:,non_zero_index_dq1pi]
     vq1pi = vq1pi[:,non_zero_index_dq1pi]
     dq1pi = diagm(dq1pi[non_zero_index_dq1pi])
