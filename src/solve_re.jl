@@ -8,14 +8,14 @@ function solve_re(model::Blanchard_Kahn_Form{T}, cutoff::T) where T <: AbstractF
 
   n = nx+ny
 
-  r = schurfact(complex(a))
+  r = schur(complex(a))
 
   # Reorder the eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs.(r[:values]) .< cutoff)
+  sel = (abs.(r.values) .< cutoff)
   ordschur!(r,sel)
-  s = r[:T]
-  q = r[:Z]' # So now q*a*q' = s
+  s = r.T
+  q = r.Z' # So now q*a*q' = s
 
   # Calculate the number of unstable eigenvalues
 
@@ -82,7 +82,7 @@ function solve_re(model::Blanchard_Kahn_Form{T}, cutoff::T, tol::T) where T <: A
   a22 = a[(nx+1):n,(nx+1):n]
 
   h0 = -a22\a21
-  h = Array{T}(ny,nx)
+  h = Array{T}(undef,ny,nx)
   len = Inf
   while len > tol
 
@@ -112,16 +112,16 @@ function solve_re(model::Klein_Form{T}, cutoff::T) where T <: AbstractFloat
 
   n = nx+ny
 
-  r = schurfact(complex(a),complex(b))
+  r = schur(complex(a),complex(b))
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs.(diag(r[:S])./diag(r[:T])).<cutoff)
+  sel = (abs.(diag(r.S)./diag(r.T)).<cutoff)
   ordschur!(r,sel)
-  s = r[:S]
-  t = r[:T]
-  q = r[:Q]'  # So now q*a*z = s and q*b*z = t
-  z = r[:Z]
+  s = r.S
+  t = r.T
+  q = r.Q'  # So now q*a*z = s and q*b*z = t
+  z = r.Z
 
   # Calculate the number of unstable eigenvalues
 
@@ -168,16 +168,16 @@ function solve_re(model::Binder_Pesaran_Form{T}, cutoff::T) where T <: AbstractF
   b = [eye(nx) zeros(nx,ny); zeros(ny,nx) b]
   c = [zeros(nx,size(c,2)); -c]
 
-  r = schurfact(complex(a),complex(b))
+  r = schur(complex(a),complex(b))
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs.(diag(r[:S])./diag(r[:T])).<cutoff)
+  sel = (abs.(diag(r.S)./diag(r.T)).<cutoff)
   ordschur!(r,sel)
-  s = r[:S]
-  t = r[:T]
-  q = r[:Q]'  # So now q*a*z = s and q*b*z = t
-  z = r[:Z]
+  s = r.S
+  t = r.T
+  q = r.Q'  # So now q*a*z = s and q*b*z = t
+  z = r.Z
 
   # Calculate the number of unstable eigenvalues
 
@@ -282,16 +282,16 @@ function solve_re(model::Sims_Form{T}, cutoff::T) where T <: AbstractFloat
 
   n  = size(gamma0,1)
 
-  r = schurfact(complex(gamma1),complex(gamma0))
+  r = schur(complex(gamma1),complex(gamma0))
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs.(diag(r[:S])./diag(r[:T])).<cutoff)
+  sel = (abs.(diag(r.S)./diag(r.T)).<cutoff)
   ordschur!(r,sel)
-  s = r[:S]
-  t = r[:T]
-  q = r[:Q]'  # So now q*a*z = s and q*b*z = t
-  z = r[:Z]
+  s = r.S
+  t = r.T
+  q = r.Q'  # So now q*a*z = s and q*b*z = t
+  z = r.Z
 
   # Calculate the number of unstable eigenvalues
 
@@ -500,16 +500,16 @@ function solve_re(model::Lombardo_Sutherland_Form, cutoff::T) where T <: Abstrac
   a2 = deriv1[1:n,1:n]
   c  = [eta; zeros(ny,size(eta,2))]
 
-  r = schurfact(complex(a2),complex(a1))
+  r = schur(complex(a2),complex(a1))
 
   # Reorder the generalized eigenvalues so that those with modulus greater than "cutoff" reside at the bottom.
 
-  sel = (abs.(diag(r[:S])./diag(r[:T])).<cutoff)
+  sel = (abs.(diag(r.S)./diag(r.T)).<cutoff)
   ordschur!(r,sel)
-  s = r[:S]
-  t = r[:T]
-  q = r[:Q]'  # So now q*a*z = s and q*b*z = t
-  z = r[:Z]
+  s = r.S
+  t = r.T
+  q = r.Q'  # So now q*a*z = s and q*b*z = t
+  z = r.Z
 
   # Calculate the number of unstable eigenvalues
 

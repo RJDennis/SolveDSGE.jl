@@ -1,4 +1,5 @@
 module SolveDSGE
+using LinearAlgebra
 
 include("types.jl")
 include("extra_functions.jl")

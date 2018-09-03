@@ -29,7 +29,7 @@ function compute_first_order_state_space_re_impulses(solution,impulse_length,inn
   nx = size(p,1)
   ny = size(h,1)
 
-  s = chol(sigma[:,:])'
+  s = cholesky(sigma[:,:]).U'
 
   responses = zeros(nx+ny,impulse_length)
   responses[1:nx,1]           = (k*s)[:,innovation_to_shock]
