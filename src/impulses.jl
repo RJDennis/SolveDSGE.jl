@@ -132,19 +132,19 @@ function compute_second_order_state_space_re_impulses(solution,impulse_length,in
   eta   = copy(solution.eta)
   sigma = copy(solution.sigma)
 
-  s = chol(sigma[:,:])'
+  s = cholesky(sigma[:,:]).U'
 
   nx = size(hx,1)
   ny = size(gx,1)
 
   responses = zeros(nx+ny,impulse_length)
   responses[1:nx,1]           = (eta*convert(Array,s))[:,innovation_to_shock]
-  responses[(nx+1):(nx+ny),1] = gx*responses[1:nx,1] + 0.5*(kron(eye(ny),responses[1:nx,1]'))*gxx*responses[1:nx,1]
+  responses[(nx+1):(nx+ny),1] = gx*responses[1:nx,1] + 0.5*(kron(Matrix(1.0I,ny,ny),responses[1:nx,1]'))*gxx*responses[1:nx,1]
 
   for i = 2:impulse_length
 
-    responses[1:nx,i]           = hx*responses[1:nx,i-1] + 0.5*(kron(eye(nx),responses[1:nx,i-1]'))*hxx*responses[1:nx,i-1]
-    responses[(nx+1):(nx+ny),i] = gx*responses[1:nx,i]   + 0.5*(kron(eye(ny),responses[1:nx,i-1]'))*gxx*responses[1:nx,i-1]
+    responses[1:nx,i]           = hx*responses[1:nx,i-1] + 0.5*(kron(Matrix(1.0I,nx,nx),responses[1:nx,i-1]'))*hxx*responses[1:nx,i-1]
+    responses[(nx+1):(nx+ny),i] = gx*responses[1:nx,i]   + 0.5*(kron(Matrix(1.0I,ny,ny),responses[1:nx,i-1]'))*gxx*responses[1:nx,i-1]
 
   end
 

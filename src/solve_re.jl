@@ -454,15 +454,15 @@ function solve_re(model::Gomme_Klein_Form, cutoff::T) where T <: AbstractFloat
 
   # Set up the LP problem needed to construct the matrices on the second-order states
 
-  m = [hx; gx*hx; eye(nx); gx]
-  q = kron(eye(n),m')*hes*m
-  b1 = kron(fxp,eye(nx))
-  b2 = kron(fyp,eye(nx))
-  b4 = kron(fy,eye(nx))
-  c1 = kron(eye(ny),hx')
-  c2 = kron(gx,eye(nx))
+  m = [hx; gx*hx; I; gx]
+  q = kron(Matrix(1.0I,n,n),m')*hes*m
+  b1 = kron(fxp,Matrix(1.0I,nx,nx))
+  b2 = kron(fyp,Matrix(1.0I,nx,nx))
+  b4 = kron(fy,Matrix(1.0I,nx,nx))
+  c1 = kron(Matrix(1.0I,ny,ny,hx'))
+  c2 = kron(gx,Matrix(1.0I,nx,nx))
 
-  qq = [kron(eye(nx),b4)+kron(hx',b2*c1) kron(eye(nx),b1+b2*c2)]
+  qq = [kron(Matrix(1.0I,nx,nx),b4)+kron(hx',b2*c1) kron(Matrix(1.0I,nx,nx),b1+b2*c2)]
   xx = -qq\vec(q)
   gxx = reshape(xx[1:nx^2*ny],nx*ny,nx)
   hxx = reshape(xx[nx^2*ny+1:n*nx*nx],nx^2,nx)
@@ -470,8 +470,8 @@ function solve_re(model::Gomme_Klein_Form, cutoff::T) where T <: AbstractFloat
   # Set up the LP problem needed to construct the intercepts, which contain the volatility effects
 
   qq = [fxp+fyp*gx fyp+fy]
-  nn = [eye(nx); gx; zeros(n,nx)]
-  q = fyp*tracem(kron(eye(ny),eta*(sigma')*eta')*gxx)+tracem(kron(eye(n),nn')*hes*nn*eta*(sigma')*eta')
+  nn = [I; gx; zeros(n,nx)]
+  q = fyp*tracem(kron(Matrix(1.0I,ny,ny),eta*(sigma')*eta')*gxx)+tracem(kron(Matrix(1.0I,n,n),nn')*hes*nn*eta*(sigma')*eta')
   ss = -qq\q
   ssh = ss[1:nx]
   ssg = ss[nx+1:n]
@@ -539,7 +539,7 @@ function solve_re(model::Lombardo_Sutherland_Form, cutoff::T) where T <: Abstrac
 
   phi   = real((z11/t11)*(s11/z11))
   gamma = c[1:nx,:]
-  omega = [eye(nx); real(z21/z11)]  # Defines [x; y] as a function of [x]
+  omega = [Matrix(1.0I,nx,nx); real(z21/z11)]  # Defines [x; y] as a function of [x]
 
   soln_type = "determinate"
   if grc < ny
@@ -596,7 +596,7 @@ function solve_re(model::Lombardo_Sutherland_Form, cutoff::T) where T <: Abstrac
   hs = h[1:nx,:]
   hu = h[nx+1:n,:]
 
-  m = reshape((kron(phi_tilda',t22)-kron(eye(round(Int,(nx*(nx+1)/2))),s22))\vec(gu),ny,round(Int,(nx*(nx+1)/2)))
+  m = reshape((kron(phi_tilda',t22)-kron(Matrix(1.0I,round(Int,(nx*(nx+1)/2)),round(Int,(nx*(nx+1)/2))),s22))\vec(gu),ny,round(Int,(nx*(nx+1)/2)))
 
   hx  = real(z11*(t11\s11)/z11)
   hxx = real(-(z11*(t11\s11)/z11)*z12*m + z11*(t11\(s12*m-t12*m*phi_tilda+gs)) + z12*m*phi_tilda)
@@ -604,9 +604,9 @@ function solve_re(model::Lombardo_Sutherland_Form, cutoff::T) where T <: Abstrac
   gx  = real(z21/z11)
   gxx = real((z22-z21*(z11\z12))*m)
 
-  vbar = (eye(round(Int,(nx*(nx+1)/2)))-phi_tilda)\gamma_tilda
-  m3   = (eye(ny)-s22\t22)\(s22\(gu*vbar+hu))
-  m2   = reshape((eye(round(Int,(nx*(nx+1)/2)*ny))-kron(phi_tilda',s22\t22))\(vec(s22\gu)),ny,round(Int,(nx*(nx+1)/2)))
+  vbar = (Matrix(1.0I,round(Int,(nx*(nx+1)/2)),round(Int,(nx*(nx+1)/2)))-phi_tilda)\gamma_tilda
+  m3   = (Matrix(1.0I,ny,ny)-s22\t22)\(s22\(gu*vbar+hu))
+  m2   = reshape((Matrix(1.0I,round(Int,(nx*(nx+1)/2)*ny),round(Int,(nx*(nx+1)/2)*ny))-kron(phi_tilda',s22\t22))\(vec(s22\gu)),ny,round(Int,(nx*(nx+1)/2)))
 
   p4 = -real(z22'\(m3-m2*vbar))
   p3 = -z22'\m2
