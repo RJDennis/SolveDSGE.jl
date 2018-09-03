@@ -459,7 +459,7 @@ function solve_re(model::Gomme_Klein_Form, cutoff::T) where T <: AbstractFloat
   b1 = kron(fxp,Matrix(1.0I,nx,nx))
   b2 = kron(fyp,Matrix(1.0I,nx,nx))
   b4 = kron(fy,Matrix(1.0I,nx,nx))
-  c1 = kron(Matrix(1.0I,ny,ny,hx'))
+  c1 = kron(Matrix(1.0I,ny,ny),hx')
   c2 = kron(gx,Matrix(1.0I,nx,nx))
 
   qq = [kron(Matrix(1.0I,nx,nx),b4)+kron(hx',b2*c1) kron(Matrix(1.0I,nx,nx),b1+b2*c2)]
