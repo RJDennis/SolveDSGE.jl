@@ -1,3 +1,32 @@
+function compute_steady_state(model::REModel, x::Array{T,1}, tol::T, maxiters::S) where {T <: AbstractFloat,S <: Integer}
+
+    # Uses NLsolve (add this using the Package Manager if you don't have it) to
+    # solve for the model's deterministic steady state
+
+    #equations = model.nlsolve_static_function
+    equations = model.static_function
+    soln = nlsolve(equations, x, xtol = tol, iterations = maxiters, autodiff = :forward, inplace = false)
+
+    return soln.zero
+
+end
+
+##################################################################################
+
+function compute_linearization(model::REModel, steady_state::Array{T,1}) where {T <: AbstractFloat}
+
+    # This function produces the Jacobian of the model's equations.
+
+    equations = model.dynamic_function
+    ns = model.number_shocks
+
+    x = [steady_state;steady_state;zeros(ns)]
+    d = ForwardDiff.jacobian(equations, x)
+
+    return d
+
+end
+
 function solve_first_order(model::REModel,scheme::PerturbationScheme) # Follows Klein (2000)
 
     if scheme.order != "first"
