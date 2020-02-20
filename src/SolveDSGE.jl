@@ -60,14 +60,16 @@ export chebyshev_nodes,
 #### Old functions to retain backward compatability
 
 include("old/types.jl")
-include("old/extra_functions.jl")
+#include("old/tracem.jl")
+include("old/permutation.jl")
+include("old/convert_second_order.jl")
 include("old/vec_to_vech.jl")
 include("old/vech_to_vec.jl")
 include("old/derivative.jl")
 include("old/hessian.jl")
 include("old/newton.jl")
 include("old/doubling.jl")
-include("old/dlyap.jl")
+#include("old/dlyap.jl")
 include("old/check_model.jl")
 include("old/solve_re.jl")
 include("old/solve_disc.jl")
