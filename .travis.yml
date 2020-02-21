@@ -5,10 +5,8 @@ julia:
 
 before_script:
   - julia -e 'using Pkg; 
-              Pkg.add(PackageSpec(url="https://github.com/RJDennis/ChebyshevApprox.jl"))'
-  - julia -e 'using Pkg; 
-              Pkg.add(PackageSpec(url="https://github.com/RJDennis/SmolyakApprox.jl"))'
-  - julia -e 'using Pkg; 
+              Pkg.add(PackageSpec(url="https://github.com/RJDennis/ChebyshevApprox.jl"));
+              Pkg.add(PackageSpec(url="https://github.com/RJDennis/SmolyakApprox.jl"));
               Pkg.add(PackageSpec(url="https://github.com/RJDennis/PiecewiseLinearApprox.jl"))'
 
 #script:
