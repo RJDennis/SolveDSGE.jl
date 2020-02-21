@@ -5,9 +5,9 @@ julia:
 
 before_script:
   - julia -e 'using Pkg; 
-              Pkg.clone("https://github.com/RJDennis/ChebyshevApprox.jl");
-              Pkg.clone("https://github.com/RJDennis/SmolyakApprox.jl");
-              Pkg.clone("https://github.com/RJDennis/PiecewiseLinearApprox.jl")'
+              pkg"add https://github.com/RJDennis/ChebyshevApprox.jl";
+              pkg"add https://github.com/RJDennis/SmolyakApprox.jl";
+              pkg"add https://github.com/RJDennis/PiecewiseLinearApprox.jl"'
 
 #script:
 #    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
