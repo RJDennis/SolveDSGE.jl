@@ -5,9 +5,9 @@ julia:
 
 before_script:
   - julia -e 'using Pkg; 
-              Pkg.add(PackageSpec(url="https://github.com/RJDennis/SmolyakApprox.jl"));
               Pkg.add(PackageSpec(url="https://github.com/RJDennis/PiecewiseLinearApprox.jl"))'
 #Pkg.add(PackageSpec(url="https://github.com/RJDennis/ChebyshevApprox.jl"));
+#Pkg.add(PackageSpec(url="https://github.com/RJDennis/SmolyakApprox.jl"));
 #script:
 #    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 #    - julia -e 'Pkg.clone(pwd()); Pkg.test("SolveDSGE", coverage=true)'
