@@ -3,12 +3,6 @@ julia:
   - 0.7
   - 1.0
 
-before_script:
-  - julia -e 'using Pkg; 
-              pkg"add https://github.com/RJDennis/ChebyshevApprox.jl";
-              pkg"add https://github.com/RJDennis/SmolyakApprox.jl";
-              pkg"add https://github.com/RJDennis/PiecewiseLinearApprox.jl"'
-
 #script:
 #    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 #    - julia -e 'Pkg.clone(pwd()); Pkg.test("SolveDSGE", coverage=true)'
