@@ -1,0 +1,921 @@
+
+\documentclass[notitlepage,11pt]{article}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{makeidx}
+\usepackage{multicol}
+
+\setcounter{MaxMatrixCols}{10}
+%TCIDATA{OutputFilter=Latex.dll}
+%TCIDATA{Version=5.50.0.2960}
+%TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
+%TCIDATA{BibliographyScheme=Manual}
+%TCIDATA{LastRevised=Thursday, February 27, 2020 22:34:53}
+%TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
+%TCIDATA{Language=American English}
+
+\geometry{left=1in,right=1in,top=1.25in,bottom=1in}
+\input{tcilatex}
+\begin{document}
+
+\author{Richard Dennis\thanks{%
+Address for Correspondence: Adam Smith Business School, University of
+Glasgow, Main Building, University Avenue, Glasgow G12 8QQ; email:
+richard.dennis@glasgow.ac.uk.} \\
+%EndAName
+University of Glasgow and CAMA}
+\title{SolveDSGE v0.3.0 --- A User Guide}
+\date{February 2020}
+\maketitle
+
+\begin{abstract}
+SolveDSGE is a Julia package for solving nonlinear Dynamic Stochastic
+General Equilibrium models. \ A varietry of solution methods are available,
+and they are interchangable so that one solution can be used subsequently as
+an initialization to obtain a more accurate solution.\noindent\ \ The
+package can compute one- second- and third-order perturbation solutions and
+Chebyshev-based, Smolyak-based and piecewise linear-based projection
+solutions. \ Once a model has been solved, the package can used used to
+simulate data and/or compute impulse response functions.
+
+\vspace{0.12in}\noindent {JEL Classification: E3, E4, E5.}
+\end{abstract}
+
+\thispagestyle{empty}\newpage \setlength{\baselineskip}{18.95pt}%
+\setcounter{page}{1}
+
+\section{Introduction}
+
+SolveDSGE is a framework for solving and analyzing Dynamic Stochastic
+General Equilibrium (DSGE) models that is implemented in the programming
+language Julia. \ SolveDSGE will solve nonlinear DSGE models using
+perturbation methods, producing solutions that are accurate to first,
+second, and third order, but this is not its focus. \ The package's focus is
+on applying projection methods to obtain solutions that are globally
+accurate.
+
+Obtaining globally accurate solutions to nonlinear DSGE models is
+notoriously difficult. \ Solutions are invariably slow to obtain and
+model-specific characteristics are often exploited to speed up the solution
+process. \ SolveDSGE does not exploit model-specific characteristics in
+order to solve a model. \ Instead, SolveDSGE applies the same general
+solution strategy to all models. \ Nonetheless, making use of Julia's speed,
+SolveDSGE allows models to be solved \textquotedblleft relatively
+quickly\textquotedblright , and it provides users with an easy, unified, way
+of organizing and expressing their model. \ At the users request, globally
+accurate\ solutions can be obtained using Chebyshev polynomials, Smolyak
+polynomials, or piecewise linear approximations, with the solution obtained
+from one approximation scheme able to be used as an initialization for the
+others, allowing greater speed and accuracy to be obtained via a form of
+homotophy.
+
+To use SolveDSGE to solve a model, two files must be supplied. \ The first
+file (the model file) summarizes the model to be solved. \ The second file
+(the solution file) reads the model file, solves the model, and performs any
+post-solution analysis.
+
+Quite a lot of time and effort has gone into writing SolveDSGE, together
+with the underlying modules: ChebyshevApprox, SmolyakApprox, and
+PiecewiseLinearApprox, but it is far from perfect. \ SolveDSGE may not be
+able to solve your model, or it may not obtain a solution quickly enough to
+be useful to you. \ You are welcome to suggest improvements to fix bugs or
+add functionality. \ At the same time, I am hopeful that you will find the
+package useful for your research. \ If it is, then please cite this User
+Guide and add an acknowledgement of SolveDSGE to your paper/report.
+
+\section{The model file}
+
+SolveDSGE requires that the model that is to be solved be stored in a model
+file. \ The model file is simply a text file so there is nothing
+particularly special about it. \ Every model file must contain the following
+five information categories: \textquotedblleft states:\textquotedblright ,
+\textquotedblleft jumps:\textquotedblright , \textquotedblleft
+shocks:\textquotedblright , \textquotedblleft parameters:\textquotedblright
+, and \textquotedblleft equations:\textquotedblright ; each category name
+must end with a colon. \ Each category will begin with its name, such as
+\textquotedblleft states:\textquotedblright\ and conclude with an
+\textquotedblleft end\textquotedblright . \ The model file can present these
+five categories in any order.
+
+The information in each category can be presented with one element per line,
+or with multiple elements on each line with each element separated by either
+a comma or a semi-colon. \ So if the jump variables in the model are labor,
+consumption, and output, then this could be presented in a variety of ways,
+such as:
+
+\bigskip
+
+\textit{jumps:}
+
+\textit{labor}
+
+\textit{consumption}
+
+\textit{output}
+
+\textit{end}
+
+\bigskip
+
+or:
+
+\textit{jumps:}
+
+\textit{labor, consumption, output}
+
+\textit{end}
+
+\bigskip
+
+or:
+
+\textit{jumps:}
+
+\textit{labor; consumption, output}
+
+\textit{end}
+
+\bigskip
+
+The first lag of a variable is denoted with a -1, so the lag of consumption
+is consumption(-1). \ Similarly the first lead of a variable is denoted with
+a +1, so the lead of consumption is denoted consumption(+1). \ The first lag
+of any model variable is automatically included as a state variable, second
+and higher lags should be given a name, defined by an equation, and included
+as state variables explicitly. \ The package may allow higher lags to
+processed automatically at a later stage.
+
+Shocks in the model refers to the innovations to the shock processes, so if
+the shock process is given by%
+\begin{equation*}
+tech(+1)=rho\ast tech+sd\ast epsilon,
+\end{equation*}%
+then \textquotedblleft $tech$\textquotedblright\ will be a state variable,
+\textquotedblleft $epsilon$\textquotedblright\ will be a shock, and
+\textquotedblleft $rho$\textquotedblright\ and \textquotedblleft $sd$%
+\textquotedblright\ will be parameters. \ If the model is deterministic,
+then it will contain no shocks.
+
+Every element in the parameters category and the equations category must
+contain an \textquotedblleft $=$\textquotedblright\ sign, such as
+\textquotedblleft $alpha=0.33$\textquotedblright\ in the case of the
+parameters category and \textquotedblleft $output=exp(tech)\ast capital%
+\symbol{94}alpha\ast labor\symbol{94}(1.0-alpha)$\textquotedblright\ in the
+case of the equations category.
+
+\subsection{Example}
+
+The following is an example of a model file for the stochastic growth model:
+
+\bigskip
+
+\textit{states:}
+
+\textit{cap, tech}
+
+\textit{end}
+
+\textit{\bigskip }
+
+\textit{jumps:}
+
+\textit{cons}
+
+\textit{end}
+
+\textit{\bigskip }
+
+\textit{shocks:}
+
+\textit{epsilon}
+
+\textit{end}
+
+\textit{\bigskip }
+
+\textit{parameters:}
+
+\textit{betta = 0.99}
+
+\textit{sigma = 1.1}
+
+\textit{delta = 0.025}
+
+\textit{alpha = 0.30}
+
+\textit{rho = 0.8}
+
+\textit{sd = 0.01}
+
+\textit{end}
+
+\textit{\bigskip }
+
+\textit{equations:}
+
+\textit{cap(+1) = (1.0 - delta)*cap + exp(tech)*cap\symbol{94}alpha - cons}
+
+\textit{cons\symbol{94}(-sigma) = betta*cons(+1)\symbol{94}(-sigma)*(1.0 -
+delta + alpha*exp(tech(+1))*cap(+1)\symbol{94}(alpha - 1.0))}
+
+\textit{tech(+1) = rho*tech + sd*epsilon}
+
+\textit{end}
+
+\section{Solving a model}
+
+Solving a model is straightforward; it consists of the following steps:
+
+\begin{enumerate}
+\item Read and process the model file. \ During the processing the order of
+variables in the system may be changed, typically the changes are to place
+the shocks at the top of the system. \ After processing is complete you will
+be told what the variable-order is.
+
+\item Solve for the model's steady state.
+
+\item Specify a SolutionScheme. \ A SolutionScheme specifies the solution
+method along with any parameters needed to implement that solution method.
+
+\item Solve the model according to the chosen SolutionScheme.
+\end{enumerate}
+
+\subsection{Reading the model and solving for its steady state}
+
+To read and process a model file we simply supply the path/filename to the
+get\_model() function, for example
+
+\bigskip
+
+\textit{dsge = get\_model("c:/desktop/model.txt")}
+
+\bigskip
+
+We can then solve for the model's steady state as follows
+
+\bigskip
+
+\textit{ss = compute\_steady\_state(dsge,tol,maxiters)}
+
+\bigskip
+
+where \textit{dsge} is the model whose steady state is to be computed, 
+\textit{tol} is a convergence tolerance, and \textit{maxiters} is an integer
+specifying the maximum number of iterations before the function exits.
+
+\subsection{Specifying a SolutionScheme}
+
+To solve a model a SolutionScheme must be supplied. \ A SolutionScheme
+specifies the solution method and the parameters upon which this solution
+method relies. \ The solution methods in SolveDSGE are either perturbation
+methods or projection methods. \ Accordingly, the SolutionSchemes can be
+divided into PerturbationSchemes or ProjectionSchemes. \ We present each in
+turn.
+
+\subsubsection{PerturbationSchemes}
+
+To solve a model using a perturbation method requires and
+PerturbationScheme. \ Regardless of the model or the order of the
+perturbation, a PerturbationScheme is a structure with three fields: the
+point about which to perturb the model (the steady state), a cutoff
+parameter that separates unstable from stable eigenvalues (eigenvalues whose
+modulus is greater than cutoff will be placed in the model's unstable
+block), and the order of the perturbation. \ For a first-order perturbation,
+a typical PerturbationScheme might be the following
+
+\bigskip
+
+\textit{N = PerturbationScheme(ss,cutoff,"first")}
+
+\bigskip
+
+while those for second and third order perturbations might be
+
+\bigskip
+
+\textit{NN = PerturbationScheme(ss,cutoff,"second")}
+
+\bigskip
+
+and
+
+\bigskip
+
+\textit{NNN = PerturbationScheme(ss,cutoff,"third")}
+
+\bigskip
+
+The method used to compute a first-order perturbation follows Klein (2000),
+that for a second-order perturbation follows Gomme and Klein (2011), while
+that for a third-order perturbation follows Binning (2013) with a refinement
+from Levintal (2017). \ At this point, perturbation solutions higher than
+third order are not supported.
+
+\subsubsection{ProjectionSchemes}
+
+ProjectionSchemes are either ChebyshevSchemes, SmolyakSchemes, or
+PiecewiseLinearSchemes, and for each of these there is a stochastic (for
+stochastic models) and a deterministic (for deterministic models) version. \
+The SolutionScheme for the deterministic case is a special case of the
+stochastic one, so we focus on the stochastic case in what follows.
+
+\paragraph{ChebyshevSchemes}
+
+Solutions based on Chebyshev polynomials rely on and make use of all of the
+functionality of the module ChebyshevApprox. \ This means that an arbitrary
+number of state variables can be accommodated (if you have enough time!) and
+both tenser-product and complete polynomials can be used. \ A stochastic
+ChebyshevScheme requires the following arguments:
+
+\begin{itemize}
+\item initial\_guess --- This will usually be a vector containing the
+model's steady state. \ It is used as the initial guess at the solution for
+the case where an initializing solution is not provided (see the section on
+model solution below).
+
+\item node\_generator --- This is the name of the function used to generate
+the nodes for the Chebyshev polynomial. \ Possible options include:
+chebyshev\_nodes and chebyshev\_extrema.
+
+\item node\_number --- This gives the number of nodes to be used for each
+state variable. \ If there is only one state variables then node\_number
+will be an integer. \ When there are two of more state variables it will be
+a vector of integers.
+
+\item num\_quad\_nodes --- This is an integer specifying the number of
+quadrature points used to compute expectations.
+
+\item order --- This defines the order of the Chebyshev polynomial to be
+used in the approximating functions. \ For a complete polynomial order will
+be an integer; for a tenser-product polynomial order will be a vector of
+integers.
+
+\item domain --- This contains the domain for the state variables over which
+the solution is obtained. \ Domain will be a $2-$element vector in the
+one-state-variable case and a $2\times n$ array in the $n$-state-variable
+case, with the first row of the array containing the upper values of the
+domain and the second row containing the lower values of the domain. \ If an
+initializing solution is provided, then the domain associated with that
+initializing solution can be used by setting domain to an empty array,
+Float64[].
+
+\item tol\_fix\_point\_solver --- This specifies the tolerance to be used in
+the inner loop to determine convergence at each solution node.
+
+\item tol\_variables --- This specifies the tolerance to be used in the
+outer loop to determine convergence of the overall solution.
+
+\item maxiters --- This is an integer specifying the maximum number of
+outer-loop iterations before the solution exits.
+\end{itemize}
+
+\bigskip
+
+An example of a stochastic ChebyshevScheme is
+
+\bigskip
+
+\textit{C = ChebyshevSchemeStoch(ss,chebyshev\_nodes,[21,21], 9, 4,[0.1
+30.0; -0.1 20.0],1e-8,1e-6,1000)}
+
+\bigskip
+
+In the deterministic case the number of quadrature nodes is not needed, i.e.,
+
+\bigskip
+
+\textit{Cdet = ChebyshevSchemeDet(ss,chebyshev\_nodes,[21,21],4,[0.1 30.0;
+-0.1 20.0],1e-8,1e-6,1000)}
+
+\paragraph{SmolyakSchemes}
+
+Underlying the Smolyak polynomial based solution is the module
+SmolyakApprox. \ This module allows for both isotropic polynomials and
+ansiotropic polynomials and several different methods for producing nodes. \
+SolveDSGE exploits all of this functionality. \ A stochastic SmolyakScheme
+requires the following arguments:
+
+\begin{itemize}
+\item initial\_guess --- This will usually be a vector containing the
+model's steady state. \ It is used as the initial guess at the solution for
+the case where an initializing solution is not provided (see the section on
+model solution below).
+
+\item node\_generator ---This is the name of the function used to generate
+the nodes for the Smolyak polynomial. \ Possible options include:
+chebyshev\_gauss\_lobatto and clenshaw\_curtis\_equidistant
+
+\item num\_quad\_nodes --- This is an integer specifying the number of
+quadrature points used to compute expectations.
+
+\item layer --- This is an integer (isotropic case) or a vector of integers
+(ansiotropic case) specifying the number of layers to be used in the
+approximation.
+
+\item domain --- This contains the domain for the state variables over which
+the solution is obtained. \ Domain will be a $2-$element vector in the
+one-state-variable case and a $2\times n$ array in the $n$-state-variable
+case, with the first row of the array containing the upper values of the
+domain and the second row containing the lower values of the domain. \ If an
+initializing solution is provided, then the domain associated with that
+initializing solution can be used by setting domain to an empty array,
+Float64[].
+
+\item tol\_fix\_point\_solver --- This specifies the tolerance to be used in
+the inner loop to determine convergence at each solution node.
+
+\item tol\_variables --- This specifies the tolerance to be used in the
+outer loop to determine convergence of the overall solution.
+
+\item maxiters --- This is an integer specifying the maximum number of
+outer-loop iterations before the solution exits.
+\end{itemize}
+
+\bigskip
+
+An example of a stochastic SmolyakScheme is
+
+\bigskip
+
+\textit{S = SmolyakSchemeStoch(ss,chebyshev\_gauss\_lobatto,9,3,[0.1 30.0;
+-0.1 20.0],1e-8,1e-6,1000)}
+
+\bigskip
+
+In the deterministic case the number of quadrature nodes is not needed, i.e.,
+
+\bigskip
+
+\textit{Sdet = SmolyakSchemeDet(ss,chebyshev\_gauss\_lobatto,3,[0.1 30.0;
+-0.1 20.0],1e-8,1e-6,1000)}
+
+\paragraph{PiecewiseLinearSchemes}
+
+To obtain piecewise linear solutions, SolveDSGE employs the module
+PiecewiseLinearApprox, which allows approximations over an arbitrary number
+of state variables. \ A stochastic PiecewiseLinearScheme requires the
+following arguments:
+
+\begin{itemize}
+\item initial\_guess --- This will usually be a vector containing the
+model's steady state. \ It is used as the initial guess at the solution for
+the case where an initializing solution is not provided (see the section on
+model solution below).
+
+\item node\_number --- This gives the number of nodes to be used for each
+state variable. \ If there is only one state variables then node\_number
+will be an integer. \ When there are two of more state variables it will be
+a vector of integers.
+
+\item num\_quad\_nodes --- This is an integer specifying the number of
+quadrature points used to compute expectations.
+
+\item domain --- This contains the domain for the state variables over which
+the solution is obtained. \ Domain will be a $2-$element vector in the
+one-state-variable case and a $2\times n$ array in the $n$-state-variable
+case, with the first row of the array containing the upper values of the
+domain and the second row containing the lower values of the domain. \ If an
+initializing solution is provided, then the domain associated with that
+initializing solution can be used by setting domain to an empty array,
+Float64[].
+
+\item tol\_fix\_point\_solver --- This specifies the tolerance to be used in
+the inner loop to determine convergence at each solution node.
+
+\item tol\_variables --- This specifies the tolerance to be used in the
+outer loop to determine convergence of the overall solution.
+
+\item maxiters --- This is an integer specifying the maximum number of
+outer-loop iterations before the solution exits.
+\end{itemize}
+
+\bigskip
+
+An example of a stochastic PiecewiseLinearScheme is
+
+\bigskip
+
+\textit{P = PiecewiseLinearStoch(ss,[21,21],9,[0.1 30.0; -0.1
+20.0],1e-8,1e-6,1000)}
+
+\bigskip
+
+In the deterministic case the number of quadrature nodes is not needed, i,e,,
+
+\bigskip
+
+\textit{Pdet = PiecewiseLinearDet(ss,[21,21],9,[0.1 30.0; -0.1
+20.0],1e-8,1e-6,1000)}
+
+\subsection{Model solution}
+
+Once a SolutionScheme is specified we are in a position to solve the model.
+\ In order to do so we use the solve\_model() function, which takes either
+two or three arguments. \ For a perturbation solution solve\_model()
+requires two arguments: the model to be solved and the SolutionScheme, as
+follows:
+
+\bigskip
+
+\textit{soln\_first\_order = solve\_model(dsge,N)}
+
+\bigskip
+
+\textit{soln\_second\_order = solve\_model(dsge,NN)}
+
+\bigskip
+
+\textit{soln\_third\_order = solve\_model(dsge,NNN)}
+
+\bigskip
+
+Alternatively, for a projection solution solve\_model() takes either two or
+three arguments. \ To provide a concrete example, suppose we wish to solve
+our model using Chebyshev polynomials. \ If we want the projection solution
+to be initialized using the steady state, then solve\_model() requires only
+two arguments: the model to be solved and the SolutionScheme:
+
+\bigskip
+
+\textit{soln\_chebyshev = solve\_model(dsge,C)}
+
+\bigskip
+
+If we want the projection solution to be initialized using the third order
+perturbation solution, then solve\_model() requires three arguments: the
+model to be solved, the initializing solution, and the SolutionScheme:
+
+\bigskip
+
+\textit{soln\_chebyshev = solve\_model(dsge,soln\_third\_order,C)}
+
+\bigskip
+
+Although this example uses a third order perturbation as the initializing
+solution, any solution (first order, second order, third order, Chebyshev,
+Smolyak, or piecewise linear) can be used.
+
+\subsubsection{A comment on third-order perturbation}
+
+Sometimes it can be useful to add skewness to the shocks, but this is not
+easy to do through the model file. \ If you want your shocks to be skewed,
+then you can access the third order perturbation solution by calling
+
+\bigskip
+
+\textit{soln\_third\_order = solve\_third\_order(dsge,NNN,skewness)}
+
+\bigskip
+
+where skewness is a 2D array containing the skewness coefficients. \ If
+there is only one shock, then the skewness array is%
+\begin{equation*}
+skewness=E\left[ \epsilon _{1}\epsilon _{1}\epsilon _{1}\right] .
+\end{equation*}%
+If there are two shocks, then the skewness array is%
+\begin{equation*}
+skewness=E\left[ 
+\begin{array}{cccc}
+\epsilon _{1}\epsilon _{1}\epsilon _{1} & \epsilon _{1}\epsilon _{1}\epsilon
+_{2} & \epsilon _{1}\epsilon _{2}\epsilon _{1} & \epsilon _{1}\epsilon
+_{2}\epsilon _{2} \\ 
+\epsilon _{2}\epsilon _{1}\epsilon _{1} & \epsilon _{2}\epsilon _{1}\epsilon
+_{2} & \epsilon _{2}\epsilon _{2}\epsilon _{1} & \epsilon _{2}\epsilon
+_{2}\epsilon _{2}%
+\end{array}%
+\right] .
+\end{equation*}%
+Etc.
+
+\subsubsection{Solution structures}
+
+When a model is solved the solution is returned in the form of a structure.
+\ The exact structure returned depends on the solution method.
+
+\paragraph{First-order perturbation}
+
+The first-order perturbation solution takes the following form:%
+\begin{eqnarray*}
+\mathbf{x}_{t+1} &=&\mathbf{h}_{\mathbf{x}}\mathbf{x}_{t}+\mathbf{k\epsilon }%
+_{t+1}, \\
+\mathbf{y}_{t} &=&\mathbf{g}_{\mathbf{x}}\mathbf{x}_{t}.
+\end{eqnarray*}%
+The solution structure for a stochastic first-order perturbation has the
+following fields:
+
+\begin{itemize}
+\item hbar --- The steady state of the state variables
+
+\item hx --- The first-order coefficients in the state-transition equation
+
+\item k --- The loading matrix on the shocks in the state-transition
+equation.
+
+\item gbar --- The steady state of the jump variables
+
+\item gx --- The first-order coefficients in the jump's equation
+
+\item sigma --- An identy matrix
+
+\item grc --- The number of eigenvalues with modulus greater than cutoff.
+
+\item Soln\_type --- Either \textquotedblleft determinate\textquotedblright
+, \textquotedblleft indeterminate\textquotedblright , or \textquotedblleft
+unstable\textquotedblright .
+\end{itemize}
+
+The solution to a deterministic model has the same fields as the stochastic
+solution with the exceptions of $\mathbf{k}$ and sigma.
+
+\paragraph{Second-order perturbation}
+
+The second-order perturbation solution takes the following form:%
+\begin{eqnarray*}
+\mathbf{x}_{t+1} &=&\mathbf{h}_{\mathbf{x}}\mathbf{x}_{t}+\frac{1}{2}\mathbf{%
+h}_{\mathbf{ss}}+\frac{1}{2}\left( \mathbf{I}\otimes \mathbf{x}_{t}\right) 
+\mathbf{h}_{\mathbf{xx}}\left( \mathbf{I}\otimes \mathbf{x}_{t}\right) +%
+\mathbf{k\epsilon }_{t+1}, \\
+\mathbf{y}_{t} &=&\mathbf{g}_{\mathbf{x}}\mathbf{x}_{t}+\frac{1}{2}\mathbf{g}%
+_{\mathbf{ss}}+\frac{1}{2}\left( \mathbf{I}\otimes \mathbf{x}_{t}\right) 
+\mathbf{g}_{\mathbf{xx}}\left( \mathbf{I}\otimes \mathbf{x}_{t}\right) .
+\end{eqnarray*}
+
+The solution structure for a stochastic second-order perturbation has the
+following fields:
+
+\begin{itemize}
+\item hbar --- The steady state of the state variables
+
+\item hx --- The first-order coefficients in the state-transition equation
+
+\item hss --- The second-order stochastic adjustment to the mean in the
+state-transion equation
+
+\item hxx --- The second-order coefficients in the state-transition equation
+
+\item k --- The loading matrix on the shocks in the state-transition
+equation.
+
+\item gbar --- The steady state of the jump variables
+
+\item gx --- The first-order coefficients in the jump's equation
+
+\item gss --- The second-order stochastic adjustment to the mean in the
+jump's equation
+
+\item gxx --- The second-order coefficients in the jump's equation
+
+\item sigma --- An identy matrix
+
+\item grc --- The number of eigenvalues with modulus greater than cutoff.
+
+\item Soln\_type --- Either \textquotedblleft determinate\textquotedblright
+, \textquotedblleft indeterminate\textquotedblright , or \textquotedblleft
+unstable\textquotedblright .
+\end{itemize}
+
+The solution to a deterministic model has the same fields as the stochastic
+solution with the exceptions of $\mathbf{h}_{\mathbf{ss}}$, $\mathbf{k}$, $%
+\mathbf{g}_{\mathbf{ss}}$, and sigma.
+
+\paragraph{Third-order perturbation}
+
+The third-order perturbation solution takes the following form:%
+\begin{eqnarray*}
+\mathbf{x}_{t+1} &=&\mathbf{h}_{\mathbf{x}}\mathbf{x}_{t}+\frac{1}{2}\mathbf{%
+h}_{\mathbf{ss}}+\frac{1}{2}\mathbf{h}_{\mathbf{xx}}\left( \mathbf{x}%
+_{t}\otimes \mathbf{x}_{t}\right) +\frac{1}{6}\mathbf{h}_{\mathbf{sss}}+%
+\frac{1}{6}\mathbf{h}_{\mathbf{ssx}}\mathbf{x}_{t}+\frac{1}{6}\mathbf{h}_{%
+\mathbf{xxx}}\left( \mathbf{x}_{t}\otimes \mathbf{x}_{t}\otimes \mathbf{x}%
+_{t}\right) +\mathbf{k\epsilon }_{t+1}, \\
+\mathbf{y}_{t} &=&\mathbf{g}_{\mathbf{x}}\mathbf{x}_{t}+\frac{1}{2}\mathbf{g}%
+_{\mathbf{ss}}+\frac{1}{2}\mathbf{g}_{\mathbf{xx}}\left( \mathbf{x}%
+_{t}\otimes \mathbf{x}_{t}\right) +\frac{1}{6}\mathbf{g}_{\mathbf{sss}}+%
+\frac{1}{6}\mathbf{g}_{\mathbf{ssx}}\mathbf{x}_{t}+\frac{1}{6}\mathbf{g}_{%
+\mathbf{xxx}}\left( \mathbf{x}_{t}\otimes \mathbf{x}_{t}\otimes \mathbf{x}%
+_{t}\right) .
+\end{eqnarray*}
+
+The solution structure for a stochastic third-order perturbation has the
+following fields:
+
+\begin{itemize}
+\item hbar --- The steady state of the state variables
+
+\item hx --- The first-order coefficients in the state-transition equation
+
+\item hss --- The second-order stochastic adjustment to the mean in the
+state-transion equation
+
+\item hxx --- The second-order coefficients in the state-transition equation
+
+\item hsss --- The third-order stochastic adjustment to the mean in the
+state-transition equation
+
+\item hssx --- The skewness adjustment \ othe state-transition equation
+
+\item hxxx --- The third-order coefficents in the state-transition equation
+
+\item k --- The loading matrix on the shocks in the state-transition
+equation.
+
+\item gbar --- The steady state of the jump variables
+
+\item gx --- The first-order coefficients in the jump's equation
+
+\item gss --- The second-order stochastic adjustment \ othe mean in the
+jump's equation
+
+\item gxx --- The second-order coefficients in the jump's equation
+
+\item gsss --- The third-order stochastic adjustment to the mean in the
+jump's equation
+
+\item gssx --- The skewness adjustment in the jump's equation
+
+\item gxxx --- The third-order coefficients in the jump's equation
+
+\item sigma --- An identy matrix
+
+\item grc --- The number of eigenvalues with modulus greater than cutoff.
+
+\item Soln\_type --- Either \textquotedblleft determinate\textquotedblright
+, \textquotedblleft indeterminate\textquotedblright , or \textquotedblleft
+unstable\textquotedblright .
+\end{itemize}
+
+The solution to a deterministic model has the same fields as the stochastic
+solution with the exceptions of $\mathbf{h}_{\mathbf{ss}}$, $\mathbf{h}_{%
+\mathbf{sss}}$, $\mathbf{h}_{\mathbf{ssx}}$, $\mathbf{k}$, $\mathbf{g}_{%
+\mathbf{ss}}$, $\mathbf{g}_{\mathbf{sss}}$, $\mathbf{g}_{\mathbf{ssx}}$, and
+sigma.
+
+\paragraph{Chebyshev solution}
+
+The solution structure for the Chebyshev solution has the following fields:
+
+\begin{itemize}
+\item variables \ --- A vector of arrays containing the solution for each
+variable
+
+\item weights --- A vector of arrays containing the weights for the
+Chebyshev polynomials
+
+\item nodes --- A vector of vectors containing the Chebyshev nodes
+
+\item order --- The order of the Chebyshev polynomials
+
+\item domain --- The domain for the state variables
+
+\item sigma --- The variance-covariance matrix for the shocks
+
+\item iteration\_count --- The number of iterations needed to achieve
+convergence
+\end{itemize}
+
+The solution to a deterministic model has the same fields with the exception
+of sigma.
+
+\paragraph{Smolyak solution}
+
+The solution structure for the Smolyak solution has the following fields:
+
+\begin{itemize}
+\item variables --- A vector of arrays containing the solution for each
+variable
+
+\item weights: --- A vector of vectors containing the weights for the
+Chebyshev polynomials
+
+\item grid --- A matrix containing the Smolyak grid
+
+\item multi\_index --- A matrix containing the multi-index underlying the
+polynominals
+
+\item layer --- The number of layers in the approximation
+
+\item domain --- The domain for the state variables
+
+\item sigma --- The variance-covariance matrix for the shocks
+
+\item iteration\_count --- The number of iterations needed to achieve
+convergence
+\end{itemize}
+
+The solution to a deterministic model has the same fields with the exception
+of sigma.
+
+\paragraph{Piecewise linear solution}
+
+The solution structure for the piecewise linear solution has the following
+fields:
+
+\begin{itemize}
+\item variables --- A vector of arrays containing the solution for each
+variable
+
+\item nodes --- A vector of vectors containing the Chebyshev nodes
+
+\item domain --- The domain for the state variables
+
+\item sigma --- The variance-covariance matrix for the shocks
+
+\item iteration\_count --- The number of iterations needed to achieve
+convergence
+\end{itemize}
+
+The solution to a deterministic model has the same fildls with the exception
+of sigma.
+
+\section{Post-solution analysis}
+
+Once you have solved your model there are many things that you might want to
+use the solution for. \ Some of the more obvious things, such as simulating
+data from the solution and computing impulse response functions have been
+programmed into SolveDSGE to make things easier for you.
+
+\subsection{Simulation}
+
+To simulate data from the solution to a model the function to use is
+simulate(), whose arguments are a model solution, an initial state, and the
+number of observations to simulate. \ An example of simulate() in action
+might be
+
+\bigskip
+
+\textit{data\_states, data\_jumps = simulate(soln,[0.0, 25.0,100000)}
+
+\bigskip
+
+As this example makes clear, the simulate function returns two 2D arrays. \
+The first array contains simulated data for the state variables, the second
+array contains simulated data for the jump variables. \ The simulate
+function can be applied to both stochastic and deterministic models. \ An
+initial burn-in sample of 1000 observations is also generated and discarded.
+
+\subsection{Impulse response functions}
+
+Impulse responses are obtained using the impulses() function, which takes
+three arguments: the model solution, the length of the impulse response
+function (number of periods), the number of the shock to apply the impulse
+to, and the number of repetitions to use for the Monte Carlo integration. \
+Responses to both a positive and a negative innovation are generated. \ An
+example of impulses() in use might be
+
+\bigskip
+
+pos\_\textit{responses, neg\_responses = impulses(soln,50,1,10000)}
+
+\bigskip
+
+For the nonlinear solutions (second-order perturbation, third-order
+perturbation, and the projection-based solutions) the initial state is
+\textquotedblleft integrated-out\textquotedblright\ via a Monte Carlo that
+averages over draws taken from the unconditional distribution of the state
+variables. At this stage in the package's development, the impulses need to
+be computed one shock at a time; this will probably change at some point.
+
+\begin{thebibliography}{9}
+\bibitem{} Andreasen, M., Fern\'{a}ndez-Villaverde, J., and J.
+Rubio-Ramirez, (2017), \textquotedblleft The Pruned State-Space System for
+Non-Linear DSGE Models: Theory and Empirical Applications\textquotedblright
+, \textit{Review of Economic Studies}, 0, pp. 1---49.
+
+\bibitem{} Binning, A., (2013), \textquotedblleft Third-order approximation
+of dynamic models without the use of tensors\textquotedblright , \textit{%
+Norges Bank Working Paper} 2013--13.
+
+\bibitem{} Gomme, P., and P. Klein, (2011), \textquotedblleft Second-Order
+Approximation of Dynamic Models Without the Use of Tensors\textquotedblright
+, \textit{Journal of Economic Dynamics and Control}, 35, pp. 604---615.
+
+\bibitem{} Judd, K. (1992), \textquotedblleft Projection Methods for Solving
+Aggregate Growth Models\textquotedblright , \textit{Journal of Economic
+Theory}, 58, pp.410---452.
+
+\bibitem{} Judd, K., Maliar, L., Maliar, S., and R. Valero, (2014),
+\textquotedblleft Smolyak Method for Solving Dynamic Economic Models:
+Lagrange Interpolation, Anisotropic Grid and Adaptive
+Domain\textquotedblright , \textit{Journal of Economic Dynamics and Control}%
+, 44, pp. 92---123.
+
+\bibitem{} Judd, K., Maliar, L., Maliar, S., and I. Tsener, (2017),
+\textquotedblleft How to Solve Dynamic Stochastic Models Computing
+Expectations just Once\textquotedblright , \textit{Quantitative Economics},
+8, pp.851---893.
+
+\bibitem{} Klein, P., (2000), \textquotedblleft Using the Generalized Schur
+Form to Solve a Multivariate Linear Rational Expectations
+Model\textquotedblright , \textit{Journal of Economic Dynamics and Control},
+24, pp. 1405---1423.
+
+\bibitem{} Potter, S., (2000), \textquotedblleft Nonlinear Impulse Response
+Functions\textquotedblright , \textit{Journal of Economic Dynamics and
+Control}, 24, pp. 1425---1446.
+\end{thebibliography}
+
+\end{document}

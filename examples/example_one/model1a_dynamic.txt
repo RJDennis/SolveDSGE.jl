@@ -1,0 +1,75 @@
+function dynamic_equations(x::Array{T,1}) where {T<:Number} 
+ 
+  f = Array{T}(undef,3) 
+ 
+  f[1] = x[4] - (0.8*x[1] + 0.01*x[7])
+  f[2] = x[3]^(-1.1) - (0.99*x[6]^(-1.1)*(1.0 - 0.025 + 0.3*exp(x[4])*x[5]^(0.3 - 1.0)))
+  f[3] = x[5] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.3 - x[3])
+
+  return f 
+ 
+ end 
+
+function dynamic_eqn_1(x::Array{T,1}) where {T<:Number} 
+ 
+  f = x[4] - (0.8*x[1] + 0.01*x[7])
+
+  return f 
+ 
+end 
+
+function dynamic_eqn_2(x::Array{T,1}) where {T<:Number} 
+ 
+  f = x[3]^(-1.1) - (0.99*x[6]^(-1.1)*(1.0 - 0.025 + 0.3*exp(x[4])*x[5]^(0.3 - 1.0)))
+
+  return f 
+ 
+end 
+
+function dynamic_eqn_3(x::Array{T,1}) where {T<:Number} 
+ 
+  f = x[5] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.3 - x[3])
+
+  return f 
+ 
+end 
+
+function closure_projection_equations(state,scaled_weights,order,domain,approximate) 
+ 
+  function projection_equations(x::Array{T,1}) where {T<:Number} 
+ 
+    approx1 = approximate(scaled_weights[1],x[1+1:end],order,domain)
+
+    f = Array{T}(undef,3) 
+ 
+    f[1] = x[2] - (0.8*state[1] + 0.01*0.0)
+    f[2] = x[1]^(-1.1) - (0.99*approx1^(-1.1)*(1.0 - 0.025 + 0.3*exp(x[2])*x[3]^(0.3 - 1.0)))
+    f[3] = x[3] - ((1.0 - 0.025)*state[2] + exp(state[1])*state[2]^0.3 - x[1])
+
+    return f 
+ 
+  end 
+ 
+  return projection_equations 
+ 
+end 
+
+function closure_projection_equations_pl(variables,grid,state,integrals,approximate) 
+ 
+  function projection_equations_pl(x::Array{T,1}) where {T<:Number} 
+ 
+    approx1 = approximate(variables[1],grid,x[1+1:end],integrals)
+
+    f = Array{T}(undef,3) 
+ 
+    f[1] = x[2] - (0.8*state[1] + 0.01*0.0)
+    f[2] = x[1]^(-1.1) - (0.99*approx1^(-1.1)*(1.0 - 0.025 + 0.3*exp(x[2])*x[3]^(0.3 - 1.0)))
+    f[3] = x[3] - ((1.0 - 0.025)*state[2] + exp(state[1])*state[2]^0.3 - x[1])
+
+    return f 
+ 
+  end 
+ 
+  return projection_equations_pl 
+ 
+end 

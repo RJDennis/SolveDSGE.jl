@@ -1,0 +1,32 @@
+# Example one --- Stochastic growth model
+
+states:
+cap, tech
+end
+
+jumps:
+cons
+end
+
+shocks:
+epsilon
+end
+
+parameters:
+betta = 0.99
+sigma = 1.1
+delta = 0.025
+alpha = 0.30
+rho = 0.8
+sd = 0.01
+end
+
+equations:
+cap(+1) = (1.0 - delta)*cap + exp(tech)*cap^alpha - cons
+cons^(-sigma) = betta*cons(+1)^(-sigma)*(1.0 - delta + alpha*exp(tech(+1))*cap(+1)^(alpha - 1.0))
+tech(+1) = rho*tech + sd*epsilon
+end
+
+exp(cap(+1)) = (1.0 - delta)*exp(cap) + exp(tech)*exp(cap)^alpha - exp(cons)
+exp(cons)^(-sigma) = betta*exp(cons(+1))^(-sigma)*(1.0 - delta + alpha*exp(tech(+1))*exp(cap(+1))^(alpha - 1.0))
+tech(+1) = rho*tech + sd*epsilon

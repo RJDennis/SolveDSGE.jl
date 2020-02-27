@@ -1,0 +1,39 @@
+# Example three --- Three shock New Keynesian model
+
+states:
+tech, epsilon, beta
+end
+
+jumps:
+cons, irate, hours, infl
+end
+
+shocks:
+eta_1, eta_2, eta_3
+end
+
+parameters:
+betta      = 0.995
+sigma      = 1.100
+theta      = 0.35
+epsil      = 11.00
+phi        = 80.00
+pistar     = 0.00375
+tax        = 0.0
+rho_1      = 0.950
+shock_sd_1 = 0.0028
+rho_2      = 0.800
+shock_sd_2 = 0.025
+rho_3      = 0.8
+shock_sd_3 = 0.003
+end
+
+equations:
+tech(+1) = rho_1*tech + shock_sd_1*eta_1
+epsilon(+1) = rho_2*epsilon + shock_sd_2*eta_2
+beta(+1) = (1-rho_3)*log(betta) + rho_3*beta + shock_sd_3*eta_3
+cons^(theta-1-sigma*theta)*(1-hours)^((1-sigma)*(1-theta)) = exp(beta(+1))*cons(+1)^(theta-1-sigma*theta)*(1-hours(+1))^((1-sigma)*(1-theta))/(1+infl(+1))*(1+irate)
+infl*(1+infl) = (1-tax)*(1-epsil*exp(epsilon))/phi + exp(beta(+1))*cons(+1)^(theta-1-sigma*theta)*(1-hours(+1))^((1-sigma)*(1-theta))*cons(+1)*infl(+1)*(1+infl(+1))/(cons*cons^(theta-1-sigma*theta)*(1-hours)^((1-sigma)*(1-theta))) + (epsil*exp(epsilon)/phi)*((1-theta)/theta)*cons/((1-hours)*exp(tech))
+cons = exp(tech)*hours
+1+irate = ((1+pistar)/exp(beta))*((1+infl)/(1+pistar))^(1.5)*(cons/cons(-1))^(0.125)
+end
