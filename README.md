@@ -29,7 +29,7 @@ SolveDSGE can also solve DSGE models using projection methods that are based on 
 
 Further information
 -------------------
-This version (version 0.3) represents an important update on the version 0.2, which didn't allow projection-based solutions, but all of the functionality present in version 0.2 remains.  This includes the optimal policy algorithms.  At some point in the future, SolveDSGE's approach to solving and analyzing optimal policy is likely to be based on the model-file/solution-file framework.  But for now your code should still work as before.
+This version (version 0.3) represents an important update on version 0.2, which didn't allow projection-based solutions, but all of the functionality present in version 0.2 remains.  This includes the optimal policy algorithms.  At some point in the future, SolveDSGE's approach to solving and analyzing optimal policy is likely to be based on the model-file/solution-file framework.  But for now, if you were using version 0.2, your code should still work as before.
 
 Examples of how to use SolveDSGE to solve a model are contained in the examples folder.  At the moment there are three examples: two stochastic models and one deterministic model.  The example models are intended to be familiar, easy to follow, and easy to replicate.
 
