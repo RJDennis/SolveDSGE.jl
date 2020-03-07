@@ -44,7 +44,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: F
 
     simulated_states_f      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_f       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] = initial_state
+    simulated_states_f[:,1] = initial_state - soln.hbar
 
     for i = 2:sim_length+1
         simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1]
@@ -67,7 +67,7 @@ function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: FirstOrder
 
     simulated_states_f      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_f       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] = initial_state
+    simulated_states_f[:,1] = initial_state - soln.hbar
 
     for i = 2:sim_length+1
         simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1] + soln.k*randn(size(soln.sigma,1))
@@ -88,11 +88,11 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: S
 
     simulated_states_f      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_f       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] = initial_state
+    simulated_states_f[:,1] = initial_state - soln.hbar
 
     simulated_states_s      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_s       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_s[:,1] = initial_state
+    simulated_states_s[:,1] = zeros(nx)
 
     for i = 2:sim_length+1
         simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1]
@@ -123,11 +123,11 @@ function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: SecondOrde
 
     simulated_states_f      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_f       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] = initial_state
+    simulated_states_f[:,1] = initial_state - soln.hbar
 
     simulated_states_s      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_s       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_s[:,1] = initial_state
+    simulated_states_s[:,1] = zeros(nx)
 
     for i = 2:sim_length+1
         simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1] + soln.k*randn(size(soln.sigma,1))
@@ -150,15 +150,15 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: T
 
     simulated_states_f      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_f       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] = initial_state
+    simulated_states_f[:,1] = initial_state - soln.hbar
 
     simulated_states_s      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_s       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_s[:,1] = initial_state
+    simulated_states_s[:,1] = zeros(nx)
 
     simulated_states_t      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_t       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_t[:,1] = initial_state
+    simulated_states_t[:,1] = zeros(nx)
 
     for i = 2:sim_length+1
         simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1]
@@ -189,15 +189,15 @@ function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: ThirdOrder
 
     simulated_states_f      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_f       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] = initial_state
+    simulated_states_f[:,1] = initial_state - soln.hbar
 
     simulated_states_s      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_s       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_s[:,1] = initial_state
+    simulated_states_s[:,1] = zeros(hx)
 
     simulated_states_t      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_t       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_t[:,1] = initial_state
+    simulated_states_t[:,1] = zeros(nx)
 
     for i = 2:sim_length+1
         simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1] + soln.k*randn(size(soln.sigma,1))
