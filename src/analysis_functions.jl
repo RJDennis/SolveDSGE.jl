@@ -55,12 +55,9 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: F
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: FirstOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: FirstOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
 
-    Random.seed!(123456)
-
-    burn_in    = 1000
-    sim_length = burn_in + n
+    Random.seed!(rndseed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -74,7 +71,7 @@ function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: FirstOrder
         simulated_jumps_f[:,i-1] = soln.gx*simulated_states_f[:,i-1]
     end
 
-    return [simulated_states_f[:,burn_in+1:sim_length].+soln.hbar;simulated_jumps_f[:,burn_in+1:end].+soln.gbar]
+    return [simulated_states_f[:,1:sim_length].+soln.hbar;simulated_jumps_f[:,1:end].+soln.gbar]
 
 end
 
@@ -108,12 +105,9 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: S
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: SecondOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: SecondOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
 
-    Random.seed!(123456)
-
-    burn_in    = 1000
-    sim_length = burn_in + n
+    Random.seed!(rndseed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -139,7 +133,7 @@ function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: SecondOrde
     simulated_states = simulated_states_f + simulated_states_s
     simulated_jumps  = simulated_jumps_f + simulated_jumps_s
 
-    return [simulated_states[:,burn_in+1:sim_length].+soln.hbar;simulated_jumps[:,burn_in+1:end].+soln.gbar]
+    return [simulated_states[:,1:sim_length].+soln.hbar;simulated_jumps[:,1:end].+soln.gbar]
 
 end
 
@@ -177,12 +171,9 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: T
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: ThirdOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: ThirdOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
 
-    Random.seed!(123456)
-
-    burn_in    = 1000
-    sim_length = burn_in + n
+    Random.seed!(rndseed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -193,7 +184,7 @@ function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: ThirdOrder
 
     simulated_states_s      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_s       = Array{T,2}(undef,ny,sim_length)
-    simulated_states_s[:,1] = zeros(hx)
+    simulated_states_s[:,1] = zeros(nx)
 
     simulated_states_t      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_t       = Array{T,2}(undef,ny,sim_length)
@@ -211,7 +202,7 @@ function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: ThirdOrder
     simulated_states = simulated_states_f + simulated_states_s + simulated_states_t
     simulated_jumps  = simulated_jumps_f + simulated_jumps_s + simulated_jumps_t
 
-    return [simulated_states[:,burn_in+1:sim_length].+soln.hbar;simulated_jumps[:,burn_in+1:end].+soln.gbar]
+    return [simulated_states[:,1:sim_length].+soln.hbar;simulated_jumps[:,1:end].+soln.gbar]
 
 
 end
@@ -246,12 +237,9 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: C
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: ChebyshevSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: ChebyshevSolutionStoch, T <: AbstractFloat, S <: Integer}
 
-    Random.seed!(123456)
-
-    burn_in    = 1000
-    sim_length = burn_in + n
+    Random.seed!(rndseed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -281,7 +269,7 @@ function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: ChebyshevS
         end
     end
 
-    return [simulated_states[:,burn_in+1:sim_length];simulated_jumps[:,burn_in+1:end]]
+    return [simulated_states[:,1:sim_length];simulated_jumps[:,1:end]]
 
 end
 
@@ -313,12 +301,9 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: S
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: SmolyakSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: SmolyakSolutionStoch, T <: AbstractFloat, S <: Integer}
 
-    Random.seed!(123456)
-
-    burn_in    = 1000
-    sim_length = burn_in + n
+    Random.seed!(rndseed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -346,7 +331,7 @@ function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: SmolyakSol
         end
     end
 
-    return [simulated_states[:,burn_in+1:sim_length];simulated_jumps[:,burn_in+1:end]]
+    return [simulated_states[:,1:sim_length];simulated_jumps[:,1:end]]
 
 end
 
@@ -373,12 +358,9 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: P
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: PiecewiseLinearSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: PiecewiseLinearSolutionStoch, T <: AbstractFloat, S <: Integer}
 
-    Random.seed!(123456)
-
-    burn_in    = 1000
-    sim_length = burn_in + n
+    Random.seed!(rndseed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -401,11 +383,11 @@ function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: PiecewiseL
         end
     end
 
-    return [simulated_states[:,burn_in+1:sim_length];simulated_jumps[:,burn_in+1:end]]
+    return [simulated_states[:,1:sim_length];simulated_jumps[:,1:end]]
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: FirstOrderSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: FirstOrderSolutionStoch, S <: Integer}
 
     if innovation_to_shock > size(soln.k,2)
         error("There is no number $innovation_to_shock shock")
@@ -433,9 +415,9 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: First
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: SecondOrderSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: SecondOrderSolutionStoch, S <: Integer}
 
-    Random.seed!(123456)
+    Random.seed!(rndseed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -443,7 +425,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Secon
     hxx = Matrix(reshape(soln.hxx',nx*nx,nx)')
     gxx = Matrix(reshape(soln.gxx',nx*nx,ny)')
 
-    sample = simulate(soln,soln.hss,5*reps)
+    sample = simulate(soln,soln.hss,5*reps+100)
     innovations = randn(size(soln.k,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
@@ -467,7 +449,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Secon
         simulated_states_base_s = zeros(nx,n+1)
         simulated_jumps_base_s  = zeros(ny,n)
 
-        initial_state = sample[1:nx,rand(1:5*reps)]
+        initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos_f[:,1]  = initial_state + soln.k[:,innovation_to_shock]
         simulated_states_neg_f[:,1]  = initial_state - soln.k[:,innovation_to_shock]
         simulated_states_base_f[:,1] = initial_state
@@ -505,14 +487,14 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Secon
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: ThirdOrderSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: ThirdOrderSolutionStoch, S <: Integer}
 
-    Random.seed!(123456)
+    Random.seed!(rndseed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
 
-    sample = simulate(soln,soln.hss,5*reps)
+    sample = simulate(soln,soln.hss,5*reps+100)
     innovations = randn(size(soln.k,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
@@ -542,7 +524,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Third
         simulated_states_base_t = zeros(nx,n+1)
         simulated_jumps_base_t  = zeros(ny,n)
 
-        initial_state = sample[1:nx,rand(1:5*reps)]
+        initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos_f[:,1]  = initial_state + soln.k[:,innovation_to_shock]
         simulated_states_neg_f[:,1]  = initial_state - soln.k[:,innovation_to_shock]
         simulated_states_base_f[:,1] = initial_state
@@ -586,9 +568,9 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Third
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: ChebyshevSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: ChebyshevSolutionStoch, S <: Integer}
 
-    Random.seed!(123456)
+    Random.seed!(rndseed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -609,7 +591,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Cheby
         estimated_steady_state[i] = soln.variables[i][i]
     end
 
-    sample = simulate(soln,estimated_steady_state,5*reps)
+    sample = simulate(soln,estimated_steady_state,5*reps+100)
     innovations = randn(size(soln.sigma,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
@@ -627,7 +609,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Cheby
         simulated_states_base = zeros(nx,n+1)
         simulated_jumps_base  = zeros(ny,n)
 
-        initial_state = sample[1:nx,rand(1:5*reps)]
+        initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos[:,1]    = initial_state
         simulated_states_pos[1:ns,1] += chol_decomp.U[:,innovation_to_shock]
         simulated_states_neg[:,1]    = initial_state
@@ -666,9 +648,9 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Cheby
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: SmolyakSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: SmolyakSolutionStoch, S <: Integer}
 
-    Random.seed!(123456)
+    Random.seed!(rndseed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -687,7 +669,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Smoly
         estimated_steady_state[i] = soln.variables[i][i]
     end
 
-    sample = simulate(soln,estimated_steady_state,5*reps)
+    sample = simulate(soln,estimated_steady_state,5*reps+100)
     innovations = randn(size(soln.sigma,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
@@ -705,7 +687,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Smoly
         simulated_states_base = zeros(nx,n+1)
         simulated_jumps_base  = zeros(ny,n)
 
-        initial_state = sample[1:nx,rand(1:5*reps)]
+        initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos[:,1]    = initial_state
         simulated_states_pos[1:ns,1] += chol_decomp.U[:,innovation_to_shock]
         simulated_states_neg[:,1]    = initial_state
@@ -744,9 +726,9 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Smoly
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: PiecewiseLinearSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: PiecewiseLinearSolutionStoch, S <: Integer}
 
-    Random.seed!(123456)
+    Random.seed!(rndseed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -757,7 +739,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Piece
 
     estimated_steady_state = vec((soln.domain[1,:] + soln.domain[2,:]))/2
 
-    sample = simulate(soln,estimated_steady_state,5*reps)
+    sample = simulate(soln,estimated_steady_state,5*reps+100)
     innovations = randn(size(soln.sigma,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
@@ -775,7 +757,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S) where {R <: Piece
         simulated_states_base = zeros(nx,n+1)
         simulated_jumps_base  = zeros(ny,n)
 
-        initial_state = sample[1:nx,rand(1:reps)]
+        initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos[:,1]    = initial_state
         simulated_states_pos[1:ns,1] += chol_decomp.U[:,innovation_to_shock]
         simulated_states_neg[:,1]    = initial_state

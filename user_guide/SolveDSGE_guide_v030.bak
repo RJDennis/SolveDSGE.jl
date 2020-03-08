@@ -14,7 +14,7 @@
 %TCIDATA{Version=5.50.0.2960}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Sunday, March 08, 2020 21:57:19}
+%TCIDATA{LastRevised=Friday, February 28, 2020 22:37:20}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -842,13 +842,12 @@ programmed into SolveDSGE to make things easier for you.
 
 To simulate data from the solution to a model the function to use is
 simulate(), whose arguments are a model solution, an initial state, and the
-number of observations to simulate. \ An optimal final argument is the seed
-for the random number generator. \ An example of simulate() in action might
-be
+number of observations to simulate. \ An example of simulate() in action
+might be
 
 \bigskip
 
-\textit{data\_states, data\_jumps = simulate(soln,[0.0, 25.0],100000)}
+\textit{data\_states, data\_jumps = simulate(soln,[0.0, 25.0,100000)}
 
 \bigskip
 
@@ -865,7 +864,6 @@ three arguments: the model solution, the length of the impulse response
 function (number of periods), the number of the shock to apply the impulse
 to, and the number of repetitions to use for the Monte Carlo integration. \
 Responses to both a positive and a negative innovation are generated. \ An
-optimal final argument is the seed for the random number generator. \ An
 example of impulses() in use might be
 
 \bigskip
