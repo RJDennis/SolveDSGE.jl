@@ -55,11 +55,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: F
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: FirstOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},n::S; burn_in=1000) where {R <: FirstOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
 
     Random.seed!(123456)
 
-    burn_in    = 1000
     sim_length = burn_in + n
 
     nx = length(soln.hbar)
@@ -108,11 +107,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: S
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: SecondOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},n::S; burn_in=1000) where {R <: SecondOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
 
     Random.seed!(123456)
 
-    burn_in    = 1000
     sim_length = burn_in + n
 
     nx = length(soln.hbar)
@@ -177,11 +175,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: T
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: ThirdOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},n::S; burn_in=1000) where {R <: ThirdOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
 
     Random.seed!(123456)
 
-    burn_in    = 1000
     sim_length = burn_in + n
 
     nx = length(soln.hbar)
@@ -246,11 +243,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: C
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: ChebyshevSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},n::S; burn_in=1000) where {R <: ChebyshevSolutionStoch, T <: AbstractFloat, S <: Integer}
 
     Random.seed!(123456)
 
-    burn_in    = 1000
     sim_length = burn_in + n
 
     nv = length(soln.variables)
@@ -313,11 +309,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: S
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: SmolyakSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},n::S; burn_in=1000) where {R <: SmolyakSolutionStoch, T <: AbstractFloat, S <: Integer}
 
     Random.seed!(123456)
 
-    burn_in    = 1000
     sim_length = burn_in + n
 
     nv = length(soln.variables)
@@ -373,11 +368,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: P
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},n::S) where {R <: PiecewiseLinearSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},n::S; burn_in=1000) where {R <: PiecewiseLinearSolutionStoch, T <: AbstractFloat, S <: Integer}
 
     Random.seed!(123456)
 
-    burn_in    = 1000
     sim_length = burn_in + n
 
     nv = length(soln.variables)
