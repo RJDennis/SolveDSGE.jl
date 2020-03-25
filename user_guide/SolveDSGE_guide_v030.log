@@ -1,4 +1,4 @@
-This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=pdflatex_ml 2008.8.22)  8 MAR 2020 21:57
+This is pdfTeXk, Version 3.141592-1.40.3 (Web2C 7.5.6) (format=pdflatex_ml 2008.8.22)  23 MAR 2020 21:42
  %&-line parsing enabled.
 **&pdflatex_ml C:/Users/rd125m/AppData/Local/Temp/swp0000.tex
 (c:/Users/rd125m/AppData/Local/Temp/swp0000.tex
@@ -284,40 +284,40 @@ LaTeX Font Info:    Try loading font information for U+msb on input line 33.
 File: umsb.fd 2002/01/19 v2.2g AMS font definitions
 ) [1
 
-{c:/swp55/TCITeX/fonts/map/pdftex/pdftex.map}] [1] [2] [3] [4]
-LaTeX Font Info:    Try loading font information for OMS+cmr on input line 335.
+{c:/swp55/TCITeX/fonts/map/pdftex/pdftex.map}] [1] [2] [3] [4] [5]
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 361.
 
  (c:/swp55/TCITeX/tex/latex/base/omscmr.fd
 File: omscmr.fd 1999/05/25 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10.95> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 335.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 361.
 
-[5]
-Overfull \hbox (9.80083pt too wide) in paragraph at lines 383--384
+[6]
+Overfull \hbox (9.80083pt too wide) in paragraph at lines 409--410
 []\T1/cmr/m/it/10.95 C = Cheby-shevSchemeStoch(ss,chebyshev_nodes,[21,21], 9, 4
 ,[0.1 30.0; -0.1 20.0],1e-8,1e-6,1000) 
  []
 
 
-Overfull \hbox (0.5539pt too wide) in paragraph at lines 392--393
+Overfull \hbox (0.5539pt too wide) in paragraph at lines 418--419
 []\T1/cmr/m/it/10.95 Cdet = Cheby-shevSchemeDet(ss,chebyshev_nodes,[21,21],4,[0
 .1 30.0; -0.1 20.0],1e-8,1e-6,1000) 
  []
 
-[6]
-Overfull \hbox (26.24538pt too wide) in paragraph at lines 408--411
+
+Overfull \hbox (26.24538pt too wide) in paragraph at lines 434--437
 \T1/cmr/m/n/10.95 poly-no-mial.  Pos-si-ble op-tions in-clude: cheby-shev_gauss
 _lobatto and clen-shaw_curtis_equidistant 
  []
 
-[7] [8] [9] [10] [11] [12] [13]
-Overfull \hbox (18.86049pt too wide) in paragraph at lines 877--883
+[7] [8] [9] [10] [11] [12] [13] [14]
+Overfull \hbox (18.86049pt too wide) in paragraph at lines 902--908
 []\T1/cmr/m/n/10.95 For the non-lin-ear so-lu-tions (second-order per-tur-ba-ti
 on, third-order per-tur-ba-tion, and the projection-
  []
 
-[14] [15] (./swp0000.aux)
+[15] [16] (./swp0000.aux)
 
 LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
@@ -325,29 +325,29 @@ LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 Here is how much of TeX's memory you used:
  2299 strings out of 95101
  27016 string characters out of 1183309
- 83417 words of memory out of 1500000
+ 84417 words of memory out of 1500000
  5343 multiletter control sequences out of 10000+50000
  29605 words of font info for 84 fonts, out of 1200000 for 2000
  22 hyphenation exceptions out of 8191
  30i,13n,22p,314b,329s stack positions out of 5000i,500n,6000p,200000b,5000s
-{c:/swp55/TCITeX/fonts/type1/cmmib10.enc}<c:/swp55/TCITeX/fonts/truetype/cmmi
-b10.ttf>{c:/swp55/TCITeX/fonts/type1/cmbx8.enc}<c:/swp55/TCITeX/fonts/truetype/
-cmbx8.ttf>{c:/swp55/TCITeX/fonts/type1/cmmi8.enc}<c:/swp55/TCITeX/fonts/truetyp
-e/cmmi8.ttf>{c:/swp55/TCITeX/fonts/type1/cmbx10.enc}<c:/swp55/TCITeX/fonts/true
-type/cmbx10.ttf>{c:/swp55/TCITeX/fonts/type1/cmex10.enc}<c:/swp55/TCITeX/fonts/
-truetype/cmex10.ttf>{c:/swp55/TCITeX/fonts/type1/cmr8.enc}<c:/swp55/TCITeX/font
-s/truetype/cmr8.ttf>{c:/swp55/TCITeX/fonts/type1/cmsy10.enc}<c:/swp55/TCITeX/fo
-nts/truetype/cmsy10.ttf>{c:/swp55/TCITeX/fonts/type1/cmr10.enc}<c:/swp55/TCITeX
-/fonts/truetype/cmr10.ttf>{c:/swp55/TCITeX/fonts/type1/cmmi10.enc}<c:/swp55/TCI
-TeX/fonts/truetype/cmmi10.ttf>{c:/swp55/TCITeX/fonts/type1/dcti10.enc}<c:/swp55
-/TCITeX/fonts/truetype/dcti10.ttf>{c:/swp55/TCITeX/fonts/type1/cmsy6.enc}<c:/sw
+{c:/swp55/TCITeX/fonts/type1/cmbx8.enc}<c:/swp55/TCITeX/fonts/truetype/cmbx8.
+ttf>{c:/swp55/TCITeX/fonts/type1/cmex10.enc}<c:/swp55/TCITeX/fonts/truetype/cme
+x10.ttf>{c:/swp55/TCITeX/fonts/type1/cmsy10.enc}<c:/swp55/TCITeX/fonts/truetype
+/cmsy10.ttf>{c:/swp55/TCITeX/fonts/type1/dcti10.enc}<c:/swp55/TCITeX/fonts/true
+type/dcti10.ttf>{c:/swp55/TCITeX/fonts/type1/cmmib10.enc}<c:/swp55/TCITeX/fonts
+/truetype/cmmib10.ttf>{c:/swp55/TCITeX/fonts/type1/cmr8.enc}<c:/swp55/TCITeX/fo
+nts/truetype/cmr8.ttf>{c:/swp55/TCITeX/fonts/type1/cmbx10.enc}<c:/swp55/TCITeX/
+fonts/truetype/cmbx10.ttf>{c:/swp55/TCITeX/fonts/type1/cmr10.enc}<c:/swp55/TCIT
+eX/fonts/truetype/cmr10.ttf>{c:/swp55/TCITeX/fonts/type1/cmmi8.enc}<c:/swp55/TC
+ITeX/fonts/truetype/cmmi8.ttf>{c:/swp55/TCITeX/fonts/type1/cmmi10.enc}<c:/swp55
+/TCITeX/fonts/truetype/cmmi10.ttf>{c:/swp55/TCITeX/fonts/type1/cmsy6.enc}<c:/sw
 p55/TCITeX/fonts/truetype/cmsy6.ttf>{c:/swp55/TCITeX/fonts/type1/dcbx10.enc}<c:
 /swp55/TCITeX/fonts/truetype/dcbx10.ttf>{c:/swp55/TCITeX/fonts/type1/cmsy8.enc}
 <c:/swp55/TCITeX/fonts/truetype/cmsy8.ttf>{c:/swp55/TCITeX/fonts/type1/dcr10.en
 c}<c:/swp55/TCITeX/fonts/truetype/dcr10.ttf>
-Output written on swp0000.pdf (16 pages, 106394 bytes).
+Output written on swp0000.pdf (17 pages, 109798 bytes).
 PDF statistics:
- 110 PDF objects out of 1000 (max. 8388607)
+ 113 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 131072)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -689,6 +689,11 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
+    for i = 1:ns
+        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
+            error("Models with correlated shocks cannot yet be solved via projection methods")
+        end
+    end
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -929,6 +934,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
     k    = soln.k
     gbar = soln.gbar
     gx   = soln.gx
+
+    for i = 1:ns
+        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
+            error("Models with correlated shocks cannot yet be solved via projection methods")
+        end
+    end
 
     T = typeof(scheme.tol_fix_point_solver)
     S = typeof(scheme.maxiters)
@@ -1229,6 +1240,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
+    for i = 1:ns
+        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
+            error("Models with correlated shocks cannot yet be solved via projection methods")
+        end
+    end
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -1456,6 +1472,11 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
+    for i = 1:ns
+        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
+            error("Models with correlated shocks cannot yet be solved via projection methods")
+        end
+    end
 
     grid, multi_ind = smolyak_grid(node_generator,nx,layer,domain)
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
@@ -1651,6 +1672,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
     gbar = soln.gbar
     gx   = soln.gx
 
+    for i = 1:ns
+        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
+            error("Models with correlated shocks cannot yet be solved via projection methods")
+        end
+    end
+
     T = typeof(scheme.tol_fix_point_solver)
     S = typeof(scheme.maxiters)
 
@@ -1665,9 +1692,6 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
         domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
     end
-
-    d = compute_linearization(model,initial_guess)
-    k = -d[1:ns,2*nv+1:end]
 
     grid, multi_ind = smolyak_grid(node_generator,nx,layer,domain)
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
@@ -1895,6 +1919,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
+    for i = 1:ns
+        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
+            error("Models with correlated shocks cannot yet be solved via projection methods")
+        end
+    end
 
     grid, multi_ind = smolyak_grid(node_generator,nx,layer,domain)
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
@@ -2098,6 +2127,11 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
+    for i = 1:ns
+        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
+            error("Models with correlated shocks cannot yet be solved via projection methods")
+        end
+    end
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -2310,6 +2344,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
     gbar = soln.gbar
     gx   = soln.gx
 
+    for i = 1:ns
+        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
+            error("Models with correlated shocks cannot yet be solved via projection methods")
+        end
+    end
+
     T = typeof(scheme.tol_fix_point_solver)
     S = typeof(scheme.maxiters)
 
@@ -2324,9 +2364,6 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
         domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
     end
-
-    d = compute_linearization(model,initial_guess)
-    k = -d[1:ns,2*nv+1:end]
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -2570,6 +2607,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
+    for i = 1:ns
+        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
+            error("Models with correlated shocks cannot yet be solved via projection methods")
+        end
+    end
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx

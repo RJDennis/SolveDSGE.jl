@@ -318,39 +318,49 @@ function reorder_equations(model::DSGEModel)
 
     states_that_have_been_reordered = Int64[]
 
-    pos = 1
-    if count_variables(shocks) != 0
-        for i = 1:length(equations)
-            if sum(occursin.(shocks,equations[i])) != 0 # there is a shock in equation i
-                for j = 1:length(states)
-                    if occursin(states[j], equations[i]) == true # it is state[j] associated with the shock that is in equation i
-                        if i != pos
-                            reordered_equations[pos], reordered_equations[i] = reordered_equations[i], reordered_equations[pos]
-                        end
-                        if j != pos && sum(j.==states_that_have_been_reordered) == 0 # Only reorder a state if it has not already been reordered
-                            reordered_states[pos], reordered_states[j] = reordered_states[j], reordered_states[pos]
-                            states_that_have_been_reordered = [states_that_have_been_reordered;j;]
-                        end
-                        pos += 1
-                    end
-                end
-            end
+    # Construct summary information about each equation
+
+    shocks_number = zeros(Int64,length(equations))
+    states_number = zeros(Int64,length(equations))
+    jumps_number  = zeros(Int64,length(equations))
+    for i = 1:length(equations)
+        if length(shocks) != 0
+            shocks_number[i] = sum(occursin.(shocks,equations[i]))
         end
-    else
-        for i = pos:length(equations)
-            if sum(occursin.(jumps,equations[i])) == 0 # there is no jump variable in equation i
-                for j = 1:length(states)
-                    if occursin(states[j], equations[i]) == true # it is state[j] that enters equation i
-                        if i != pos
-                            reordered_equations[pos], reordered_equations[i] = reordered_equations[i], reordered_equations[pos]
-                        end
-                        if j != pos && sum(j.==states_that_have_been_reordered) == 0 # Only reorder a state if it has not already been reordered
-                            reordered_states[pos], reordered_states[j] = reordered_states[j], reordered_states[pos]
-                            states_that_have_been_reordered = [states_that_have_been_reordered;j;]
-                        end
-                        pos += 1
-                    end
-                end
+        states_number[i] = sum(occursin.(states,equations[i]))
+        jumps_number[i] = sum(occursin.(jumps,equations[i]))
+    end
+    number_eqns_with_shocks = sum(shocks_number .!= 0)
+
+    # Put the equations with no jumps in them at the top
+
+    pos = 1
+    for i = 1:length(equations)
+        if jumps_number[i] == 0 && i != pos
+            reordered_equations[pos], reordered_equations[i] = reordered_equations[i], reordered_equations[pos]
+            shocks_number[pos], shocks_number[i] = shocks_number[i], shocks_number[pos]
+            states_number[pos], states_number[i] = states_number[i], states_number[pos]
+            jumps_number[pos], jumps_number[i]   = jumps_number[i], jumps_number[pos]
+            pos += 1
+        end
+    end
+
+    # Put the shock equations with the fewest states at the top
+
+    reordered_equations[1:number_eqns_with_shocks] .= reordered_equations[sortperm(states_number[1:number_eqns_with_shocks])]
+    shocks_number[1:number_eqns_with_shocks] .= shocks_number[sortperm(states_number[1:number_eqns_with_shocks])]
+    states_number[1:number_eqns_with_shocks] .= states_number[sortperm(states_number[1:number_eqns_with_shocks])]
+    jumps_number[1:number_eqns_with_shocks]  .= jumps_number[sortperm(states_number[1:number_eqns_with_shocks])]
+
+    # Now sort out the order of the states in the system
+
+    pos = 1
+    for i = 1:number_eqns_with_shocks
+        for j = pos:length(states)
+            if occursin(states[j],reordered_equations[i]) == true && sum(j.==states_that_have_been_reordered) == 0
+                reordered_states[pos], reordered_states[j] = reordered_states[j], reordered_states[pos]
+                states_that_have_been_reordered = [states_that_have_been_reordered;j;]
+                pos += 1
             end
         end
     end

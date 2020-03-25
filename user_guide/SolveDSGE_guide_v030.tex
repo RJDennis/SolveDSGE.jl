@@ -14,7 +14,7 @@
 %TCIDATA{Version=5.50.0.2960}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Sunday, March 08, 2020 21:57:19}
+%TCIDATA{LastRevised=Monday, March 23, 2020 21:41:45}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -86,6 +86,32 @@ be useful to you. \ You are welcome to suggest improvements to fix bugs or
 add functionality. \ At the same time, I am hopeful that you will find the
 package useful for your research. \ If it is, then please cite this User
 Guide and add an acknowledgement of SolveDSGE to your paper/report.
+
+\section{What types of models can be solved?}
+
+SolveDSGE is designed to solve models that can be written in the following
+standard form:%
+\begin{equation}
+E_{t}\left[ \mathbf{f}\left( \mathbf{x}_{t},\mathbf{y}_{t},\mathbf{x}_{t+1},%
+\mathbf{y}_{t+1},\mathbf{\varepsilon }_{t+1}\right) \right] =\mathbf{0},
+\end{equation}%
+where $\mathbf{x}_{t}$ is a vector of state variables, $\mathbf{y}_{t}$ is a
+vector of jump variables, and $\mathbf{\varepsilon }_{t+1}$ is a vector of
+shocks. \ The first-order conditions and constraints for the DSGE model are
+specified equation-by-equation. \ The shocks, state variables, and jump
+variables are defined and then SolveDSGE takes the model and expresses it in
+the form of equation (1) in preparation for solution. \ Equation (1) covers
+a wide set of models, but obviously not all models. \ In principle SolveDSGE
+can handle standard business cycle models of the real and new Keynesian
+varieties, and it can handle models with volatility shocks, but it cannot
+handle heterogeneous agents models, nor models with generalized Euler
+equation like those that emerge from discretionary policy problems or from
+models with quasi-geometric discounting. \ Allowing for models that contain
+generalized Euler equations is a topic for future work. \ Another set of
+models that are not fully accommodated are those where the shocks are
+contemporaneously correlated. \ Such models can be solved via the
+perturbation methods, but not via the projection methods (due to the
+techniques used for quadrature).
 
 \section{The model file}
 
@@ -836,7 +862,7 @@ of sigma.
 Once you have solved your model there are many things that you might want to
 use the solution for. \ Some of the more obvious things, such as simulating
 data from the solution and computing impulse response functions have been
-programmed into SolveDSGE to make things easier for you.
+built into SolveDSGE to make things easier for you.
 
 \subsection{Simulation}
 
@@ -855,8 +881,7 @@ be
 As this example makes clear, the simulate function returns two 2D arrays. \
 The first array contains simulated data for the state variables, the second
 array contains simulated data for the jump variables. \ The simulate
-function can be applied to both stochastic and deterministic models. \ An
-initial burn-in sample of 1000 observations is also generated and discarded.
+function can be applied to both stochastic and deterministic models.
 
 \subsection{Impulse response functions}
 
