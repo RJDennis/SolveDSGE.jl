@@ -426,37 +426,34 @@ function repackage_equations(equations::Array{Q,1},variables::Array{Q,1},model::
 
     repackaged_equations = copy(equations)
 
-    # Now we go through every equation and replace future variables and
-    # variables with a numbered element of a vector, "x".
-
-    for i = 1:length(repackaged_equations)
-        for j in sortperm(length.(lead_variables),rev = true)
-            repackaged_equations[i] = replace(repackaged_equations[i],lead_variables[j] => "x[$(length(variables) + j)]")
-        end
-    end
-
-    for i = 1:length(repackaged_equations)
-        for j in sortperm(length.(variables),rev = true)
-            repackaged_equations[i] = replace(repackaged_equations[i],variables[j] => "x[$(j)]")
-        end
-    end
-
-    # Go through each equation and replace parameter names with its associated value.
-
-    for i = 1:length(repackaged_equations)
-        #for j in sortperm(length.(parameters),rev = true)
-        for j = 1:length(parameters) # Parameters have already been ordered from longest to shortest
-            repackaged_equations[i] = replace(repackaged_equations[i],parameters[j] => parametervalues[j])
-        end
-    end
-
-    # Go through each equation and replace any shocks with a numbered element of a
-    # vector, "x".
-
     if count_variables(shocks) != 0
-        for i = 1:length(repackaged_equations)
-            for j in sortperm(length.(shocks),rev = true)
-                repackaged_equations[i] = replace(repackaged_equations[i],shocks[j] => "x[$(length(variables) + length(lead_variables) + j)]")
+        vars_plus_params = [variables;parameters;shocks]
+    else
+        vars_plus_params = [variables;parameters]
+    end
+
+    sorted_vars_plus_params = vars_plus_params[sortperm(length.(vars_plus_params),rev = true)]
+
+    # Now we go through every equation and replace future variables, variables, and
+    # shocks with a numbered element of a vector, "x".  We also replace parameter
+    # names with parameter values.
+
+    for j in sorted_vars_plus_params
+        if sum(j .== variables) == 1
+            variable_index = findfirst(isequal(j),variables)
+            for i = 1:length(repackaged_equations)
+                repackaged_equations[i] = replace(repackaged_equations[i],"$j(+1)" => "x[$(length(variables) + variable_index)]")
+                repackaged_equations[i] = replace(repackaged_equations[i],j => "x[$(variable_index)]")
+            end
+        elseif sum(j .== parameters) == 1
+            parameter_index = findfirst(isequal(j),parameters)
+            for i = 1:length(repackaged_equations)
+                repackaged_equations[i] = replace(repackaged_equations[i],j => parametervalues[parameter_index])
+            end
+        elseif count_variables(shocks) != 0 && sum(j .== shocks) == 1
+            shock_index = findfirst(isequal(j),shocks)
+            for i = 1:length(repackaged_equations)
+                repackaged_equations[i] = replace(repackaged_equations[i],j => "x[$(length(variables) + length(lead_variables) + shock_index)]")
             end
         end
     end
@@ -479,24 +476,35 @@ function create_steady_state_equations(equations::Array{Q,1}, model::DSGEModel) 
     parameters = model.parameters
     parametervalues = model.parametervalues
 
-    for i = 1:length(equations)
-        for j in sortperm(length.(variables), rev = true)
-            #steady_state_equations[i] = replace(steady_state_equations[i], lag_variables[j] => variables[j])
-            steady_state_equations[i] = replace(steady_state_equations[i], lead_variables[j] => variables[j])
-            steady_state_equations[i] = replace(steady_state_equations[i], variables[j] => "x[$j]")
-        end
-    end
-
-    for i = 1:length(equations)
-        for j in sortperm(length.(parameters), rev = true)
-            steady_state_equations[i] = replace(steady_state_equations[i], parameters[j] => parametervalues[j])
-        end
-    end
-
     if count_variables(shocks) != 0
-        for i = 1:length(equations)
-            for j in sortperm(length.(shocks), rev = true)
-                steady_state_equations[i] = replace(steady_state_equations[i], shocks[j] => 0.0)
+        vars_plus_params = [variables;parameters;shocks]
+    else
+        vars_plus_params = [variables;parameters]
+    end
+
+    sorted_vars_plus_params = vars_plus_params[sortperm(length.(vars_plus_params),rev = true)]
+
+    # Now we go through every equation and replace future variables, variables, and
+    # shocks with a numbered element of a vector, "x".  We also replace parameter
+    # names with parameter values
+
+    for j in sorted_vars_plus_params
+        if sum(j .== variables) == 1
+            variable_index = findfirst(isequal(j),variables)
+            for i = 1:length(equations)
+                #steady_state_equations[i] = replace(steady_state_equations[i],"$j(-1)" => "x[$(variable_index)]")
+                steady_state_equations[i] = replace(steady_state_equations[i],"$j(+1)" => "x[$(variable_index)]")
+                steady_state_equations[i] = replace(steady_state_equations[i],j => "x[$(variable_index)]")
+            end
+        elseif sum(j .== parameters) == 1
+            parameter_index = findfirst(isequal(j),parameters)
+            for i = 1:length(equations)
+                steady_state_equations[i] = replace(steady_state_equations[i],j => parametervalues[parameter_index])
+            end
+        elseif count_variables(shocks) != 0 && sum(j .== shocks) == 1
+            shock_index = findfirst(isequal(j),shocks)
+            for i = 1:length(equations)
+                steady_state_equations[i] = replace(steady_state_equations[i],j => 0.0)
             end
         end
     end
