@@ -50,5 +50,5 @@ soln_nlo = solve_model(dsge,soln_nln,MM)
 simulated_data1 = simulate(soln_nlf,ss[1:2],100000)
 pos_imps, neg_imps = impulses(soln_nlf,50,1,10000)
 
-nodesf, f = approximate_density(simulated_data[3,:],10,1.95,2.0)
-nodesF, F = approximate_distribution(simulated_data[3,:],10,1.95,2.0)
+nodesf, f = approximate_density(simulated_data1[3,:],10,1.95,2.0)
+nodesF, F = approximate_distribution(simulated_data1[3,:],10,1.95,2.0)
