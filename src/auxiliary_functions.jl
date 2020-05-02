@@ -2,11 +2,11 @@ function eye(tpe::Type,n::S) where {S <: Integer}
 
     if tpe <: Number
         return Matrix{tpe}(I,n,n)
-    else
-        error("$tpe is an invalid type for the eye() function")
     end
 
 end
+
+eye(n::Integer) = eye(Float64,n::Integer)
 
 function tracem(x::Array{T,2}) where {T <: AbstractFloat}
 
@@ -25,11 +25,11 @@ function tracem(x::Array{T,2}) where {T <: AbstractFloat}
   n = size(x,2)
   m = Int(size(x,1)/n)
 
-  y = zeros(m,1)  # We want this to be a 2-d array for subsequent matrix multiplication
+  y = zeros(m)  # We want this to be a 2-d array for subsequent matrix multiplication
 
   for i = 1:m
 
-    y[i,1] = tr(x[(n*(i-1)+1):i*n,1:n])
+      @views y[i] = tr(x[(n*(i-1)+1):i*n,1:n])
 
   end
 
@@ -83,7 +83,7 @@ function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},v::A
 
     p = zeros(n1*n3,n6)
     for i = 1:n6
-        p[:,i] = kron_prod_times_vector(a,b,v[:,i])
+        @views p[:,i] = kron_prod_times_vector(a,b,v[:,i])
     end
 
     return p
@@ -144,7 +144,7 @@ function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},c::A
 
     p = zeros(n1*n3*n5,n8)
     for i = 1:n8
-        v_tilda = reshape(v[:,i],n4*n6,n2)*a'
+        @views v_tilda = reshape(v[:,i],n4*n6,n2)*a'
         p[:,i]  = vec(kron_prod_times_matrix(b,c,v_tilda))
     end
 
@@ -191,16 +191,16 @@ function dsylvester(a::AbstractArray{T,2}, b::AbstractArray{T,2}, c::Union{Abstr
         else;
             block_size = 1
         end
-        ajj = kron(s[j:j1,j:j1],t) + I
-        rhs = vec(c[:,j:j1])
+        @views ajj = kron(s[j:j1,j:j1],t) + I
+        @views rhs = vec(c[:,j:j1])
         if j1 < m
-            rhs2 = t*(x[:,(j+1):m]*s[j:j1,(j+1):m]')
+            @views rhs2 = t*(x[:,(j+1):m]*s[j:j1,(j+1):m]')
             rhs -= vec(rhs2)
         end
         w = ajj\rhs
-        x[:,j] = w[1:n]
+        @views x[:,j] = w[1:n]
         if block_size == 2
-            x[:,j1] = w[(n+1):2*n]
+            @views x[:,j1] = w[(n+1):2*n]
         end
         j -= 1
     end
@@ -221,7 +221,7 @@ function trm(x::AbstractArray{T,2}) where {T <: AbstractFloat}
 
     y = zeros(n1)
     for i = 1:k
-        y += x[:,i+(i-1)*k]
+        @views y += x[:,i+(i-1)*k]
     end
 
     return y
@@ -239,7 +239,7 @@ function trm2(x::AbstractArray{T,2}) where {T <: AbstractFloat}
     y = zeros(n1,k)
     for j = 1:k
         for i = 1:k
-            y[:,j] += x[:,(j-1)+i+(i-1)*k^2]
+            @views y[:,j] += x[:,(j-1)+i+(i-1)*k^2]
         end
     end
 
@@ -247,7 +247,7 @@ function trm2(x::AbstractArray{T,2}) where {T <: AbstractFloat}
 
 end
 
-function create_omega3(n::Integer)
+function create_omega3(n::S) where {S <: Integer}
 
     # Creates the combination matrix for a third-order perturbation as defined in Levintal (2017).
 
@@ -259,7 +259,7 @@ function create_omega3(n::Integer)
 
     ind = [1:n^3;]
     M = reshape(ind,1,n,n,n)
-    Ix = Matrix(1I,n^3,n^3)
+    Ix = eye(S,n^3)
     omega3 = (reshape(Ix[:,PermutedDimsArray(M,[1,4,2,3])],n^3,n^3)
            + reshape(Ix[:,PermutedDimsArray(M,[1,2,4,3])],n^3,n^3)
            + reshape(Ix[:,PermutedDimsArray(M,[1,2,3,4])],n^3,n^3))
@@ -288,9 +288,9 @@ function kron_prod_times_matrix(A::Union{Array{Array{T,2},1},Array{Array{Complex
     # Computes y = (A[p] * A[p-1] * ... * A[1] )*x
 
     N = prod(n[1:p])
-    y = Array{Complex{Float64}}(undef,N,size(x,2))
+    y = Array{Complex{T}}(undef,N,size(x,2))
     for j = 1:size(x,2)
-        z = x[:,j]
+        @views z = x[:,j]
         for i = 1:p
             z = (A[i]*reshape(z,n[i],Int(N/n[i])))'
         end
@@ -310,9 +310,9 @@ function KPShiftSolve(TT::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}
 
     TT[p] = alpha*TT[p]
     if p == 1
-        y = (TT[1] + lambda*Matrix{Float64}(I,n[1],n[1]))\c
+        y = (TT[1] + lambda*Matrix{T}(I,n[1],n[1]))\c
     else
-        y = Array{Complex{Float64}}(undef,N)
+        y = Array{Complex{T}}(undef,N)
         mp = Int(N/n[p])
         for i = n[p]:-1:1
             idx = ((i-1)*mp+1):(i*mp)
@@ -397,16 +397,16 @@ function dlyap(a::Array{T,2}, b::Array{T,2}) where {T <: AbstractFloat}
         else
             block = 1
         end
-        lhs = kron(s[j:j1,j:j1],s) - I # I = eye(block*n)
-        rhs = vec(b[:,j:j1])
+        @views lhs = kron(s[j:j1,j:j1],s) - I # I = eye(block*n)
+        @views rhs = vec(b[:,j:j1])
         if j1 < n
-            rhs2 = s*(x[:,(j1+1):n]*s[j:j1,(j1+1):n]')
+            @views rhs2 = s*(x[:,(j1+1):n]*s[j:j1,(j1+1):n]')
             rhs += vec(rhs2)
         end
         w = -lhs\rhs
-        x[:,j] = w[1:n]
+        @views x[:,j] = w[1:n]
         if block == 2
-            x[:,j1] = w[(n+1):block*n]
+            @views x[:,j1] = w[(n+1):block*n]
         end
         j -= 1
     end
@@ -425,7 +425,6 @@ function compute_variances(soln::FirstOrderSolutionStoch)
     sigma = soln.sigma
 
     var_states = dlyap(hx,k*sigma*k')
-
     var_jumps  = gx*var_states*gx'
 
   return var_states,var_jumps

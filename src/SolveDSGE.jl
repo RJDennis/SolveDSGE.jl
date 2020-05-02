@@ -45,7 +45,9 @@ export get_model,
        solve_model,
        compute_mean,
        simulate,
-       impulses
+       impulses,
+       approximate_density,
+       approximat_distribution
 
 export chebyshev_nodes,
        chebyshev_extrema,

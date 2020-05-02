@@ -14,7 +14,7 @@
 %TCIDATA{Version=5.50.0.2960}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Monday, March 23, 2020 21:41:45}
+%TCIDATA{LastRevised=Saturday, May 02, 2020 16:11:05}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -28,8 +28,8 @@ Glasgow, Main Building, University Avenue, Glasgow G12 8QQ; email:
 richard.dennis@glasgow.ac.uk.} \\
 %EndAName
 University of Glasgow and CAMA}
-\title{SolveDSGE v0.3.0 --- A User Guide}
-\date{February 2020}
+\title{SolveDSGE v0.3.5 --- A User Guide}
+\date{April 2020}
 \maketitle
 
 \begin{abstract}
@@ -906,7 +906,38 @@ averages over draws taken from the unconditional distribution of the state
 variables. At this stage in the package's development, the impulses need to
 be computed one shock at a time; this will probably change at some point.
 
-\begin{thebibliography}{9}
+PDFs and CDFs
+
+SolveDSGE contains functions for approximating the probability density
+function and the cumulative distribution function of a variable, where the
+approximation is based on Fourier series (Kronmal and Tarter, 1968). \ To
+approximate the probability density function the function is
+
+\bigskip 
+
+\textit{nodesf, f =
+approximate\_denisty(sample,order,lower\_bound,upper\_bound)}
+
+\bigskip 
+
+where \textit{sample} is a vector of data, \textit{order} is the order of
+the Fourier series approximation, and \textit{lower\_bound} and \textit{%
+upper\_bound} specify the support over which the PDF is constructed. \
+Similarly, the cumulative distribution function is approximated using the
+function
+
+\bigskip 
+
+\textit{nodesf, f =
+approximate\_distribution(sample,order,lower\_bound,upper\_bound)}
+
+\bigskip 
+
+where \textit{sample} is a vector of data, \textit{order} is the order of
+the Fourier series approximation, and \textit{lower\_bound} and \textit{%
+upper\_bound} specify the support over which the CDF is constructed.
+
+\begin{thebibliography}{99}
 \bibitem{} Andreasen, M., Fern\'{a}ndez-Villaverde, J., and J.
 Rubio-Ramirez, (2017), \textquotedblleft The Pruned State-Space System for
 Non-Linear DSGE Models: Theory and Empirical Applications\textquotedblright
@@ -939,6 +970,11 @@ Expectations just Once\textquotedblright , \textit{Quantitative Economics},
 Form to Solve a Multivariate Linear Rational Expectations
 Model\textquotedblright , \textit{Journal of Economic Dynamics and Control},
 24, pp. 1405---1423.
+
+\bibitem{} Kronmal, R., and M. Tarter, (1968), \textquotedblleft The
+Estimation of Probability Densities and Cumulatives by Fourier Series
+Methods\textquotedblright , \textit{Journal of the American Statistical
+Association}, 63, 323, pp.925--952.
 
 \bibitem{} Levintal, O., (2017), \textquotedblleft Fifth-Order Perturbation
 Solution to DSGE models\textquotedblright , \textit{Journal of Economic

@@ -795,3 +795,109 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
     return [impulses_states_pos[:,1:n];impulses_jumps_pos], [impulses_states_neg[:,1:n];impulses_jumps_neg]
 
 end
+
+function approximate_density(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+
+    n = 0
+
+    c = zeros(order+1)
+    for j in eachindex(sample)
+        if sample[j] >= a && sample[j] <= b
+            n += 1
+            for i = 1:order+1
+                c[i] += (2.0/(b-a))*cos((i-1)*pi*(sample[j]-a)/(b-a))
+            end
+        end
+    end
+    c = c/n
+
+    f = c[1]/2.0
+    for i = 2:order+1
+        f += c[i]*cos((i-1)*pi*(point-a)/(b-a))
+    end
+
+    return f
+
+end
+
+function approximate_density(sample::Array{T,1},order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+
+    n = 0
+
+    c = zeros(order+1)
+    for j in eachindex(sample)
+        if sample[j] >= a && sample[j] <= b
+            n += 1
+            for i = 1:order+1
+                c[i] += (2.0/(b-a))*cos((i-1)*pi*(sample[j]-a)/(b-a))
+            end
+        end
+    end
+    c = c/n
+
+    points = range(a,b,length=minimum([round(Int,n/100),100]))
+    ff = zeros(length(points))
+    for j in eachindex(ff)
+        f = c[1]/2.0
+        for i = 2:order+1
+            f += c[i]*cos((i-1)*pi*(points[j]-a)/(b-a))
+        end
+        ff[j] = f
+    end
+
+    return collect(points), ff
+
+end
+
+function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+
+    n = 0
+
+    c = zeros(order+1)
+    for j in eachindex(sample)
+        if sample[j] >= a && sample[j] <= b
+            n += 1
+            for i = 1:order+1
+                c[i] += (2.0/(b-a))*cos((i-1)*pi*(sample[j]-a)/(b-a))
+            end
+        end
+    end
+    c = c/n
+
+    F = (point-a)/(b-a)
+    for i = 2:order+1
+        F += (c[i]*(b-a)/(pi*i-1))*sin((i-1)*pi*(point-a)/(b-a))
+    end
+
+    return F
+
+end
+
+function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+
+    n = 0
+
+    c = zeros(order+1)
+    for j in eachindex(sample)
+        if sample[j] >= a && sample[j] <= b
+            n += 1
+            for i = 1:order+1
+                c[i] += (2.0/(b-a))*cos((i-1)*pi*(sample[j]-a)/(b-a))
+            end
+        end
+    end
+    c = c/n
+
+    points = range(a,b,length=minimum([round(Int,n/100),100]))
+    FF = zeros(length(points))
+    for j in eachindex(FF)
+        F = (points[j]-a)/(b-a)
+        for i = 2:order+1
+            F += (c[i]*(b-a)/(pi*i-1))*sin((i-1)*pi*(points[j]-a)/(b-a))
+        end
+        FF[j] = F
+    end
+
+    return collect(points), FF
+
+end

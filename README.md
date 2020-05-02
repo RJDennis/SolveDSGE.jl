@@ -33,7 +33,7 @@ This version (version 0.3) represents an important update on version 0.2, which 
 
 Examples of how to use SolveDSGE to solve a model are contained in the examples folder.  At the moment there are three examples: two stochastic models and one deterministic model.  The example models are intended to be familiar, easy to follow, and easy to replicate.
 
-Although it no-doubt requires much improvement, there is a User Guide that describes in detail the steps that should be taken to solve a model, and documents the relevant functions, solution schemes, and solution structures.  How to simulate data from a solved model and compute impulse response functions is also described.
+Although it no-doubt requires much improvement, there is a User Guide that describes in detail the steps that should be taken to solve a model, and documents the relevant functions, solution schemes, and solution structures.  How to simulate data from a solved model, compute impulse response functions, and approximate PDFs and CDFs is also described.
 
 References
 ----------
@@ -53,6 +53,8 @@ Judd, K., Maliar, L., Maliar, S., and R. Valero, (2014), "Smolyak Method for Sol
 Judd, K., Maliar, L., Maliar, S., and I. Tsener, (2017), "How to Solve Dynamic Stochastic Models Computing Expectations just Once", Quantitative Economics, 8, pp.851---893.
 
 Klein, P., (2000), "Using the Generalized Schur Form to Solve a Multivariate Linear Rational Expectations Model", Journal of Economic Dynamics and Control, 24, pp. 1405---1423.
+
+Kronmal, R., and M. Tarter, (1968), "The Estimation of Probability Densities and Cumulatives by Fourier Series Methods", Journal of the American Statistical Association, 63, 323, pp.925--952.
 
 Levintal, O., (2017), "Fifth-Order Perturbation Solution to DSGE models", Journal of Economic Dynamics and Control, 80, pp. 1---16.
 

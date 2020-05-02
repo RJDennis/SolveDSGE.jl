@@ -1,15 +1,24 @@
 function open_model_file(path::Q) where {Q <: AbstractString}
 
-    # Opens the model file and reads the contents, which are stored in a String-vector.
+    #= Opens the model file and reads the contents, which are stored
+       in a String-vector. =#
 
     model_file = open(path)
     model_array = readlines(model_file)
     close(model_file)
 
-    # Remove lines that have been commented out
-    # A line is assumed to be commented out if a # appears anywhere in the line
+    # Remove blank lines
 
-    model_array = model_array[.!occursin.("#",model_array)]
+    model_array = model_array[model_array .!= ""]
+
+    # Remove lines or parts of lines that have been commented out.
+
+    for i in eachindex(model_array)
+        if occursin("#",model_array[i]) == true
+            keep,discard = split(model_array[i],"#")
+            model_array[i] = keep
+        end
+    end
 
     return model_array
 
@@ -24,7 +33,7 @@ function find_term(model_array::Array{Q,1}, term::Q) where {Q <: AbstractString}
     if length(locations) == 1
         return locations[1]
     elseif length(locations) == 0
-        error("The $term-designation is not in the model file")
+        error("The $term-designation does not appear in the model file")
     else
         error("The $term-designation appears multiple times in the model file")
     end
@@ -49,10 +58,12 @@ end
 
 function get_variables(model_array::Array{Q,1}, term::Q) where {Q <: AbstractString}
 
-    # This function extracts the variable names and ensures that no names are repeated
+    #= This function extracts the variable names and ensures that no names
+       are repeated =#
 
     term_begin = find_term(model_array, term) + 1
     term_end   = find_end(model_array, term_begin) - 1
+
     if term_begin > term_end
         if term == "shocks:"
             return [""]
@@ -62,18 +73,6 @@ function get_variables(model_array::Array{Q,1}, term::Q) where {Q <: AbstractStr
     end
 
     term_block = model_array[term_begin:term_end]
-
-    # Remove blank lines
-
-    term_block = term_block[term_block .!= ""]
-
-    if length(term_block) == 0
-        if term == "shocks:"
-            return [""]
-        else
-            error("The model file contains no $(term[1:end-1])")
-        end
-    end
 
     # Extract the variable names
 
@@ -174,13 +173,6 @@ function get_parameters_and_values(model_array::Array{Q,1}, term::Q) where {Q <:
 
     parameterblock  = model_array[parametersbegin:parametersend]
 
-    # Remove blank lines
-
-    parameterblock = parameterblock[parameterblock .!= ""]
-    if length(parameterblock) == 0
-        error("The model file contains no $(term[1:end-1])")
-    end
-
     # Extract the parameter names and values
 
     # First remove any trailing separators: "," or ";".
@@ -202,7 +194,7 @@ function get_parameters_and_values(model_array::Array{Q,1}, term::Q) where {Q <:
         if occursin("=",revised_parameterblock[i]) == false
             error("Parameter line $i does not contain an '=' sign")
         else
-            pair = String.(strip.(split(revised_parameterblock[i],"=")))
+            pair = strip.(split(revised_parameterblock[i],"="))
             parameters[i] = pair[1]
             values[i] = Meta.parse(pair[2])
         end
@@ -227,13 +219,6 @@ function get_equations(model_array::Array{Q,1}, term::Q) where {Q <: AbstractStr
     end
 
     equation_block  = model_array[equationsbegin:equationsend]
-
-    # Remove blank lines
-
-    equation_block = equation_block[equation_block .!= ""]
-    if length(equation_block) == 0
-        error("The model file contains no $(term[1:end-1])")
-    end
 
     # Extract the equations
 
@@ -281,19 +266,12 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q <: AbstractSt
         end
     end
 
-    if length(intersect(parameters, variables)) != 0
-        error("Some parameters and variables have the same name")
+    combined_names = [parameters;variables;shocks]
+    if length(unique(combined_names)) != length(combined_names)
+        error("Some parameters, variables, or shocks have the same name")
     end
 
-    if length(intersect(parameters, shocks)) != 0
-        error("Some parameters and shocks have the same name")
-    end
-
-    if length(intersect(shocks, variables)) != 0
-        error("Some variables and shocks have the same name")
-    end
-
-    if sum([variables;shocks;parameters] .== "exp") != 0
+    if sum(combined_names .== "exp") != 0
         error("'exp' cannot be a name for a variable, a shock, or a parameter.")
     end
 
@@ -427,18 +405,18 @@ function repackage_equations(equations::Array{Q,1},variables::Array{Q,1},model::
     repackaged_equations = copy(equations)
 
     if count_variables(shocks) != 0
-        vars_plus_params = [variables;parameters;shocks]
+        combined_names = [variables;parameters;shocks]
     else
-        vars_plus_params = [variables;parameters]
+        combined_names = [variables;parameters]
     end
 
-    sorted_vars_plus_params = vars_plus_params[sortperm(length.(vars_plus_params),rev = true)]
+    sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
 
     # Now we go through every equation and replace future variables, variables, and
     # shocks with a numbered element of a vector, "x".  We also replace parameter
     # names with parameter values.
 
-    for j in sorted_vars_plus_params
+    for j in sorted_combined_names
         if sum(j .== variables) == 1
             variable_index = findfirst(isequal(j),variables)
             for i = 1:length(repackaged_equations)
@@ -469,39 +447,38 @@ function create_steady_state_equations(equations::Array{Q,1}, model::DSGEModel) 
     # their associated value.
 
     steady_state_equations = copy(equations)
-    variables = model.variables
-    lag_variables = model.lag_variables
-    lead_variables = model.lead_variables
-    shocks = model.shocks
-    parameters = model.parameters
+
+    variables       = model.variables
+    shocks          = model.shocks
+    parameters      = model.parameters
     parametervalues = model.parametervalues
 
     if count_variables(shocks) != 0
-        vars_plus_params = [variables;parameters;shocks]
+        combined_names = [variables;parameters;shocks]
     else
-        vars_plus_params = [variables;parameters]
+        combined_names = [variables;parameters]
     end
 
-    sorted_vars_plus_params = vars_plus_params[sortperm(length.(vars_plus_params),rev = true)]
+    sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
 
     # Now we go through every equation and replace future variables, variables, and
     # shocks with a numbered element of a vector, "x".  We also replace parameter
     # names with parameter values
 
-    for j in sorted_vars_plus_params
-        if sum(j .== variables) == 1
+    for j in sorted_combined_names
+        if j in variables
             variable_index = findfirst(isequal(j),variables)
             for i = 1:length(equations)
-                #steady_state_equations[i] = replace(steady_state_equations[i],"$j(-1)" => "x[$(variable_index)]")
+                steady_state_equations[i] = replace(steady_state_equations[i],"$j(-1)" => "x[$(variable_index)]")
                 steady_state_equations[i] = replace(steady_state_equations[i],"$j(+1)" => "x[$(variable_index)]")
                 steady_state_equations[i] = replace(steady_state_equations[i],j => "x[$(variable_index)]")
             end
-        elseif sum(j .== parameters) == 1
+        elseif j in parameters
             parameter_index = findfirst(isequal(j),parameters)
             for i = 1:length(equations)
                 steady_state_equations[i] = replace(steady_state_equations[i],j => parametervalues[parameter_index])
             end
-        elseif count_variables(shocks) != 0 && sum(j .== shocks) == 1
+        elseif count_variables(shocks) != 0 && j in shocks
             shock_index = findfirst(isequal(j),shocks)
             for i = 1:length(equations)
                 steady_state_equations[i] = replace(steady_state_equations[i],j => 0.0)
@@ -612,7 +589,7 @@ function re_model_processed(re_model_primatives::REModelPrimatives{Q,T}) where {
 
     projection_equations, jumps_to_be_approximated = create_projection_equations(repackaged_equations,re_model_primatives)
     closure_function = function faux_closure_function() end
-    closure_function_piecewise = function faux_closure_function_pl() end
+    closure_function_piecewise = function faux_closure_function() end
 
     number_states    = count_variables(states)
     number_jumps     = count_variables(re_model_primatives.jumps)
@@ -628,7 +605,7 @@ end
 
 function create_model_functions(model::REModel, path::AbstractString)
 
-    # Takes the model's equations (which read in as strings) and turns these
+    # Takes the model's equations (which are read in as strings) and turns these
     # equations into functions.  There are functions for the static equations,
     # functions for the dynamic equations, and functions for each individual
     # dynamic equation.  These functions are inserted into the processed model

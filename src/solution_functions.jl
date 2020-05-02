@@ -52,12 +52,12 @@ function solve_first_order_det(model::REModel,scheme::PerturbationScheme) # Foll
 
     steady_state = scheme.steady_state
     cutoff       = scheme.cutoff
-    T            = typeof(cutoff)
+    T            = eltype(steady_state)
 
-    d = compute_linearization(model, steady_state)
+    d = compute_linearization(model,steady_state)
 
-    a =  d[1:nv,1:nv]
-    b = -d[1:nv,nv+1:2*nv]
+    @views a =  d[1:nv,1:nv]
+    @views b = -d[1:nv,nv+1:2*nv]
 
     r = schur(complex(a), complex(b))
 
@@ -69,7 +69,7 @@ function solve_first_order_det(model::REModel,scheme::PerturbationScheme) # Foll
 
     s = r.S
     t = r.T
-    q = r.Q'  # So now q*a*z = s and q*b*z = t
+    #q = r.Q'  # So now q*a*z = s and q*b*z = t
     z = r.Z
 
     # Calculate the number of unstable eigenvalues
@@ -86,10 +86,10 @@ function solve_first_order_det(model::REModel,scheme::PerturbationScheme) # Foll
     # Construct the rational expectations equilibrium by eliminating the
     # unstable dynamics
 
-    z11 = z[1:nx,1:nx]
-    z21 = z[nx+1:nv,1:nx]
-    t11 = t[1:nx,1:nx]
-    s11 = s[1:nx,1:nx]
+    @views z11 = z[1:nx,1:nx]
+    @views z21 = z[nx+1:nv,1:nx]
+    @views t11 = t[1:nx,1:nx]
+    @views s11 = s[1:nx,1:nx]
 
     hx = real((z11/t11)*(s11/z11))
     gx = real(z21/z11)
@@ -108,12 +108,12 @@ function solve_first_order_stoch(model::REModel,scheme::PerturbationScheme) # Fo
 
     steady_state = scheme.steady_state
     cutoff       = scheme.cutoff
-    T            = typeof(cutoff)
+    T            = eltype(steady_state)
 
-    d = compute_linearization(model, steady_state)
+    d = compute_linearization(model,steady_state)
 
-    a =  d[1:nv,1:nv]
-    b = -d[1:nv,nv+1:2*nv]
+    @views a =  d[1:nv,1:nv]
+    @views b = -d[1:nv,nv+1:2*nv]
 
     r = schur(complex(a), complex(b))
 
@@ -125,7 +125,7 @@ function solve_first_order_stoch(model::REModel,scheme::PerturbationScheme) # Fo
 
     s = r.S
     t = r.T
-    q = r.Q'  # So now q*a*z = s and q*b*z = t
+    #q = r.Q'  # So now q*a*z = s and q*b*z = t
     z = r.Z
 
     # Calculate the number of unstable eigenvalues
@@ -142,19 +142,17 @@ function solve_first_order_stoch(model::REModel,scheme::PerturbationScheme) # Fo
     # Construct the rational expectations equilibrium by eliminating the
     # unstable dynamics
 
-    z11 = z[1:nx,1:nx]
-    z21 = z[nx+1:nv,1:nx]
-    t11 = t[1:nx,1:nx]
-    s11 = s[1:nx,1:nx]
+    @views z11 = z[1:nx,1:nx]
+    @views z21 = z[nx+1:nv,1:nx]
+    @views t11 = t[1:nx,1:nx]
+    @views s11 = s[1:nx,1:nx]
 
     hx = real((z11/t11)*(s11/z11))
     gx = real(z21/z11)
 
-    c = -d[1:nv,2*nv+1:2*nv+ns]
-    k = c[1:nx,:]
-    sigma = Matrix{T}(I,ns,ns)
+    @views k = -d[1:nx,2*nv+1:2*nv+ns]
+    sigma = eye(T,ns)
     soln = FirstOrderSolutionStoch(steady_state[1:nx],hx,k,steady_state[nx+1:nv],gx,sigma,grc,soln_type)
-
     return soln
 
 end
@@ -185,7 +183,7 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
 
     steady_state = scheme.steady_state
     cutoff       = scheme.cutoff
-    T            = typeof(cutoff)
+    T            = eltype(steady_state)
 
     first_order_soln = solve_first_order(model,PerturbationScheme(steady_state,cutoff,"first"))
     hx        = first_order_soln.hx
@@ -203,16 +201,15 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     point = [steady_state; steady_state]
     deriv2 = zeros(ne*2*nv,2*nv)
     for i = 1:nv
-        h = ForwardDiff.hessian(model.each_eqn_function[i],point,ForwardDiff.HessianConfig(model.each_eqn_function[i],point,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
-        deriv2[(i-1)*2*nv+1:i*2*nv,:] = h
-    end
+        deriv2[(i-1)*2*nv+1:i*2*nv,:] = ForwardDiff.hessian(model.each_eqn_function[i],point,ForwardDiff.HessianConfig(model.each_eqn_function[i],point,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
+     end
 
     # Construct partitioned first derivative matrices
 
-    fx  = d[:,1:nx]
-    fy  = d[:,(nx+1):nv]
-    fxp = d[:,(nv+1):(nv+nx)]
-    fyp = d[:,(nv+nx+1):2*nv]
+    @views fx  = d[:,1:nx]
+    @views fy  = d[:,(nx+1):nv]
+    @views fxp = d[:,(nv+1):(nv+nx)]
+    @views fyp = d[:,(nv+nx+1):2*nv]
 
     # Set up the Sylvester equation needed to construct the matrices on the
     # second-order states.
@@ -229,8 +226,8 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     # states.
 
     A = [b1+b2*c2 b4]
-    B = [zeros(size(b2,1),nx*nx) b2*c1]
     C = hx
+    B = [zeros(size(b2,1),nx*nx) b2*c1]
     D = q
 
     B = A\B
@@ -258,7 +255,7 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
 
     steady_state = scheme.steady_state
     cutoff       = scheme.cutoff
-    T            = typeof(cutoff)
+    T            = eltype(steady_state)
 
     first_order_soln = solve_first_order(model,PerturbationScheme(steady_state,cutoff,"first"))
     hx        = first_order_soln.hx
@@ -276,16 +273,15 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
     point = [steady_state; steady_state; zeros(ns)]
     deriv2 = zeros(ne*2*nv,2*nv)
     for i = 1:nv
-        h = ForwardDiff.hessian(model.each_eqn_function[i],point,ForwardDiff.HessianConfig(model.each_eqn_function[i],point,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
-        deriv2[(i-1)*2*nv+1:i*2*nv,:] = h
+        deriv2[(i-1)*2*nv+1:i*2*nv,:] = ForwardDiff.hessian(model.each_eqn_function[i],point,ForwardDiff.HessianConfig(model.each_eqn_function[i],point,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
     end
 
     # Construct partitioned first derivative matrices
 
-    fx  = d[:,1:nx]
-    fy  = d[:,(nx+1):nv]
-    fxp = d[:,(nv+1):(nv+nx)]
-    fyp = d[:,(nv+nx+1):2*nv]
+    @views fx  = d[:,1:nx]
+    @views fy  = d[:,(nx+1):nv]
+    @views fxp = d[:,(nv+1):(nv+nx)]
+    @views fyp = d[:,(nv+nx+1):2*nv]
 
     # Set up the Sylvester equation needed to construct the matrices on the
     # second-order states.
@@ -356,7 +352,6 @@ function solve_third_order_det(model::REModel, scheme::PerturbationScheme) # Fol
 
     steady_state = scheme.steady_state
     cutoff       = scheme.cutoff
-    T            = typeof(cutoff)
 
     first_order_soln = solve_first_order(model,PerturbationScheme(steady_state,cutoff,"first"))
     hx        = first_order_soln.hx
@@ -393,10 +388,10 @@ function solve_third_order_det(model::REModel, scheme::PerturbationScheme) # Fol
 
     Mx = [I; gx; hx; gx*hx]
 
-    fx  = first_derivs[:,1:nx]
-    fy  = first_derivs[:,nx+1:nv]
-    fxp = first_derivs[:,nv+1:nv+nx]
-    fyp = first_derivs[:,nv+nx+1:2*nv]
+    @views fx  = first_derivs[:,1:nx]
+    @views fy  = first_derivs[:,nx+1:nv]
+    @views fxp = first_derivs[:,nv+1:nv+nx]
+    @views fyp = first_derivs[:,nv+nx+1:2*nv]
 
     # Compute the second-order terms on the state variables
 
@@ -416,15 +411,15 @@ function solve_third_order_det(model::REModel, scheme::PerturbationScheme) # Fol
 
     hxx_dagger = zeros(nx^2,nx^3)
     for i = 1:nx
-        hxx_dagger[:,(i-1)*nx^2+1:i*nx^2] = kron(hx,hxx[:,(i-1)*nx+1:i*nx])
+        @views hxx_dagger[:,(i-1)*nx^2+1:i*nx^2] = kron(hx,hxx[:,(i-1)*nx+1:i*nx])
     end
 
     # Solve for the third order coefficients on the state variables
 
     omega = create_omega3(nx)
 
-    A = [fxp+fyp*gx fy]
-    B = [zeros(nv,nx) fyp]
+    #A = [fxp+fyp*gx fy]
+    #B = [zeros(nv,nx) fyp]
     D = (-matrix_times_kron_prod(third_derivs,Mx,Mx,Mx) - matrix_times_kron_prod(second_derivs,Mx,Mxx)*omega - fyp*gxx*(kron(hx,hxx) + kron(hxx,hx) + hxx_dagger))
 
     z = martin_van_loan(A,B,hx,D,2)
@@ -483,10 +478,10 @@ function solve_third_order_stoch(model::REModel, scheme::PerturbationScheme, ske
 
     Mx = [I; gx; hx; gx*hx]
 
-    fx  = first_derivs[:,1:nx]
-    fy  = first_derivs[:,nx+1:nv]
-    fxp = first_derivs[:,nv+1:nv+nx]
-    fyp = first_derivs[:,nv+nx+1:2*nv]
+    @views fx  = first_derivs[:,1:nx]
+    @views fy  = first_derivs[:,nx+1:nv]
+    @views fxp = first_derivs[:,nv+1:nv+nx]
+    @views fyp = first_derivs[:,nv+nx+1:2*nv]
 
     # Compute the second-order terms on the state variables
 
@@ -506,16 +501,16 @@ function solve_third_order_stoch(model::REModel, scheme::PerturbationScheme, ske
 
     hxx_dagger = zeros(nx^2,nx^3)
     for i = 1:nx
-        hxx_dagger[:,(i-1)*nx^2+1:i*nx^2] = kron(hx,hxx[:,(i-1)*nx+1:i*nx])
+        @views hxx_dagger[:,(i-1)*nx^2+1:i*nx^2] .= kron(hx,hxx[:,(i-1)*nx+1:i*nx])
     end
 
     # Solve for the third order coefficients on the state variables
 
     omega = create_omega3(nx)
 
-    A = [fxp+fyp*gx fy]
-    B = [zeros(nv,nx) fyp]
-    D = (-matrix_times_kron_prod(third_derivs,Mx,Mx,Mx) - matrix_times_kron_prod(second_derivs,Mx,Mxx)*omega - fyp*gxx*(kron(hx,hxx) + kron(hxx,hx) + hxx_dagger))
+    #A = [fxp+fyp*gx fy]
+    #B = [zeros(nv,nx) fyp]
+    D = (-matrix_times_kron_prod(third_derivs,Mx,Mx,Mx) .- matrix_times_kron_prod(second_derivs,Mx,Mxx)*omega .- fyp*gxx*(kron(hx,hxx) .+ kron(hxx,hx) .+ hxx_dagger))
 
     z = martin_van_loan(A,B,hx,D,2)
     hxxx = z[1:nx,:]
@@ -529,7 +524,7 @@ function solve_third_order_stoch(model::REModel, scheme::PerturbationScheme, ske
     Ns = [zeros(nv,nx); I; gx]
 
     A = [fxp+fyp*gx fy+fyp]
-    F = -trm(matrix_times_kron_prod(second_derivs,Ns,Ns*k*sigma*k')) - fyp*trm(matrix_times_kron_prod(gxx,eye(T,nx),k*sigma*k'))
+    F = -trm(matrix_times_kron_prod(second_derivs,Ns,Ns*k*sigma*k')) .- fyp*trm(matrix_times_kron_prod(gxx,eye(T,nx),k*sigma*k'))
 
     z = A\F
     hss = reshape(z[1:nx,:],nx)
@@ -562,7 +557,7 @@ function solve_third_order_stoch(model::REModel, scheme::PerturbationScheme, ske
 
         Nss = [zeros(nv+nx,nx^2); gxx]
 
-        A = [fxp+fyp*gx fy+fyp]
+        #A = [fxp+fyp*gx fy+fyp]
         F = -trm(third_derivs*kron(Ns,kron(Ns,Ns*skew))) - 3*trm(second_derivs*kron(Nss,Ns*skew)) - fyp*trm(gxxx*kron(eye(T,nx^2),skew))
         z = A\F
         hsss = reshape(z[1:nx,:],nx)
