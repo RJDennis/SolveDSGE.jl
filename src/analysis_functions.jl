@@ -866,10 +866,55 @@ function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T
 
     F = (point-a)/(b-a)
     for i = 2:order+1
-        F += (c[i]*(b-a)/(pi*i-1))*sin((i-1)*pi*(point-a)/(b-a))
+        F += (c[i]*(b-a)/(pi*(i-1)))*sin((i-1)*pi*(point-a)/(b-a))
     end
 
     return F
+
+end
+
+function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:AbstractFloat,S<:Integer}
+
+    n_vars = size(sample,2)
+    C = Array{Array{T,1}}(undef,n_vars)
+    n = zeros(n_vars)
+
+    for i = 1:n_vars
+        c = zeros(order[i]+1)
+        samp = sample[:,i]
+        for j in eachindex(samp)
+            if samp[j] >= a[i] && samp[j] <= b[i]
+                n[i] += 1
+                for k = 1:order[i]+1
+                    c[k] += (2.0/(b[i]-a[i]))*cos((k-1)*pi*(samp[j]-a[i])/(b[i]-a[i]))
+                end
+            end
+        end
+        C[i] = c/n[i]
+        C[i][1] = C[i][1]/2.0
+    end
+
+    V = Array{Array{T,1}}(undef,n_vars)
+    for i = 1:n_vars
+        v = Array{T,1}(undef,order[i]+1)
+        for j = 1:order[i]+1
+            if j == 1
+                v[1] = 1.0
+            else
+                v[j] = cos((j-1)*pi*(point[i]-a[i])/(b[i]-a[i]))
+            end
+        end
+        V[i] = v
+    end
+
+    coefs = C[1]
+    vars = V[1]
+    for i = 2:n_vars
+        coefs = kron(coefs,C[i])
+        vars = kron(vars,V[i])
+    end
+
+    return (coefs'vars)[1]
 
 end
 
@@ -893,7 +938,7 @@ function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {
     for j in eachindex(FF)
         F = (points[j]-a)/(b-a)
         for i = 2:order+1
-            F += (c[i]*(b-a)/(pi*i-1))*sin((i-1)*pi*(points[j]-a)/(b-a))
+            F += (c[i]*(b-a)/(pi*(i-1)))*sin((i-1)*pi*(points[j]-a)/(b-a))
         end
         FF[j] = F
     end

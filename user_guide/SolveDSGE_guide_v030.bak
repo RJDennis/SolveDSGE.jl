@@ -14,7 +14,7 @@
 %TCIDATA{Version=5.50.0.2960}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Saturday, May 02, 2020 16:10:33}
+%TCIDATA{LastRevised=Tuesday, May 05, 2020 00:45:20}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -28,8 +28,8 @@ Glasgow, Main Building, University Avenue, Glasgow G12 8QQ; email:
 richard.dennis@glasgow.ac.uk.} \\
 %EndAName
 University of Glasgow and CAMA}
-\title{SolveDSGE v0.3.5 --- A User Guide}
-\date{February 2020}
+\title{SolveDSGE v0.3.6 --- A User Guide}
+\date{April 2020}
 \maketitle
 
 \begin{abstract}
@@ -911,31 +911,63 @@ PDFs and CDFs
 SolveDSGE contains functions for approximating the probability density
 function and the cumulative distribution function of a variable, where the
 approximation is based on Fourier series (Kronmal and Tarter, 1968). \ To
-approximate the probability density function the function is
+approximate the probability density function and evaluate the approximated
+function at a point the function is
+
+\bigskip
+
+\textit{f =
+approximate\_density(sample,point,order,lower\_bound,upper\_bound)}
+
+where \textit{sample} is a vector of data, \textit{point} is the value at
+which the PDF is evaluated, \textit{order} is the order of the Fourier
+series approximation, and \textit{lower\_bound} and \textit{upper\_bound}
+specify the support over which the PDF is constructed. \ If an approximation
+of the entire PDF is sought, then the function is
 
 \bigskip 
 
 \textit{nodesf, f =
-approximate\_denisty(sample,order,lower\_bound,upper\_bound)}
+approximate\_density(sample,order,lower\_bound,upper\_bound)}
 
 \bigskip 
 
-where \textit{sample} is a vector of data, \textit{order} is the order of
-the Fourier series approximation, and \textit{lower\_bound} and \textit{%
-upper\_bound} specify the support over which the PDF is constructed. \
-Similarly, the cumulative distribution function is approximated using the
-function
+Similarly, the cumulative distribution function is approximated and
+evaluated at a point using the function
+
+\bigskip
+
+\textit{F =
+approximate\_distribution(sample,point,order,lower\_bound,upper\_bound)}
+
+\bigskip
+
+where \textit{sample} is a vector of data, \textit{point} is the value at
+which the CDF is evaluated, \textit{order} is the order of the Fourier
+series approximation, and \textit{lower\_bound} and \textit{upper\_bound}
+specify the support over which the CDF is constructed. \ If an approximation
+of the entire CDF is sought, then the function is
 
 \bigskip 
 
-\textit{nodesf, f =
+\textit{nodesF, F =
 approximate\_distribution(sample,order,lower\_bound,upper\_bound)}
 
 \bigskip 
 
-where \textit{sample} is a vector of data, \textit{order} is the order of
-the Fourier series approximation, and \textit{lower\_bound} and \textit{%
-upper\_bound} specify the support over which the CDF is constructed.
+Finally, in the multivaraite case the PDF can be approximated and evaluated
+at a point using the function
+
+\bigskip 
+
+\textit{f =
+approximate\_density(sample,point,order,lower\_bound,upper\_bound)}
+
+\bigskip 
+
+where \textit{sample} is a 2D array of data, \textit{point} is a vector, 
+\textit{order} is a vector of integers, and \textit{lower\_bound} and 
+\textit{upper\_bound} are vectors.
 
 \begin{thebibliography}{99}
 \bibitem{} Andreasen, M., Fern\'{a}ndez-Villaverde, J., and J.
