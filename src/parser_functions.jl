@@ -7,18 +7,19 @@ function open_model_file(path::Q) where {Q <: AbstractString}
     model_array = readlines(model_file)
     close(model_file)
 
-    # Remove blank lines
-
-    model_array = model_array[model_array .!= ""]
-
     # Remove lines or parts of lines that have been commented out.
 
     for i in eachindex(model_array)
         if occursin("#",model_array[i]) == true
-            keep,discard = split(model_array[i],"#")
+            components = split(model_array[i],"#")
+            keep = prod(components[isodd.(eachindex(components))])
             model_array[i] = keep
         end
     end
+
+    # Remove blank lines
+
+    model_array = model_array[model_array .!= ""]
 
     return model_array
 

@@ -14,7 +14,7 @@
 %TCIDATA{Version=5.50.0.2960}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Tuesday, May 05, 2020 00:45:20}
+%TCIDATA{LastRevised=Wednesday, May 06, 2020 22:07:04}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -906,13 +906,18 @@ averages over draws taken from the unconditional distribution of the state
 variables. At this stage in the package's development, the impulses need to
 be computed one shock at a time; this will probably change at some point.
 
-PDFs and CDFs
+\subsection{PDFs and CDFs}
 
 SolveDSGE contains functions for approximating the probability density
 function and the cumulative distribution function of a variable, where the
-approximation is based on Fourier series (Kronmal and Tarter, 1968). \ To
-approximate the probability density function and evaluate the approximated
-function at a point the function is
+approximation is based on Fourier series (Kronmal and Tarter, 1968). \ Most
+of the functionality relates to the univariate case, but some functionality
+is included to approximate and evaluate the PDF\ in the multivariate case.
+
+\subsubsection{Univariate}
+
+To approximate the probability density function and evaluate the
+approximated function at a point the function is
 
 \bigskip
 
@@ -925,12 +930,12 @@ series approximation, and \textit{lower\_bound} and \textit{upper\_bound}
 specify the support over which the PDF is constructed. \ If an approximation
 of the entire PDF is sought, then the function is
 
-\bigskip 
+\bigskip
 
 \textit{nodesf, f =
 approximate\_density(sample,order,lower\_bound,upper\_bound)}
 
-\bigskip 
+\bigskip
 
 Similarly, the cumulative distribution function is approximated and
 evaluated at a point using the function
@@ -948,22 +953,35 @@ series approximation, and \textit{lower\_bound} and \textit{upper\_bound}
 specify the support over which the CDF is constructed. \ If an approximation
 of the entire CDF is sought, then the function is
 
-\bigskip 
+\bigskip
 
 \textit{nodesF, F =
 approximate\_distribution(sample,order,lower\_bound,upper\_bound)}
 
-\bigskip 
+\bigskip
 
-Finally, in the multivaraite case the PDF can be approximated and evaluated
-at a point using the function
+\subsubsection{Multivariate}
 
-\bigskip 
+In the multivaraite case the PDF can be approximated and evaluated at a
+point using the function
+
+\bigskip
 
 \textit{f =
 approximate\_density(sample,point,order,lower\_bound,upper\_bound)}
 
-\bigskip 
+\bigskip
+
+where \textit{sample} is a 2D array of data, \textit{point} is a vector, 
+\textit{order} is a vector of integers, and \textit{lower\_bound} and 
+\textit{upper\_bound} are vectors. \ From this function, marginal densities
+and conditional densities can be computed. \ Similarly, the CDF can be
+approximated and evaluated at a point using the function
+
+\textit{F =
+approximate\_distribution(sample,point,order,lower\_bound,upper\_bound)}
+
+\bigskip
 
 where \textit{sample} is a 2D array of data, \textit{point} is a vector, 
 \textit{order} is a vector of integers, and \textit{lower\_bound} and 

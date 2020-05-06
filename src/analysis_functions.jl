@@ -849,30 +849,6 @@ function approximate_density(sample::Array{T,1},order::S,a::T,b::T) where {T<:Ab
 
 end
 
-function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
-
-    n = 0
-
-    c = zeros(order+1)
-    for j in eachindex(sample)
-        if sample[j] >= a && sample[j] <= b
-            n += 1
-            for i = 1:order+1
-                c[i] += (2.0/(b-a))*cos((i-1)*pi*(sample[j]-a)/(b-a))
-            end
-        end
-    end
-    c = c/n
-
-    F = (point-a)/(b-a)
-    for i = 2:order+1
-        F += (c[i]*(b-a)/(pi*(i-1)))*sin((i-1)*pi*(point-a)/(b-a))
-    end
-
-    return F
-
-end
-
 function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:AbstractFloat,S<:Integer}
 
     n_vars = size(sample,2)
@@ -918,6 +894,30 @@ function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S
 
 end
 
+function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+
+    n = 0
+
+    c = zeros(order+1)
+    for j in eachindex(sample)
+        if sample[j] >= a && sample[j] <= b
+            n += 1
+            for i = 1:order+1
+                c[i] += (2.0/(b-a))*cos((i-1)*pi*(sample[j]-a)/(b-a))
+            end
+        end
+    end
+    c = c/n
+
+    F = (point-a)/(b-a)
+    for i = 2:order+1
+        F += (c[i]*(b-a)/(pi*(i-1)))*sin((i-1)*pi*(point-a)/(b-a))
+    end
+
+    return F
+
+end
+
 function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
 
     n = 0
@@ -944,5 +944,50 @@ function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {
     end
 
     return collect(points), FF
+
+end
+
+function approximate_distribution(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:AbstractFloat,S<:Integer}
+
+    n_vars = size(sample,2)
+    C = Array{Array{T,1}}(undef,n_vars)
+    n = zeros(n_vars)
+
+    for i = 1:n_vars
+        c = zeros(order[i]+1)
+        samp = sample[:,i]
+        for j in eachindex(samp)
+            if samp[j] >= a[i] && samp[j] <= b[i]
+                n[i] += 1
+                for k = 1:order[i]+1
+                    c[k] += (2.0/(b[i]-a[i]))*cos((k-1)*pi*(samp[j]-a[i])/(b[i]-a[i]))
+                end
+            end
+        end
+        C[i] = c/n[i]
+        C[i][1] = 1.0
+    end
+
+    V = Array{Array{T,1}}(undef,n_vars)
+    for i = 1:n_vars
+        v = Array{T,1}(undef,order[i]+1)
+        for j = 1:order[i]+1
+            if j == 1
+                v[1] = (point[i]-a[i])/(b[i]-a[i])
+            else
+                v[j] = ((b[i]-a[i])/(pi*(j-1)))*sin((j-1)*pi*(point[i]-a[i])/(b[i]-a[i]))
+            end
+        end
+        V[i] = v
+    end
+
+    coefs = C[1]
+    vars = V[1]
+    for i = 2:n_vars
+        coefs = kron(coefs,C[i])
+        vars = kron(vars,V[i])
+    end
+
+    return (coefs'vars)[1]
 
 end
