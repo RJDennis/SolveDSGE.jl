@@ -590,7 +590,7 @@ function re_model_processed(re_model_primatives::REModelPrimatives{Q,T}) where {
 
     projection_equations, jumps_to_be_approximated = create_projection_equations(repackaged_equations,re_model_primatives)
     closure_function = function faux_closure_function() end
-    closure_function_piecewise = function faux_closure_function() end
+    closure_function_piecewise = function faux_closure_function_piecewise() end
 
     number_states    = count_variables(states)
     number_jumps     = count_variables(re_model_primatives.jumps)
