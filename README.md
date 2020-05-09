@@ -42,7 +42,7 @@ The main research papers upon which the solution methods are based are the follo
 
 Andreasen, M., Fernández-Villaverde, J., and J. Rubio-Ramirez, (2017), "The Pruned State-Space System for Non-Linear DSGE Models: Theory and Empirical Applications", Review of Economic Studies, 0, pp. 1---49.
 
-Binning, A., (2013), "Third-order approximation of dynamic models without the use of tensors", Norges Bank Working Paper 2013---13.
+Binning, A., (2013), "Third-Order Approximation of Dynamic Models Without the Use of Tensors", Norges Bank Working Paper 2013---13.
 
 Gomme, P., and P. Klein, (2011), "Second-Order Approximation of Dynamic Models Without the Use of Tensors", Journal of Economic Dynamics and Control, 35, pp. 604---615.
 
