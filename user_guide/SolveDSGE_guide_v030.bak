@@ -14,7 +14,7 @@
 %TCIDATA{Version=5.50.0.2960}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Wednesday, May 06, 2020 22:07:04}
+%TCIDATA{LastRevised=Wednesday, May 13, 2020 00:39:22}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -28,8 +28,8 @@ Glasgow, Main Building, University Avenue, Glasgow G12 8QQ; email:
 richard.dennis@glasgow.ac.uk.} \\
 %EndAName
 University of Glasgow and CAMA}
-\title{SolveDSGE v0.3.6 --- A User Guide}
-\date{April 2020}
+\title{SolveDSGE v0.3.8 --- A User Guide}
+\date{May 2020}
 \maketitle
 
 \begin{abstract}
@@ -895,7 +895,7 @@ example of impulses() in use might be
 
 \bigskip
 
-pos\_\textit{responses, neg\_responses = impulses(soln,50,1,10000)}
+\textit{pos\_responses, neg\_responses = impulses(soln,50,1,10000)}
 
 \bigskip
 
@@ -923,6 +923,8 @@ approximated function at a point the function is
 
 \textit{f =
 approximate\_density(sample,point,order,lower\_bound,upper\_bound)}
+
+\bigskip 
 
 where \textit{sample} is a vector of data, \textit{point} is the value at
 which the PDF is evaluated, \textit{order} is the order of the Fourier
@@ -978,6 +980,8 @@ where \textit{sample} is a 2D array of data, \textit{point} is a vector,
 and conditional densities can be computed. \ Similarly, the CDF can be
 approximated and evaluated at a point using the function
 
+\bigskip 
+
 \textit{F =
 approximate\_distribution(sample,point,order,lower\_bound,upper\_bound)}
 
@@ -986,6 +990,29 @@ approximate\_distribution(sample,point,order,lower\_bound,upper\_bound)}
 where \textit{sample} is a 2D array of data, \textit{point} is a vector, 
 \textit{order} is a vector of integers, and \textit{lower\_bound} and 
 \textit{upper\_bound} are vectors.
+
+\subsection{Evaluating accuracy}
+
+At this point SolveDSGE doesn't have routines to assess numerical accuracy
+according to conventional metrics like Euler equation errors. \ What
+SolveDSGE can do, however, is compare two solutions and assess the
+magnitudes of any differences. \ This facilitates an adaptive approach to
+approximation and it allows robustness of the solution to be assessed across
+approximation schemes. When comparing two models, SolveDSGE looks at the
+predicted values for the jump variables, returning the maximum absolute
+difference for each jump variable found for a random sample of 100,000
+realizations of the state variables. \ We compare two solution according to
+
+\bigskip 
+
+\textit{errors = compare\_solutions(solna,solnb,domain,seed)}
+
+\bigskip 
+
+where \textit{solna} and \textit{solnb} are the two solutions that are to be
+compared, \textit{domain} is the domain for the state variables over which
+the comparison takes place, and \textit{seed} is an optional argument that
+sets the seed for the random number generator. 
 
 \begin{thebibliography}{99}
 \bibitem{} Andreasen, M., Fern\'{a}ndez-Villaverde, J., and J.

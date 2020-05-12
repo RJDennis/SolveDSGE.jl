@@ -991,3 +991,115 @@ function approximate_distribution(sample::Array{T,2},point::Array{T,1},order::Ar
     return (coefs'vars)[1]
 
 end
+
+function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 123456) where {T<:AbstractFloat,S<:Integer,R1<:ModelSolution,R2<:ModelSolution}
+
+    if typeof(solna) <: PerturbationSolution && typeof(solnb) <: PerturbationSolution
+        case = 1
+        if length(solna.gbar) != length(solnb.gbar) || length(solna.hbar) != length(solnb.hbar)
+            error("The solutions are not of the same model.")
+        end
+        nx = length(solna.hbar)
+        ny = length(solna.gbar)
+        sup_errors = zeros(ny)
+    elseif typeof(solna) <: PerturbationSolution && typeof(solnb) <: ProjectionSolution
+        case = 2
+        if length(solna.hbar) != size(solnb.domain,2) || length(solna.gbar) != length(solnb.variables) - size(solnb.domain,2)
+            error("The solutions are not of the same model.")
+        end
+        nx = length(solna.hbar)
+        ny = length(solna.gbar)
+        sup_errors = zeros(ny)
+    elseif typeof(solna) <: ProjectionSolution && typeof(solnb) <: PerturbationSolution
+        case = 3
+        if length(solnb.hbar) != size(solna.domain,2) || length(solnb.gbar) != length(solna.variables) - size(solna.domain,2)
+            error("The solutions are not of the same model.")
+        end
+        nx = length(solnb.hbar)
+        ny = length(solnb.gbar)
+        sup_errors = zeros(ny)
+    else
+        case = 4
+        if size(solna.domain) != size(solnb.domain) || length(solna.variables) != length(solnb.variables)
+            error("The solutions are not of the same model.")
+        end
+        nx = size(solna.domain,2)
+        ny = length(solna.variables)-nx
+        sup_errors = zeros(ny)
+    end
+
+    solutions = (solna,solnb)
+    Random.seed!(seed)
+
+    n = 100000
+    state = domain[2,:] .+ rand(nx,n).*(domain[1,:] - domain[2,:])
+    vars = [zeros(ny,n),zeros(ny,n)]
+    for j = 1: length(solutions)
+        soln = solutions[j]
+        for k = 1:ny
+            if typeof(soln) <: FirstOrderSolutionDet{T,S}
+                for i = 1:n
+                    vars[j][k,i] = soln.gbar[k] + (soln.gx[k:k,:]*(state[:,i] - soln.hbar))[1]
+                end
+            elseif typeof(soln) <: FirstOrderSolutionStoch{T,S}
+                for i = 1:n
+                    vars[j][k,i] = soln.gbar[k] + (soln.gx[k:k,:]*(state[:,1] - soln.hbar))[1]
+                end
+            elseif typeof(soln) <: SecondOrderSolutionDet{T,S}
+                for i = 1:n
+                    vars[j][k,i] = soln.gbar[k] + (soln.gx[k:k,:]*(state[:,i] - soln.hbar))[1]
+                    vars[j][k,i] += (1/2)*sum(vec(soln.gxx[(k-1)*nx+1:k*nx,:]).*kron((state[:,i] - soln.hbar),(state[:,i] - soln.hbar)))
+                end
+            elseif typeof(soln) <: SecondOrderSolutionStoch{T,S}
+                for i = 1:n
+                    vars[j][k,i] = soln.gbar[k] + (soln.gx[k:k,:]*(state[:,i] - soln.hbar))[1]
+                    vars[j][k,i] += (1/2)*soln.gss[k] + (1/2)*sum(vec(soln.gxx[(k-1)*nx+1:k*nx,:]).*kron((state[:,i] - soln.hbar),(state[:,i] - soln.hbar)))
+                end
+            elseif typeof(soln) <: ThirdOrderSolutionDet{T,S}
+                for i = 1:n
+                    vars[j][k,i] = soln.gbar[k] + (soln.gx[k:k,:]*(state[:,i] - soln.hbar))[1]
+                    vars[j][k,i] += (1/2)*((soln.gxx[k:k,:])*kron((state[:,i] - soln.hbar),(state[:,i] - soln.hbar)))[1] + (1/6)*(soln.gxxx[k:k,:]*kron(kron((state[:,i] - soln.hbar),(state[:,i] - soln.hbar)),(state[:,i] - soln.hbar)))[1]
+                end
+            elseif typeof(soln) <: ThirdOrderSolutionStoch{T,S}
+                for i = 1:n
+                    vars[j][k,i] = soln.gbar[k] + (soln.gx[k:k,:]*(state[:,i] - soln.hbar))[1]
+                    vars[j][k,i] += (1/2)*soln.gss[k] + (1/2)*((soln.gxx[k:k,:])*kron((state[:,i] - soln.hbar),(state[:,i] - soln.hbar)))[1] + (3/6)*(soln.gssx[k:k,:]*(state[:,i] - soln.hbar))[1] + (1/6)*(soln.gxxx[k:k,:]*kron(kron((state[:,i] - soln.hbar),(state[:,i] - soln.hbar)),(state[:,i] - soln.hbar)))[1]
+                end
+            elseif typeof(soln) <: ChebyshevSolutionDet{T,S}
+                w = chebyshev_weights(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
+                for i = 1:n
+                    vars[j][k,i] = chebyshev_evaluate(w,state[:,i],soln.order,domain)
+                end
+            elseif typeof(soln) <: ChebyshevSolutionStoch{T,S}
+                w = chebyshev_weights(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
+                for i = 1:n
+                    vars[j][k,i] = chebyshev_evaluate(w,state[:,i],soln.order,domain)
+                end
+            elseif typeof(soln) <: SmolyakSolutionDet{T,S}
+                w = smolyak_weights(soln.variables[nx+k],soln.grid,soln.multi_index,soln.domain)
+                for i = 1:n
+                    vars[j][k,i] = smolyak_evaluate(w,state[:,i],soln.multi_index,domain)
+                end
+            elseif typeof(soln) <: SmolyakSolutionStoch{T,S}
+                w = smolyak_weights(soln.variables[nx+k],soln.grid,soln.multi_index,soln.domain)
+                for i = 1:n
+                    vars[j][k,i] = smolyak_evaluate(w,state[:,i],soln.multi_index,domain)
+                end
+            elseif typeof(soln) <: PiecewiseLinearSolutionDet{T,S}
+                for i = 1:n
+                    vars[j][k,i] = piecewise_linear_evaluate(soln.variables[nx+k],soln.nodes,state[:,i])
+                end
+            elseif typeof(soln) <: PiecewiseLinearSolutionStoch{T,S}
+                for i = 1:n
+                    vars[j][k,i] = piecewise_linear_evaluate(soln.variables[nx+k],soln.nodes,state[:,i])
+                end
+            end
+        end
+    end
+    for j = 1:ny
+        sup_errors[j] = maximum(abs,vars[1][j,:]-vars[2][j,:])
+    end
+
+    return sup_errors
+
+end
