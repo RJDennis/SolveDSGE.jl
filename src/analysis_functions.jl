@@ -930,7 +930,7 @@ end
 
 function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:AbstractFloat,S<:Integer}
 
-    if length(point) != length(a) or length(point) != length(b)
+    if length(point) != length(a) || length(point) != length(b)
         error("'point', 'a', and 'b' must be the same length")
     end
 
@@ -1052,7 +1052,7 @@ end
 
 function approximate_distribution(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:AbstractFloat,S<:Integer}
 
-    if length(point) != length(a) or length(point) != length(b)
+    if length(point) != length(a) || length(point) != length(b)
         error("'point', 'a', and 'b' must be the same length")
     end
 
