@@ -42,6 +42,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: F
     nx = length(soln.hbar)
     ny = length(soln.gbar)
 
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
     simulated_states_f      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_f       = Array{T,2}(undef,ny,sim_length)
     simulated_states_f[:,1] = initial_state - soln.hbar
@@ -62,6 +66,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
     nx = length(soln.hbar)
     ny = length(soln.gbar)
 
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
     simulated_states_f      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_f       = Array{T,2}(undef,ny,sim_length)
     simulated_states_f[:,1] = initial_state - soln.hbar
@@ -79,6 +87,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: S
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
 
     hxx = Matrix(reshape(soln.hxx',nx*nx,nx)')
     gxx = Matrix(reshape(soln.gxx',nx*nx,ny)')
@@ -112,6 +124,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
     nx = length(soln.hbar)
     ny = length(soln.gbar)
 
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
     hxx = Matrix(reshape(soln.hxx',nx*nx,nx)')
     gxx = Matrix(reshape(soln.gxx',nx*nx,ny)')
 
@@ -141,6 +157,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: T
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
 
     simulated_states_f      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_f       = Array{T,2}(undef,ny,sim_length)
@@ -178,6 +198,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
     nx = length(soln.hbar)
     ny = length(soln.gbar)
 
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
     simulated_states_f      = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps_f       = Array{T,2}(undef,ny,sim_length)
     simulated_states_f[:,1] = initial_state - soln.hbar
@@ -204,7 +228,6 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
     return [simulated_states[:,1:sim_length].+soln.hbar;simulated_jumps[:,1:end].+soln.gbar]
 
-
 end
 
 function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: ChebyshevSolutionDet, T <: AbstractFloat, S <: Integer}
@@ -212,6 +235,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: C
     nv = length(soln.variables)
     nx = size(soln.domain,2)
     ny = nv - nx
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
 
     N = ndims(soln.weights[1])
 
@@ -246,6 +273,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
     ns = size(soln.sigma,2)
     ny = nv - nx
 
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
     chol_decomp = cholesky(soln.sigma)
 
     N = ndims(soln.weights[1])
@@ -279,6 +310,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: S
     nx = size(soln.domain,2)
     ny = nv - nx
 
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
     w = Array{Array{T,1},1}(undef,length(soln.variables))
     for i = 1:nv
         w[i] = smolyak_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
@@ -309,6 +344,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
     nx = size(soln.domain,2)
     ns = size(soln.sigma,2)
     ny = nv - nx
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
 
     chol_decomp = cholesky(soln.sigma)
 
@@ -341,6 +380,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: P
     nx = size(soln.domain,2)
     ny = nv - nx
 
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
     simulated_states = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps  = Array{T,2}(undef,ny,sim_length)
     simulated_states[:,1] = initial_state
@@ -366,6 +409,10 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
     nx = size(soln.domain,2)
     ns = size(soln.sigma,2)
     ny = nv - nx
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
 
     chol_decomp = cholesky(soln.sigma)
 
@@ -416,6 +463,10 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 end
 
 function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: SecondOrderSolutionStoch, S <: Integer}
+
+    if innovation_to_shock > size(soln.k,2)
+        error("There is no number $innovation_to_shock shock")
+    end
 
     Random.seed!(rndseed)
 
@@ -488,6 +539,10 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 end
 
 function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: ThirdOrderSolutionStoch, S <: Integer}
+
+    if innovation_to_shock > size(soln.k,2)
+        error("There is no number $innovation_to_shock shock")
+    end
 
     Random.seed!(rndseed)
 
@@ -577,6 +632,10 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
     ns = size(soln.sigma,2)
     ny = nv - nx
 
+    if innovation_to_shock > ns
+        error("There is no number $innovation_to_shock shock")
+    end
+
     chol_decomp = cholesky(soln.sigma)
 
     N = ndims(soln.weights[1])
@@ -657,6 +716,10 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
     ns = size(soln.sigma,2)
     ny = nv - nx
 
+    if innovation_to_shock > ns
+        error("There is no number $innovation_to_shock shock")
+    end
+
     chol_decomp = cholesky(soln.sigma)
 
     w = Array{Array{eltype(soln.domain),1},1}(undef,length(soln.variables))
@@ -735,6 +798,10 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
     ns = size(soln.sigma,2)
     ny = nv - nx
 
+    if innovation_to_shock > ns
+        error("There is no number $innovation_to_shock shock")
+    end
+
     chol_decomp = cholesky(soln.sigma)
 
     estimated_steady_state = vec((soln.domain[1,:] + soln.domain[2,:]))/2
@@ -798,6 +865,14 @@ end
 
 function approximate_density(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
 
+    if a >= b
+        error("'a' must be less than 'b'")
+    end
+
+    if point < a || point > b
+        error("'point' must be between 'a' and 'b'")
+    end
+
     n = 0
 
     c = zeros(order+1)
@@ -821,6 +896,10 @@ function approximate_density(sample::Array{T,1},point::T,order::S,a::T,b::T) whe
 end
 
 function approximate_density(sample::Array{T,1},order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+
+    if a >= b
+        error("'a' must be less than 'b'")
+    end
 
     n = 0
 
@@ -850,6 +929,18 @@ function approximate_density(sample::Array{T,1},order::S,a::T,b::T) where {T<:Ab
 end
 
 function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:AbstractFloat,S<:Integer}
+
+    if length(point) != length(a) or length(point) != length(b)
+        error("'point', 'a', and 'b' must be the same length")
+    end
+
+    for i = 1:length(point)
+        if a[i] >= b[i]
+            error("'a' must be less than 'b'")
+        elseif point[i] < a[i] || point[i] > b[i]
+            error("'point' must be between 'a' and 'b'")
+        end
+    end
 
     n_vars = size(sample,2)
     C = Array{Array{T,1}}(undef,n_vars)
@@ -896,6 +987,14 @@ end
 
 function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
 
+    if a >= b
+        error("'a' must be less than 'b'")
+    end
+
+    if point < a || point > b
+        error("'point' must be between 'a' and 'b'")
+    end
+
     n = 0
 
     c = zeros(order+1)
@@ -919,6 +1018,10 @@ function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T
 end
 
 function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+
+    if a >= b
+        error("'a' must be less than 'b'")
+    end
 
     n = 0
 
@@ -948,6 +1051,18 @@ function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {
 end
 
 function approximate_distribution(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:AbstractFloat,S<:Integer}
+
+    if length(point) != length(a) or length(point) != length(b)
+        error("'point', 'a', and 'b' must be the same length")
+    end
+
+    for i = 1:length(point)
+        if a[i] >= b[i]
+            error("'a' must be less than 'b'")
+        elseif point[i] < a[i] || point[i] > b[i]
+            error("'point' must be between 'a' and 'b'")
+        end
+    end
 
     n_vars = size(sample,2)
     C = Array{Array{T,1}}(undef,n_vars)
