@@ -277,7 +277,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
         error("The number of inital values for the states must equal the number of states")
     end
 
-    chol_decomp = cholesky(soln.sigma)
+    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     N = ndims(soln.weights[1])
 
@@ -349,7 +349,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
         error("The number of inital values for the states must equal the number of states")
     end
 
-    chol_decomp = cholesky(soln.sigma)
+    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     w = Array{Array{T,1},1}(undef,length(soln.variables))
     for i = 1:nv
@@ -414,7 +414,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
         error("The number of inital values for the states must equal the number of states")
     end
 
-    chol_decomp = cholesky(soln.sigma)
+    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     simulated_states = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps  = Array{T,2}(undef,ny,sim_length)
@@ -636,7 +636,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
         error("There is no number $innovation_to_shock shock")
     end
 
-    chol_decomp = cholesky(soln.sigma)
+    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     N = ndims(soln.weights[1])
 
@@ -720,7 +720,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
         error("There is no number $innovation_to_shock shock")
     end
 
-    chol_decomp = cholesky(soln.sigma)
+    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     w = Array{Array{eltype(soln.domain),1},1}(undef,length(soln.variables))
     for i = 1:nv
@@ -802,7 +802,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
         error("There is no number $innovation_to_shock shock")
     end
 
-    chol_decomp = cholesky(soln.sigma)
+    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     estimated_steady_state = vec((soln.domain[1,:] + soln.domain[2,:]))/2
 
