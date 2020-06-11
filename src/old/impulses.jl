@@ -29,7 +29,7 @@ function compute_first_order_state_space_re_impulses(solution,impulse_length,inn
   nx = size(p,1)
   ny = size(h,1)
 
-  s = cholesky(sigma[:,:]).U'
+  s = cholesky(Hermitian(sigma[:,:])).U'
 
   responses = zeros(nx+ny,impulse_length)
   responses[1:nx,1]           = (k*s)[:,innovation_to_shock]
@@ -58,7 +58,7 @@ function compute_state_space_op_impulses(solution,impulse_length,innovation_to_s
   ny = size(h,1)
   np = size(f,1)
 
-  s = chol(sigma[:,:])'
+  s = chol(Hermitian(sigma[:,:]))'
 
   responses = zeros(nx+ny+np,impulse_length)
   responses[1:nx,1]                 = (k*s)[:,innovation_to_shock]
@@ -83,7 +83,7 @@ function compute_structural_re_impulses(solution,impulse_length,innovation_to_sh
   k     = copy(solution.k)
   sigma = copy(solution.sigma)
 
-  s = cholesky(sigma[:,:]).U'
+  s = cholesky(Hermitian(sigma[:,:])).U'
 
   n = size(p,1)
 
@@ -106,7 +106,7 @@ function compute_structural_op_impulses(solution,impulse_length,innovation_to_sh
   k     = copy(solution.k)
   sigma = copy(solution.sigma)
 
-  s = chol(sigma[:,:])'
+  s = chol(Hermitian(sigma[:,:]))'
 
   n = size(p,1)
 
@@ -132,7 +132,7 @@ function compute_second_order_state_space_re_impulses(solution,impulse_length,in
   eta   = copy(solution.eta)
   sigma = copy(solution.sigma)
 
-  s = cholesky(sigma[:,:]).U'
+  s = cholesky(Hermitian(sigma[:,:])).U'
 
   nx = size(hx,1)
   ny = size(gx,1)
