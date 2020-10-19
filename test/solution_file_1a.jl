@@ -3,7 +3,7 @@ using SolveDSGE
 filename = "model1a.txt"
 path = joinpath(@__DIR__,filename)
 process_model(path)
-dsge = retrieve_proessed_model(path)
+dsge = retrieve_processed_model(path)
 
 x = [0.05, 3.05, 0.7]
 
