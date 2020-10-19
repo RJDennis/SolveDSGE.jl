@@ -2,7 +2,12 @@ using SolveDSGE
 
 filename = "model5a.txt"
 path5 = joinpath(@__DIR__,filename)
-dsge5 = get_model(path5)
+process_model(path5)
+
+processed_filename = "processed_model5a.txt"
+processed_path5 =  joinpath(@__DIR__,processed_filename)
+
+dsge5 = retrieve_processed_model(processed_path5)
 
 x5 = [0.05, 0.05, -0.05, 0.3, 0.3, 0.3, 0.005, 0.005]
 
@@ -43,4 +48,4 @@ soln_nl5h = solve_model(dsge5,soln_to5,MM)
 soln_nl5i = solve_model(dsge5,soln_nl5b,MM)
 
 simulated_data5 = simulate(soln_nl5c,ss5[1:4],100)
-pos_imps, neg_imps = impulses(soln_nl5c,50,1,10000)
+pos_imps, neg_imps = impulses(soln_nl5c,50,[1],10000)

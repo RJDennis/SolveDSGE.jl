@@ -434,10 +434,12 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: FirstOrderSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123456) where {R <: FirstOrderSolutionStoch, S <: Integer, T <: Real}
 
-    if innovation_to_shock > size(soln.k,2)
-        error("There is no number $innovation_to_shock shock")
+    if length(innovation_vector) > size(soln.k,2)
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < size(soln.k,2)
+        error("Each shock needs an innovation (even if its zero).")
     end
 
     nx = length(soln.hbar)
@@ -445,11 +447,11 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 
     simulated_states_pos_f      = zeros(nx,n+1)
     simulated_jumps_pos_f       = zeros(ny,n)
-    simulated_states_pos_f[:,1] = soln.k[:,innovation_to_shock]
+    simulated_states_pos_f[:,1] = soln.k*innovation_vector
 
     simulated_states_neg_f      = zeros(nx,n+1)
     simulated_jumps_neg_f       = zeros(ny,n)
-    simulated_states_neg_f[:,1] = -soln.k[:,innovation_to_shock]
+    simulated_states_neg_f[:,1] = -soln.k*innovation_vector
 
     for i = 2:n+1
         simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1]
@@ -462,10 +464,12 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: SecondOrderSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123456) where {R <: SecondOrderSolutionStoch, S <: Integer, T <: Real}
 
-    if innovation_to_shock > size(soln.k,2)
-        error("There is no number $innovation_to_shock shock")
+    if length(innovation_vector) > size(soln.k,2)
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < size(soln.k,2)
+        error("Each shock needs an innovation (even if its zero).")
     end
 
     Random.seed!(rndseed)
@@ -501,8 +505,8 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
         simulated_jumps_base_s  = zeros(ny,n)
 
         initial_state = sample[1:nx,rand(101:5*reps+100)]
-        simulated_states_pos_f[:,1]  = initial_state + soln.k[:,innovation_to_shock]
-        simulated_states_neg_f[:,1]  = initial_state - soln.k[:,innovation_to_shock]
+        simulated_states_pos_f[:,1]  = initial_state + soln.k*innovation_vector
+        simulated_states_neg_f[:,1]  = initial_state - soln.k*innovation_vector
         simulated_states_base_f[:,1] = initial_state
 
         for i = 2:n+1
@@ -538,12 +542,14 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: ThirdOrderSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123456) where {R <: ThirdOrderSolutionStoch, S <: Integer, T <: Real}
 
-    if innovation_to_shock > size(soln.k,2)
-        error("There is no number $innovation_to_shock shock")
+    if length(innovation_vector) > size(soln.k,2)
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < size(soln.k,2)
+        error("Each shock needs an innovation (even if its zero).")
     end
-
+    
     Random.seed!(rndseed)
 
     nx = length(soln.hbar)
@@ -580,8 +586,8 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
         simulated_jumps_base_t  = zeros(ny,n)
 
         initial_state = sample[1:nx,rand(101:5*reps+100)]
-        simulated_states_pos_f[:,1]  = initial_state + soln.k[:,innovation_to_shock]
-        simulated_states_neg_f[:,1]  = initial_state - soln.k[:,innovation_to_shock]
+        simulated_states_pos_f[:,1]  = initial_state + soln.k*innovation_vector
+        simulated_states_neg_f[:,1]  = initial_state - soln.k*innovation_vector
         simulated_states_base_f[:,1] = initial_state
 
         for i = 2:n+1
@@ -623,7 +629,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: ChebyshevSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123456) where {R <: ChebyshevSolutionStoch, S <: Integer, T <: Real}
 
     Random.seed!(rndseed)
 
@@ -632,8 +638,10 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
     ns = size(soln.sigma,2)
     ny = nv - nx
 
-    if innovation_to_shock > ns
-        error("There is no number $innovation_to_shock shock")
+    if length(innovation_vector) > ns
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < ns
+        error("Each shock needs an innovation (even if its zero).")
     end
 
     chol_decomp = cholesky(Hermitian(soln.sigma))
@@ -670,9 +678,9 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 
         initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos[:,1]    = initial_state
-        simulated_states_pos[1:ns,1] += chol_decomp.U[:,innovation_to_shock]
+        simulated_states_pos[1:ns,1] += chol_decomp.U*innovation_vector
         simulated_states_neg[:,1]    = initial_state
-        simulated_states_neg[1:ns,1] -= chol_decomp.U[:,innovation_to_shock]
+        simulated_states_neg[1:ns,1] -= chol_decomp.U*innovation_vector
         simulated_states_base[:,1]   = initial_state
 
         for i = 2:n+1
@@ -707,7 +715,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: SmolyakSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123456) where {R <: SmolyakSolutionStoch, S <: Integer, T <: Real}
 
     Random.seed!(rndseed)
 
@@ -716,8 +724,10 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
     ns = size(soln.sigma,2)
     ny = nv - nx
 
-    if innovation_to_shock > ns
-        error("There is no number $innovation_to_shock shock")
+    if length(innovation_vector) > ns
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < ns
+        error("Each shock needs an innovation (even if its zero).")
     end
 
     chol_decomp = cholesky(Hermitian(soln.sigma))
@@ -752,9 +762,9 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 
         initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos[:,1]    = initial_state
-        simulated_states_pos[1:ns,1] += chol_decomp.U[:,innovation_to_shock]
+        simulated_states_pos[1:ns,1] += chol_decomp.U*innovation_vector
         simulated_states_neg[:,1]    = initial_state
-        simulated_states_neg[1:ns,1] -= chol_decomp.U[:,innovation_to_shock]
+        simulated_states_neg[1:ns,1] -= chol_decomp.U*innovation_vector
         simulated_states_base[:,1]   = initial_state
 
         for i = 2:n+1
@@ -789,7 +799,7 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 
 end
 
-function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) where {R <: PiecewiseLinearSolutionStoch, S <: Integer}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123456) where {R <: PiecewiseLinearSolutionStoch, S <: Integer, T <: Real}
 
     Random.seed!(rndseed)
 
@@ -798,8 +808,10 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
     ns = size(soln.sigma,2)
     ny = nv - nx
 
-    if innovation_to_shock > ns
-        error("There is no number $innovation_to_shock shock")
+    if length(innovation_vector) > ns
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < ns
+        error("Each shock needs an innovation (even if its zero).")
     end
 
     chol_decomp = cholesky(Hermitian(soln.sigma))
@@ -826,9 +838,9 @@ function impulses(soln::R,n::S,innovation_to_shock::S,reps::S;rndseed=123456) wh
 
         initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos[:,1]    = initial_state
-        simulated_states_pos[1:ns,1] += chol_decomp.U[:,innovation_to_shock]
+        simulated_states_pos[1:ns,1] += chol_decomp.U*innovation_vector
         simulated_states_neg[:,1]    = initial_state
-        simulated_states_neg[1:ns,1] -= chol_decomp.U[:,innovation_to_shock]
+        simulated_states_neg[1:ns,1] -= chol_decomp.U*innovation_vector
         simulated_states_base[:,1]   = initial_state
 
         for i = 2:n+1
@@ -943,45 +955,42 @@ function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S
     end
 
     n_vars = size(sample,2)
-    C = Array{Array{T,1}}(undef,n_vars)
-    n = zeros(n_vars)
+    C = zeros(tuple(order...).+1)
 
-    for i = 1:n_vars
-        c = zeros(order[i]+1)
-        samp = sample[:,i]
-        for j in eachindex(samp)
-            if samp[j] >= a[i] && samp[j] <= b[i]
-                n[i] += 1
-                for k = 1:order[i]+1
-                    c[k] += (2.0/(b[i]-a[i]))*cos((k-1)*pi*(samp[j]-a[i])/(b[i]-a[i]))
+    sample .= (sample.-a')./(b'-a')
+    n = 0
+
+    for j in 1:size(sample,1)^n_vars
+        jj = CartesianIndices(tuple(repeat([size(sample,1)],n_vars)...))[j]
+        for m = 1:n_vars
+            if sample[jj[m],m] >= 0.0 && sample[jj[m],m] < 1.0
+                n += 1
+                for i in CartesianIndices(C)
+                    k = Tuple(i)
+                    l = sum(k.==1)
+                    p = cos((k[1]-1)*pi*sample[jj[1],1])
+                    for m = 2:n_vars
+                        p *= cos((k[m]-1)*pi*sample[jj[m],m])
+                    end
+                    C[i] += ((2.0^(n_vars-l))/prod(b-a))*p
                 end
             end
         end
-        C[i] = c/n[i]
-        C[i][1] = C[i][1]/2.0
     end
-
-    V = Array{Array{T,1}}(undef,n_vars)
-    for i = 1:n_vars
-        v = Array{T,1}(undef,order[i]+1)
-        for j = 1:order[i]+1
-            if j == 1
-                v[1] = 1.0
-            else
-                v[j] = cos((j-1)*pi*(point[i]-a[i])/(b[i]-a[i]))
-            end
+    C = C/n
+    
+    point .= (point-a)./(b-a)
+    prob = 0.0
+    for i in CartesianIndices(C)
+        k = Tuple(i)
+        p = cos((k[1]-1)*pi*point[1])
+        for m = 2:n_vars
+            p *= cos((k[m]-1)*pi*point[m])
         end
-        V[i] = v
+        prob += C[i]*p
     end
 
-    coefs = C[1]
-    vars = V[1]
-    for i = 2:n_vars
-        coefs = kron(coefs,C[i])
-        vars = kron(vars,V[i])
-    end
-
-    return (coefs'vars)[1]
+    return prob
 
 end
 

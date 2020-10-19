@@ -14,7 +14,7 @@
 %TCIDATA{Version=5.50.0.2960}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Wednesday, May 13, 2020 00:40:06}
+%TCIDATA{LastRevised=Monday, October 19, 2020 03:11:11}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -28,8 +28,8 @@ Glasgow, Main Building, University Avenue, Glasgow G12 8QQ; email:
 richard.dennis@glasgow.ac.uk.} \\
 %EndAName
 University of Glasgow and CAMA}
-\title{SolveDSGE v0.3.8 --- A User Guide}
-\date{May 2020}
+\title{SolveDSGE v0.3.10 --- A User Guide}
+\date{October 2020}
 \maketitle
 
 \begin{abstract}
@@ -66,7 +66,7 @@ order to solve a model. \ Instead, SolveDSGE applies the same general
 solution strategy to all models. \ Nonetheless, making use of Julia's speed,
 SolveDSGE allows models to be solved \textquotedblleft relatively
 quickly\textquotedblright , and it provides users with an easy, unified, way
-of organizing and expressing their model. \ At the users request, globally
+of organizing and expressing their model. \ At the user's request, globally
 accurate\ solutions can be obtained using Chebyshev polynomials, Smolyak
 polynomials, or piecewise linear approximations, with the solution obtained
 from one approximation scheme able to be used as an initialization for the
@@ -273,15 +273,24 @@ method along with any parameters needed to implement that solution method.
 \subsection{Reading the model and solving for its steady state}
 
 To read and process a model file we simply supply the path/filename to the
-get\_model() function, for example
+get\_model() function, for example:
 
 \bigskip
 
-\textit{dsge = get\_model("c:/desktop/model.txt")}
+\textit{process\_model("c:/desktop/model.txt")}
 
 \bigskip
 
-We can then solve for the model's steady state as follows
+The processed model is saved in the same folder as the model file, which in
+then retrieved and stored in a structure:
+
+\bigskip 
+
+\textit{dsge = retrieve\_processed\_model("c:/desktop/model\_processed.txt")}
+
+\bigskip 
+
+We can then solve for the model's steady state as follows:
 
 \bigskip
 
@@ -296,7 +305,7 @@ specifying the maximum number of iterations before the function exits.
 \subsection{Specifying a SolutionScheme}
 
 To solve a model a SolutionScheme must be supplied. \ A SolutionScheme
-specifies the solution method and the parameters upon which this solution
+specifies the solution method and the parameters upon which that solution
 method relies. \ The solution methods in SolveDSGE are either perturbation
 methods or projection methods. \ Accordingly, the SolutionSchemes can be
 divided into PerturbationSchemes or ProjectionSchemes. \ We present each in
@@ -401,7 +410,7 @@ outer-loop iterations before the solution exits.
 
 \bigskip
 
-An example of a stochastic ChebyshevScheme is
+An example of a stochastic ChebyshevScheme is:
 
 \bigskip
 
@@ -463,7 +472,7 @@ outer-loop iterations before the solution exits.
 
 \bigskip
 
-An example of a stochastic SmolyakScheme is
+An example of a stochastic SmolyakScheme is:
 
 \bigskip
 
@@ -521,7 +530,7 @@ outer-loop iterations before the solution exits.
 
 \bigskip
 
-An example of a stochastic PiecewiseLinearScheme is
+An example of a stochastic PiecewiseLinearScheme is:
 
 \bigskip
 
@@ -589,7 +598,7 @@ Smolyak, or piecewise linear) can be used.
 
 Sometimes it can be useful to add skewness to the shocks, but this is not
 easy to do through the model file. \ If you want your shocks to be skewed,
-then you can access the third order perturbation solution by calling
+then you can access the third order perturbation solution by calling:
 
 \bigskip
 
@@ -598,11 +607,11 @@ then you can access the third order perturbation solution by calling
 \bigskip
 
 where skewness is a 2D array containing the skewness coefficients. \ If
-there is only one shock, then the skewness array is%
+there is only one shock, then the skewness array is:%
 \begin{equation*}
 skewness=E\left[ \epsilon _{1}\epsilon _{1}\epsilon _{1}\right] .
 \end{equation*}%
-If there are two shocks, then the skewness array is%
+If there are two shocks, then the skewness array is:%
 \begin{equation*}
 skewness=E\left[ 
 \begin{array}{cccc}
@@ -869,8 +878,8 @@ built into SolveDSGE to make things easier for you.
 To simulate data from the solution to a model the function to use is
 simulate(), whose arguments are a model solution, an initial state, and the
 number of observations to simulate. \ An optimal final argument is the seed
-for the random number generator. \ An example of simulate() in action might
-be
+for the random number generator. \ An example of simulate() in action would
+be:
 
 \bigskip
 
@@ -887,24 +896,26 @@ function can be applied to both stochastic and deterministic models.
 
 Impulse responses are obtained using the impulses() function, which takes
 three arguments: the model solution, the length of the impulse response
-function (number of periods), the number of the shock to apply the impulse
-to, and the number of repetitions to use for the Monte Carlo integration. \
-Responses to both a positive and a negative innovation are generated. \ An
-optimal final argument is the seed for the random number generator. \ An
-example of impulses() in use might be
+function (number of periods), the nature of the impulse to apply, and the
+number of repetitions to use for the Monte Carlo integration. \ Responses to
+both a positive and a negative innovation are generated. \ An optimal final
+argument is the seed for the random number generator. \ For a model with two
+shocks, an example of impulses() in use would be:
 
 \bigskip
 
-\textit{pos\_responses, neg\_responses = impulses(soln,50,1,10000)}
+\textit{pos\_responses, neg\_responses = impulses(soln,50,[2,0],10000)}
 
-\bigskip
+\bigskip 
 
-For the nonlinear solutions (second-order perturbation, third-order
-perturbation, and the projection-based solutions) the initial state is
-\textquotedblleft integrated-out\textquotedblright\ via a Monte Carlo that
-averages over draws taken from the unconditional distribution of the state
-variables. At this stage in the package's development, the impulses need to
-be computed one shock at a time; this will probably change at some point.
+which applies a two standard deviation impulse to the first shock and no
+impulse to the second shock. \ For the nonlinear solutions (second-order
+perturbation, third-order perturbation, and the projection-based solutions)
+the initial state is \textquotedblleft integrated-out\textquotedblright\ via
+a Monte Carlo that averages over draws taken from the unconditional
+distribution of the state variables. \ At this stage in the package's
+development, the impulses need to be computed one shock at a time; this will
+probably change at some point.
 
 \subsection{PDFs and CDFs}
 
@@ -917,20 +928,20 @@ is included to approximate and evaluate the PDF\ in the multivariate case.
 \subsubsection{Univariate}
 
 To approximate the probability density function and evaluate the
-approximated function at a point the function is
+approximated function at a point the function is:
 
 \bigskip
 
 \textit{f =
 approximate\_density(sample,point,order,lower\_bound,upper\_bound)}
 
-\bigskip 
+\bigskip
 
 where \textit{sample} is a vector of data, \textit{point} is the value at
 which the PDF is evaluated, \textit{order} is the order of the Fourier
 series approximation, and \textit{lower\_bound} and \textit{upper\_bound}
 specify the support over which the PDF is constructed. \ If an approximation
-of the entire PDF is sought, then the function is
+of the entire PDF is sought, then the function is:
 
 \bigskip
 
@@ -940,7 +951,7 @@ approximate\_density(sample,order,lower\_bound,upper\_bound)}
 \bigskip
 
 Similarly, the cumulative distribution function is approximated and
-evaluated at a point using the function
+evaluated at a point using the function:
 
 \bigskip
 
@@ -953,7 +964,7 @@ where \textit{sample} is a vector of data, \textit{point} is the value at
 which the CDF is evaluated, \textit{order} is the order of the Fourier
 series approximation, and \textit{lower\_bound} and \textit{upper\_bound}
 specify the support over which the CDF is constructed. \ If an approximation
-of the entire CDF is sought, then the function is
+of the entire CDF is sought, then the function is:
 
 \bigskip
 
@@ -965,7 +976,7 @@ approximate\_distribution(sample,order,lower\_bound,upper\_bound)}
 \subsubsection{Multivariate}
 
 In the multivaraite case the PDF can be approximated and evaluated at a
-point using the function
+point using the function:
 
 \bigskip
 
@@ -976,11 +987,10 @@ approximate\_density(sample,point,order,lower\_bound,upper\_bound)}
 
 where \textit{sample} is a 2D array of data, \textit{point} is a vector, 
 \textit{order} is a vector of integers, and \textit{lower\_bound} and 
-\textit{upper\_bound} are vectors. \ From this function, marginal densities
-and conditional densities can be computed. \ Similarly, the CDF can be
-approximated and evaluated at a point using the function
+\textit{upper\_bound} are vectors. \ Similarly, the CDF can be approximated
+and evaluated at a point using the function:
 
-\bigskip 
+\bigskip
 
 \textit{F =
 approximate\_distribution(sample,point,order,lower\_bound,upper\_bound)}
@@ -995,24 +1005,24 @@ where \textit{sample} is a 2D array of data, \textit{point} is a vector,
 
 At this point SolveDSGE doesn't have routines to assess numerical accuracy
 according to conventional metrics like Euler equation errors. \ What
-SolveDSGE can do, however, is compare two solutions and assess the
+SolveDSGE does do, however, is compare two solutions and assess the
 magnitudes of any differences. \ This facilitates an adaptive approach to
 approximation and it allows robustness of the solution to be assessed across
-approximation schemes. When comparing two models, SolveDSGE looks at the
+approximation schemes. \ When comparing two models, SolveDSGE looks at the
 predicted values for the jump variables, returning the maximum absolute
 difference for each jump variable found for a random sample of 100,000
-realizations of the state variables. \ We compare two solution according to
+realizations of the state variables. \ We compare two solution according to:
 
-\bigskip 
+\bigskip
 
 \textit{errors = compare\_solutions(solna,solnb,domain,seed)}
 
-\bigskip 
+\bigskip
 
 where \textit{solna} and \textit{solnb} are the two solutions to be
 compared, \textit{domain} is the domain for the state variables over which
 the comparison takes place, and \textit{seed} is an optional argument that
-sets the seed for the random number generator. 
+sets the seed for the random number generator.
 
 \begin{thebibliography}{99}
 \bibitem{} Andreasen, M., Fern\'{a}ndez-Villaverde, J., and J.

@@ -1,8 +1,9 @@
 ################ Introduce the model structures ###############
 
 abstract type DSGEModel end
+abstract type ModelPrimatives end
 
-mutable struct REModelPrimatives{Q <: AbstractString,T <: AbstractFloat} <: DSGEModel
+struct REModelPrimatives{Q <: AbstractString} <: ModelPrimatives
 
     # This structure contains the critial model information extracted from a
     # model file.
@@ -11,15 +12,13 @@ mutable struct REModelPrimatives{Q <: AbstractString,T <: AbstractFloat} <: DSGE
     jumps::Array{Q,1}
     shocks::Array{Q,1}
     variables::Array{Q,1}
-    lag_variables::Array{Q,1}
-    lead_variables::Array{Q,1}
     parameters::Array{Q,1}
-    parametervalues::Array{T,1}
+    parametervalues::Array{Q,1}
     equations::Array{Q,1}
 
 end
 
-mutable struct REModel{S <: Integer, Q <: AbstractString} <: DSGEModel
+struct REModel{S <: Integer, Q <: AbstractString} <: DSGEModel
 
     # This structure contains information about a model in a form that the
     # model-solvers can work with.
@@ -28,19 +27,16 @@ mutable struct REModel{S <: Integer, Q <: AbstractString} <: DSGEModel
     number_jumps::S
     number_shocks::S
     number_variables::S
-    variables::Array{Q,1}
     number_equations::S
-    steady_state_equations::Array{Q,1}
-    repackaged_equations::Array{Q,1}
-    static_function::Function
+    jumps_approximated::Array{S,1}
+    variables::Array{Q,1}
     nlsolve_static_function::Function
+    static_function::Function
     dynamic_function::Function
     each_eqn_function::Array{Function,1}
-    nonlinear_equations::Array{Q,1}
     closure_function::Function
     closure_function_piecewise::Function
-    jumps_approximated::Array{S,1}
-
+    
 end
 
 ############### Introduce the solutionscheme structures #######################

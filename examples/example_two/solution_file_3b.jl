@@ -2,7 +2,12 @@ using SolveDSGE
 
 filename = "model3b.txt"
 path3 = joinpath(@__DIR__,filename)
-dsge3 = get_model(path3)
+process_model(path3)
+
+processed_filename = "processed_model5a.txt"
+processed_path3 =  joinpath(@__DIR__,processed_filename)
+
+dsge3 = retrieve_processed_model(processed_path3)
 
 x3 = [0.05, 3.05, 0.7, 0.7]
 

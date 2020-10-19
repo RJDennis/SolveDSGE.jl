@@ -2,7 +2,13 @@ using SolveDSGE
 
 filename = "model1a.txt"
 path = joinpath(@__DIR__,filename)
-dsge = get_model(path)
+
+process_model(path)
+
+processed_filename = "processed_model1a.txt"
+processed_path =  joinpath(@__DIR__,processed_filename)
+
+dsge = retrieve_processed_model(processed_path)
 
 x = [0.05, 3.05, 0.7]
 
@@ -48,7 +54,7 @@ soln_nln = solve_model(dsge,soln_nlj,MM)
 soln_nlo = solve_model(dsge,soln_nln,MM)
 
 simulated_data1 = simulate(soln_nlf,ss[1:2],100000)
-pos_imps, neg_imps = impulses(soln_nlf,50,1,10000)
+pos_imps, neg_imps = impulses(soln_nlf,50,[1],10000)
 
-nodesf, f = approximate_density(simulated_data[3,:],10,1.95,2.0)
-nodesF, F = approximate_distribution(simulated_data[3,:],10,1.95,2.0)
+nodesf, f = approximate_density(simulated_data1[3,:],10,1.95,2.0)
+nodesF, F = approximate_distribution(simulated_data1[3,:],10,1.95,2.0)
