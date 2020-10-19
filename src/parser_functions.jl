@@ -683,7 +683,7 @@ function process_model(path::Q) where {Q <: AbstractString}
 
 end
 
-function retrive_processed_model(path::Q) where {Q <: AbstractString}
+function retrieve_processed_model(path::Q) where {Q <: AbstractString}
 
     if !occursin("_processed",path)
         path = replace(path,".txt" => "_processed.txt")
