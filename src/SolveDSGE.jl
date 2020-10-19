@@ -36,7 +36,8 @@ export PerturbationScheme,
        PiecewiseLinearSolutionStoch,
        PiecewiseLinearSolutionDet
 
-export get_model,
+export process_model,
+       retrieve_processed_model,
        compute_steady_state,
        solve_first_order,
        solve_second_order,
