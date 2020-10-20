@@ -4,7 +4,7 @@ filename = "model3b.txt"
 path3 = joinpath(@__DIR__,filename)
 process_model(path3)
 
-processed_filename = "processed_model5a.txt"
+processed_filename = "model3b_processed.txt"
 processed_path3 =  joinpath(@__DIR__,processed_filename)
 
 dsge3 = retrieve_processed_model(processed_path3)
