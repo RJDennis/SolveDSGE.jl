@@ -699,9 +699,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
     integrals = Array{Array{T,1},1}(undef,ns)
     for i = 1:ns
         if length(order) == 1
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,order,k[i,i])
+            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order,-d[i,i],k[i,i])
         else
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,order[i],k[i,i])
+            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order[i],-d[i,i],k[i,i])
         end
     end
 
@@ -960,9 +960,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
     integrals = Array{Array{T,1},1}(undef,ns)
     for i = 1:ns
         if length(order) == 1
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,order,k[i,i])
+            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order,hx[i,i],k[i,i])
         else
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,order[i],k[i,i])
+            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order[i],hx[i,i],k[i,i])
         end
     end
 
@@ -1250,9 +1250,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
     integrals = Array{Array{T,1},1}(undef,ns)
     for i = 1:ns
         if length(order) == 1
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,order,k[i,i])
+            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order,-d[i,i],k[i,i])
         else
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,order[i],k[i,i])
+            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order[i],-d[i,i],k[i,i])
         end
     end
 
@@ -1467,6 +1467,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
+    RHO = -d[1:ns,1:ns]
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via projection methods")
@@ -1475,7 +1476,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
 
     grid, multi_ind = smolyak_grid(node_generator,nx,layer,domain)
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
-    weight_scale_factor = weight_scale_factors(eps_nodes,eps_weights,multi_ind,nx,k)
+    weight_scale_factor = weight_scale_factors(eps_nodes,eps_weights,multi_ind,nx,grid,RHO,k)
 
     N = size(grid,1)
 
@@ -1667,6 +1668,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
     gbar = soln.gbar
     gx   = soln.gx
 
+    RHO = hx[1:ns,1:ns]
+
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via projection methods")
@@ -1690,7 +1693,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     grid, multi_ind = smolyak_grid(node_generator,nx,layer,domain)
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
-    weight_scale_factor = weight_scale_factors(eps_nodes,eps_weights,multi_ind,nx,k)
+    weight_scale_factor = weight_scale_factors(eps_nodes,eps_weights,multi_ind,nx,grid,RHO,k)
 
     N = size(grid,1)
 
@@ -1914,6 +1917,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
+    RHO = -d[1:ns,1:ns]
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via projection methods")
@@ -1922,7 +1926,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     grid, multi_ind = smolyak_grid(node_generator,nx,layer,domain)
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
-    weight_scale_factor = weight_scale_factors(eps_nodes,eps_weights,multi_ind,nx,k)
+    weight_scale_factor = weight_scale_factors(eps_nodes,eps_weights,multi_ind,nx,grid,RHO,k)
 
     N = size(grid,1)
 

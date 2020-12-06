@@ -431,31 +431,76 @@ function compute_variances(soln::FirstOrderSolutionStoch)
 
 end
 
-function compute_chebyshev_integrals(eps_nodes,eps_weights,order,sigma)
+function compute_chebyshev_integrals(eps_nodes,eps_weights,nodes,order,rho,sigma)
 
-  integrals = Array{Float64}(undef,order+1)
+  # A simplified implementation of the integration described in Judd et al (2017, section 5.1);
+  # it uses the mean integral across the nodes.
+  # Using integrals[i] = sum(exp.(sqrt(2)*sigma*(i-1)*eps_nodes).*eps_weights)*pi^(-1/2)
+  # leads to something much simplier and equally accurate, but is less recognizably appropriate
+  # or the case where the shocks are AR(1) processes and ordinary polynomials are not being used.
+
+  terms_num  = Array{Float64}(undef,length(eps_nodes))
+  integrals  = Array{Float64}(undef,order+1,length(nodes))
+  integrals2 = Array{Float64}(undef,order+1)
   for i = 1:(order+1)
-    integrals[i] = sum(exp.(sqrt(2)*sigma*(i-1)*eps_nodes).*eps_weights)*pi^(-1/2)
+    integrals2[i] = sum(exp.(sqrt(2)*sigma*(i-1)*eps_nodes).*eps_weights)*pi^(-1/2)
+    for j = 1:length(nodes)
+      terms_num     .= rho*nodes[j] .+ sqrt(2)*sigma*eps_nodes
+      terms_den      = rho*nodes[j]
+      terms_num     .= chebyshev_polynomial(i,terms_num)[:,i]
+      terms_den      = chebyshev_polynomial(i,terms_den)[i]
+      integrals[i,j] = sum((terms_num/terms_den).*eps_weights)*pi^(-1/2)
+     end
   end
 
-  return integrals
+  nodetoosmall = abs.(nodes) .< sqrt(eps())
+  if sum(nodetoosmall) > 0
+    if length(nodes) == 1
+      integrals[:,1] .= integrals2
+    else
+      for i = 1:length(nodes)
+        if nodetoosmall[i] == 1
+          if i == 1
+            integrals[:,i] .= integrals[:,i+1]
+        elseif i == length(nodes)
+            integrals[:,i] .= integrals[:,i-1]
+          else
+            integrals[:,i] .= (integrals[:,i-1]+integrals[:,i+1])/2
+          end
+        end
+      end
+    end
+  end
+
+  return reshape(mean(integrals,dims=2),order+1)
+
+#  integrals = Array{Float64}(undef,order+1)
+#  for i = 1:(order+1)
+#    integrals[i] = sum(exp.(sqrt(2)*sigma*(i-1)*eps_nodes).*eps_weights)*pi^(-1/2)
+#  end
+#  return integrals
 
 end
 
-function compute_smolyak_integrals(eps_nodes,eps_weights,nx,order,sigma)
+function compute_smolyak_integrals(eps_nodes,eps_weights,nx,order,grid,RHO,sigma)
 
   integrals = ones(nx,order+1)
   for j = 1:size(sigma,2)
-      for i = 1:(order+1)
-          integrals[j,i] = sum(exp.(sqrt(2)*sigma[j,j]*(i-1)*eps_nodes).*eps_weights)*pi^(-1/2)
-      end
+      nodes = unique(grid[:,j])
+      integrals[j,:] .= compute_chebyshev_integrals(eps_nodes,eps_weights,nodes,order,RHO[j,j],sigma[j,j])
   end
+
+#  for j = 1:size(sigma,2)
+#      for i = 1:(order+1)
+#          integrals[j,i] = sum(exp.(sqrt(2)*sigma[j,j]*(i-1)*eps_nodes).*eps_weights)*pi^(-1/2)
+#      end
+#  end
 
   return integrals
 
 end
 
-function weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,sigma)
+function weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,grid,RHO,sigma)
 
   unique_multi_index = sort(unique(multi_index))
   unique_orders = m_i(unique_multi_index).-1
@@ -464,7 +509,7 @@ function weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,sigma)
 
   base_integrals = Array{Array{Float64,2}}(undef,length(unique_orders))
   for i = 1:length(unique_orders)
-    base_integrals[i] = compute_smolyak_integrals(eps_nodes,eps_weights,nx,unique_orders[i],sigma)
+    base_integrals[i] = compute_smolyak_integrals(eps_nodes,eps_weights,nx,unique_orders[i],grid,RHO,sigma)
   end
 
   # Compute the unique polynomial terms from the base polynomials
@@ -510,7 +555,8 @@ end
 
 function compute_piecewise_linear_integrals(eps_nodes,eps_weights,sigma)
 
-  integral = sum(exp.(sqrt(2)*sigma*eps_nodes).*eps_weights)*pi^(-1/2)
+  integral = 1.0
+  #integral = sum(exp.(sqrt(2)*sigma*eps_nodes).*eps_weights)*pi^(-1/2)
 
   return integral
 
