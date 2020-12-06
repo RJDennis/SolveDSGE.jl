@@ -472,7 +472,7 @@ function compute_chebyshev_integrals(eps_nodes,eps_weights,nodes,order,rho,sigma
     end
   end
 
-  return reshape(mean(integrals,dims=2),order+1)
+  return reshape(sum(integrals,dims=2)/length(nodes),order+1)
 
 #  integrals = Array{Float64}(undef,order+1)
 #  for i = 1:(order+1)
