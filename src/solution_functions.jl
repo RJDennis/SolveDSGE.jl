@@ -3,6 +3,10 @@ function compute_steady_state(model::REModel, x::Array{T,1}, tol::T, maxiters::S
     # Uses NLsolve (add this using the Package Manager if you don't have it) to
     # solve for the model's deterministic steady state
 
+    if length(x) != model.number_equations
+        error("The initialization has either too many or too few elements")
+    end
+
     #equations = model.nlsolve_static_function
     equations = model.static_function
     soln = nlsolve(equations, x, xtol = tol, iterations = maxiters, autodiff = :forward, inplace = false)
