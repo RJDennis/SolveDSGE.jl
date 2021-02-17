@@ -61,3 +61,5 @@ export chebyshev_nodes,
        piecewise_linear_evaluate,
        chebyshev_weights,
        smolyak_weights
+
+end
