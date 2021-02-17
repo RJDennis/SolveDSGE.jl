@@ -1,4 +1,4 @@
-function compute_steady_state(model::REModel, x::Array{T,1}, tol::T, maxiters::S) where {T <: AbstractFloat,S <: Integer}
+function compute_steady_state(model::REModel, x::Array{T,1}, tol::T, maxiters::S) where {T <: Real,S <: Integer}
 
     # Uses NLsolve (add this using the Package Manager if you don't have it) to
     # solve for the model's deterministic steady state
@@ -10,6 +10,7 @@ function compute_steady_state(model::REModel, x::Array{T,1}, tol::T, maxiters::S
     #equations = model.nlsolve_static_function
     equations = model.static_function
     soln = nlsolve(equations, x, xtol = tol, iterations = maxiters, autodiff = :forward, inplace = false)
+    #soln = nlsolve(equations, x, xtol = tol, iterations = maxiters, inplace = false)
 
     return soln.zero
 
@@ -17,7 +18,7 @@ end
 
 ##################################################################################
 
-function compute_linearization(model::REModel, steady_state::Array{T,1}) where {T <: AbstractFloat}
+function compute_linearization(model::REModel, steady_state::Array{T,1}) where {T <: Real}
 
     # This function produces the Jacobian of the model's equations.
 
@@ -234,15 +235,12 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     B = [zeros(size(b2,1),nx*nx) b2*c1]
     D = q
 
-    B = A\B
-    D = A\D
+    B .= A\B
+    D .= A\D
 
     z = dsylvester(B,C,-D)
     hxx = z[1:nx*nx,:]
     gxx = z[nx^2+1:end,:]
-
-    # Set up the LP problem needed to construct the intercepts, which contain
-    # the volatility effects
 
     soln = SecondOrderSolutionDet(steady_state[1:nx],hx,hxx,steady_state[nx+1:nv],gx,gxx,grc,soln_type)
     return soln
@@ -306,8 +304,8 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
     C = hx
     D = q
 
-    B = A\B
-    D = A\D
+    B .= A\B
+    D .= A\D
 
     z = dsylvester(B,C,-D)
     hxx = z[1:nx*nx,:]
@@ -324,12 +322,13 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
     ss = -qq\q
     hss = ss[1:nx]
     gss = ss[nx+1:nv]
+
     soln = SecondOrderSolutionStoch(steady_state[1:nx],hx,hss,hxx,k,steady_state[nx+1:nv],gx,gss,gxx,sigma,grc,soln_type)
     return soln
 
 end
 
-function solve_third_order(model::REModel,scheme::PerturbationScheme, skewness::Union{Array{T,1},Array{T,2}} = zeros(model.number_shocks,model.number_shocks^2)) where {T <: AbstractFloat} # Follows Binning (2013)
+function solve_third_order(model::REModel,scheme::PerturbationScheme, skewness::Union{Array{T,1},Array{T,2}} = zeros(model.number_shocks,model.number_shocks^2)) where {T <: Real} # Follows Binning (2013)
 
     if scheme.order != "third"
         error("A third order perturbation must be supplied")
@@ -352,7 +351,6 @@ function solve_third_order_det(model::REModel, scheme::PerturbationScheme) # Fol
     nx = model.number_states
     ny = model.number_jumps
     ne = model.number_equations
-    nv = nx + ny
 
     steady_state = scheme.steady_state
     cutoff       = scheme.cutoff
@@ -435,14 +433,13 @@ function solve_third_order_det(model::REModel, scheme::PerturbationScheme) # Fol
 
 end
 
-function solve_third_order_stoch(model::REModel, scheme::PerturbationScheme, skewness::Union{Array{T,1},Array{T,2}}) where {T <: AbstractFloat} # Follows Binning (2013)
+function solve_third_order_stoch(model::REModel, scheme::PerturbationScheme, skewness::Union{Array{T,1},Array{T,2}}) where {T <: Real} # Follows Binning (2013)
 
     ns = model.number_shocks
     nv = model.number_variables
     nx = model.number_states
     ny = model.number_jumps
     ne = model.number_equations
-    nv = nx + ny
 
     steady_state = scheme.steady_state
     cutoff       = scheme.cutoff

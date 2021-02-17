@@ -37,7 +37,7 @@ function compute_mean(soln::R) where {R <: PerturbationSolution}
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: FirstOrderSolutionDet, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: FirstOrderSolutionDet, T <: Real, S <: Integer}
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -59,7 +59,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: F
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: FirstOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: FirstOrderSolutionStoch, T <: Real, S <: Integer}
 
     Random.seed!(rndseed)
 
@@ -83,7 +83,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: SecondOrderSolutionDet, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: SecondOrderSolutionDet, T <: Real, S <: Integer}
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -117,7 +117,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: S
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: SecondOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: SecondOrderSolutionStoch, T <: Real, S <: Integer}
 
     Random.seed!(rndseed)
 
@@ -153,7 +153,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: ThirdOrderSolutionDet, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: ThirdOrderSolutionDet, T <: Real, S <: Integer}
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -191,7 +191,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: T
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: ThirdOrderSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: ThirdOrderSolutionStoch, T <: Real, S <: Integer}
 
     Random.seed!(rndseed)
 
@@ -230,7 +230,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: ChebyshevSolutionDet, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: ChebyshevSolutionDet, T <: Real, S <: Integer}
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -264,7 +264,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: C
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: ChebyshevSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: ChebyshevSolutionStoch, T <: Real, S <: Integer}
 
     Random.seed!(rndseed)
 
@@ -304,7 +304,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: SmolyakSolutionDet, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: SmolyakSolutionDet, T <: Real, S <: Integer}
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -336,7 +336,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: S
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: SmolyakSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: SmolyakSolutionStoch, T <: Real, S <: Integer}
 
     Random.seed!(rndseed)
 
@@ -374,7 +374,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: PiecewiseLinearSolutionDet, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: PiecewiseLinearSolutionDet, T <: Real, S <: Integer}
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -401,7 +401,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: P
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: PiecewiseLinearSolutionStoch, T <: AbstractFloat, S <: Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: PiecewiseLinearSolutionStoch, T <: Real, S <: Integer}
 
     Random.seed!(rndseed)
 
@@ -549,7 +549,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     elseif length(innovation_vector) < size(soln.k,2)
         error("Each shock needs an innovation (even if its zero).")
     end
-    
+
     Random.seed!(rndseed)
 
     nx = length(soln.hbar)
@@ -875,7 +875,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
 
 end
 
-function approximate_density(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+function approximate_density(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:Real, S<:Integer}
 
     if a >= b
         error("'a' must be less than 'b'")
@@ -907,7 +907,7 @@ function approximate_density(sample::Array{T,1},point::T,order::S,a::T,b::T) whe
 
 end
 
-function approximate_density(sample::Array{T,1},order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+function approximate_density(sample::Array{T,1},order::S,a::T,b::T) where {T<:Real, S<:Integer}
 
     if a >= b
         error("'a' must be less than 'b'")
@@ -940,7 +940,7 @@ function approximate_density(sample::Array{T,1},order::S,a::T,b::T) where {T<:Ab
 
 end
 
-function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:AbstractFloat,S<:Integer}
+function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:Real,S<:Integer}
 
     if length(point) != length(a) || length(point) != length(b)
         error("'point', 'a', and 'b' must be the same length")
@@ -978,7 +978,7 @@ function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S
         end
     end
     C = C/n
-    
+
     point .= (point-a)./(b-a)
     prob = 0.0
     for i in CartesianIndices(C)
@@ -994,7 +994,7 @@ function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S
 
 end
 
-function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:Real, S<:Integer}
 
     if a >= b
         error("'a' must be less than 'b'")
@@ -1026,7 +1026,7 @@ function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T
 
 end
 
-function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {T<:AbstractFloat, S<:Integer}
+function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {T<:Real, S<:Integer}
 
     if a >= b
         error("'a' must be less than 'b'")
@@ -1059,7 +1059,7 @@ function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {
 
 end
 
-function approximate_distribution(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:AbstractFloat,S<:Integer}
+function approximate_distribution(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:Real,S<:Integer}
 
     if length(point) != length(a) || length(point) != length(b)
         error("'point', 'a', and 'b' must be the same length")
@@ -1116,7 +1116,7 @@ function approximate_distribution(sample::Array{T,2},point::Array{T,1},order::Ar
 
 end
 
-function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 123456) where {T<:AbstractFloat,S<:Integer,R1<:ModelSolution,R2<:ModelSolution}
+function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 123456) where {T<:Real,S<:Integer,R1<:ModelSolution,R2<:ModelSolution}
 
     if typeof(solna) <: PerturbationSolution && typeof(solnb) <: PerturbationSolution
         case = 1

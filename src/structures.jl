@@ -15,6 +15,7 @@ struct REModelPrimatives{Q <: AbstractString} <: ModelPrimatives
     parameters::Array{Q,1}
     parametervalues::Array{Q,1}
     equations::Array{Q,1}
+    unassigned_parameters::Array{Q,1}
 
 end
 
@@ -36,7 +37,29 @@ struct REModel{S <: Integer, Q <: AbstractString} <: DSGEModel
     each_eqn_function::Array{Function,1}
     closure_function::Function
     closure_function_piecewise::Function
-    
+
+end
+
+struct REModelPartial{S <: Integer, Q <: AbstractString} <: DSGEModel
+
+    # This structure is similar to REModel, but relates to the case
+    # where some parameter values have yet to be assigned.
+
+    number_states::S
+    number_jumps::S
+    number_shocks::S
+    number_variables::S
+    number_equations::S
+    jumps_approximated::Array{S,1}
+    variables::Array{Q,1}
+    nlsolve_static_function::Function
+    static_function::Function
+    dynamic_function::Function
+    each_eqn_function::Array{Function,1}
+    closure_function::Function
+    closure_function_piecewise::Function
+    unassigned_parameters::Array{Q,1}
+
 end
 
 ############### Introduce the solutionscheme structures #######################
@@ -47,7 +70,7 @@ abstract type ChebyshevScheme <: ProjectionScheme end
 abstract type SmolyakScheme <: ProjectionScheme end
 abstract type PiecewiseLinearScheme <: ProjectionScheme end
 
-struct PerturbationScheme{T <: AbstractFloat, Q <: AbstractString} <: SolutionScheme
+struct PerturbationScheme{T <: Real, Q <: AbstractString} <: SolutionScheme
 
     steady_state::Array{T,1}
     cutoff::T
@@ -55,7 +78,7 @@ struct PerturbationScheme{T <: AbstractFloat, Q <: AbstractString} <: SolutionSc
 
 end
 
-struct ChebyshevSchemeStoch{T <: AbstractFloat, S <: Integer} <: ChebyshevScheme
+struct ChebyshevSchemeStoch{T <: Real, S <: Integer} <: ChebyshevScheme
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
@@ -69,7 +92,7 @@ struct ChebyshevSchemeStoch{T <: AbstractFloat, S <: Integer} <: ChebyshevScheme
 
 end
 
-struct ChebyshevSchemeDet{T <: AbstractFloat, S <: Integer} <: ChebyshevScheme
+struct ChebyshevSchemeDet{T <: Real, S <: Integer} <: ChebyshevScheme
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
@@ -82,7 +105,7 @@ struct ChebyshevSchemeDet{T <: AbstractFloat, S <: Integer} <: ChebyshevScheme
 
 end
 
-struct SmolyakSchemeStoch{T <: AbstractFloat, S <: Integer} <: SmolyakScheme
+struct SmolyakSchemeStoch{T <: Real, S <: Integer} <: SmolyakScheme
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
@@ -95,7 +118,7 @@ struct SmolyakSchemeStoch{T <: AbstractFloat, S <: Integer} <: SmolyakScheme
 
 end
 
-struct SmolyakSchemeDet{T <: AbstractFloat, S <: Integer} <: SmolyakScheme
+struct SmolyakSchemeDet{T <: Real, S <: Integer} <: SmolyakScheme
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
@@ -107,7 +130,7 @@ struct SmolyakSchemeDet{T <: AbstractFloat, S <: Integer} <: SmolyakScheme
 
 end
 
-struct PiecewiseLinearSchemeStoch{T <: AbstractFloat, S <: Integer} <: PiecewiseLinearScheme
+struct PiecewiseLinearSchemeStoch{T <: Real, S <: Integer} <: PiecewiseLinearScheme
 
     initial_guess::Union{T,Array{T,1}}
     node_number::Union{S,Array{S,1}}
@@ -119,7 +142,7 @@ struct PiecewiseLinearSchemeStoch{T <: AbstractFloat, S <: Integer} <: Piecewise
 
 end
 
-struct PiecewiseLinearSchemeDet{T <: AbstractFloat, S <: Integer} <: PiecewiseLinearScheme
+struct PiecewiseLinearSchemeDet{T <: Real, S <: Integer} <: PiecewiseLinearScheme
 
     initial_guess::Union{T,Array{T,1}}
     node_number::Union{S,Array{S,1}}
@@ -142,7 +165,7 @@ abstract type ProjectionSolution <: ModelSolution end
 abstract type ProjectionSolutionDet <: ProjectionSolution end
 abstract type ProjectionSolutionStoch <: ProjectionSolution end
 
-struct FirstOrderSolutionStoch{T <: AbstractFloat,S <: Integer} <: PerturbationSolutionStoch
+struct FirstOrderSolutionStoch{T <: Real,S <: Integer} <: PerturbationSolutionStoch
 
     # x(t+1) = hx*x(t) + k*v(t+1)
     #   y(t) = gx*x(t)
@@ -158,7 +181,7 @@ struct FirstOrderSolutionStoch{T <: AbstractFloat,S <: Integer} <: PerturbationS
 
 end
 
-struct FirstOrderSolutionDet{T <: AbstractFloat,S <: Integer} <: PerturbationSolutionDet
+struct FirstOrderSolutionDet{T <: Real,S <: Integer} <: PerturbationSolutionDet
 
     # x(t+1) = hx*x(t)
     #   y(t) = gx*x(t)
@@ -172,7 +195,7 @@ struct FirstOrderSolutionDet{T <: AbstractFloat,S <: Integer} <: PerturbationSol
 
 end
 
-struct SecondOrderSolutionStoch{T <: AbstractFloat,S <: Integer} <: PerturbationSolutionStoch
+struct SecondOrderSolutionStoch{T <: Real,S <: Integer} <: PerturbationSolutionStoch
 
     # x(t+1) = hx*x(t) + (1/2)*hss + (1/2)*[kron(I,x(t))]'hxx*[kron(I,x(t))] + k*v(t+1)
     #   y(t) = gx*x(t) + (1/2)*gss + (1/2)*[kron(I,x(t))]'gxx*[kron(I,x(t))]
@@ -192,7 +215,7 @@ struct SecondOrderSolutionStoch{T <: AbstractFloat,S <: Integer} <: Perturbation
 
 end
 
-struct SecondOrderSolutionDet{T <: AbstractFloat,S <: Integer} <: PerturbationSolutionDet
+struct SecondOrderSolutionDet{T <: Real,S <: Integer} <: PerturbationSolutionDet
 
     # x(t+1) = hx*x(t) + (1/2)*[kron(I,x(t))]'hxx*[kron(I,x(t))]
     #   y(t) = gx*x(t) + (1/2)*[kron(I,x(t))]'gxx*[kron(I,x(t))]
@@ -208,7 +231,7 @@ struct SecondOrderSolutionDet{T <: AbstractFloat,S <: Integer} <: PerturbationSo
 
 end
 
-struct ThirdOrderSolutionStoch{T <: AbstractFloat, S <: Integer} <: PerturbationSolutionStoch
+struct ThirdOrderSolutionStoch{T <: Real, S <: Integer} <: PerturbationSolutionStoch
 
     # x(t+1) = hx*x(t) + (1/2)*hss + (1/2)*hxx*[kron(x(t),x(t)]
     #        + (1/6)*hsss + (1/6)*hssx*[x(t)] + (1/6)*hxxx*[kron(x(t),x(t),x(t))]
@@ -239,7 +262,7 @@ struct ThirdOrderSolutionStoch{T <: AbstractFloat, S <: Integer} <: Perturbation
 
 end
 
-struct ThirdOrderSolutionDet{T <: AbstractFloat, S <: Integer} <: PerturbationSolutionDet
+struct ThirdOrderSolutionDet{T <: Real, S <: Integer} <: PerturbationSolutionDet
 
     # x(t+1) = hx*x(t) + (1/2)*hxx*[kron(x(t),x(t)] + (1/6)*hxxx*[kron(x(t),x(t),x(t))]
 
@@ -258,7 +281,7 @@ struct ThirdOrderSolutionDet{T <: AbstractFloat, S <: Integer} <: PerturbationSo
 
 end
 
-struct ChebyshevSolutionStoch{T <: AbstractFloat, S <: Integer, N} <: ProjectionSolutionStoch
+struct ChebyshevSolutionStoch{T <: Real, S <: Integer, N} <: ProjectionSolutionStoch
 
     variables::Array{Array{T,N},1}       # Variables
     weights::Array{Array{T,N},1}         # Chebyshev polynomials
@@ -270,7 +293,7 @@ struct ChebyshevSolutionStoch{T <: AbstractFloat, S <: Integer, N} <: Projection
 
 end
 
-struct ChebyshevSolutionDet{T <: AbstractFloat, S <: Integer, N} <: ProjectionSolutionDet
+struct ChebyshevSolutionDet{T <: Real, S <: Integer, N} <: ProjectionSolutionDet
 
     variables::Array{Array{T,N},1}       # Variables
     weights::Array{Array{T,N},1}         # Chebyshev polynomials
@@ -281,7 +304,7 @@ struct ChebyshevSolutionDet{T <: AbstractFloat, S <: Integer, N} <: ProjectionSo
 
 end
 
-struct SmolyakSolutionStoch{T <: AbstractFloat, S <: Integer} <: ProjectionSolutionStoch
+struct SmolyakSolutionStoch{T <: Real, S <: Integer} <: ProjectionSolutionStoch
 
     variables::Array{Array{T,1},1}       # Variables
     weights::Array{Array{T,1},1}         # Smolyak polynominals
@@ -294,7 +317,7 @@ struct SmolyakSolutionStoch{T <: AbstractFloat, S <: Integer} <: ProjectionSolut
 
 end
 
-struct SmolyakSolutionDet{T <: AbstractFloat, S <: Integer} <: ProjectionSolutionDet
+struct SmolyakSolutionDet{T <: Real, S <: Integer} <: ProjectionSolutionDet
 
     variables::Array{Array{T,1},1}       # Variables
     weights::Array{Array{T,1},1}         # Smolyak polynominals
@@ -306,7 +329,7 @@ struct SmolyakSolutionDet{T <: AbstractFloat, S <: Integer} <: ProjectionSolutio
 
 end
 
-struct PiecewiseLinearSolutionStoch{T <: AbstractFloat, S <: Integer, N} <: ProjectionSolutionStoch
+struct PiecewiseLinearSolutionStoch{T <: Real, S <: Integer, N} <: ProjectionSolutionStoch
 
     variables::Array{Array{T,N},1}       # Variables
     nodes::Array{Array{T,1},1}           # Nodes
@@ -316,7 +339,7 @@ struct PiecewiseLinearSolutionStoch{T <: AbstractFloat, S <: Integer, N} <: Proj
 
 end
 
-struct PiecewiseLinearSolutionDet{T <: AbstractFloat, S <: Integer, N} <: ProjectionSolutionDet
+struct PiecewiseLinearSolutionDet{T <: Real, S <: Integer, N} <: ProjectionSolutionDet
 
     variables::Array{Array{T,N},1}       # Variables
     nodes::Array{Array{T,1},1}           # Nodes

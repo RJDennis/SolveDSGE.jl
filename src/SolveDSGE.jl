@@ -38,6 +38,7 @@ export PerturbationScheme,
 
 export process_model,
        retrieve_processed_model,
+       assign_parameters,
        compute_steady_state,
        solve_first_order,
        solve_second_order,

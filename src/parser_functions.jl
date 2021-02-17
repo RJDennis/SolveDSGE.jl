@@ -44,7 +44,7 @@ end
 function find_end(model_array::Array{Q,1},startfrom::S) where {Q <: AbstractString,S <: Integer}
 
     #= Each of the key model terms must be followed by an 'end', whose location
-       in the vector this function finds.  White space at the start of a line is 
+       in the vector this function finds.  White space at the start of a line is
        stripped out. =#
 
     for end_location = startfrom:length(model_array)
@@ -158,11 +158,18 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q <: 
 
     # Extract the parameter names and values
 
+    unassigned_parameter_index = 1
+    unassigned_parameters = Array{Q}(undef,0)
+
     parameters = Array{Q}(undef,length(revised_parameterblock))
     values     = Array{Q}(undef,length(revised_parameterblock))
     for i = 1:length(revised_parameterblock)
         if occursin("=",revised_parameterblock[i]) == false
-            error("Parameter line $i does not contain an '=' sign.")
+            parameters[i] = revised_parameterblock[i]
+            values[i] = "param[$unassigned_parameter_index]"
+            push!(unassigned_parameters,revised_parameterblock[i])
+            unassigned_parameter_index += 1
+            #error("Parameter line $i does not contain an '=' sign.")
         else
             pair = strip.(split(revised_parameterblock[i],"="))
             parameters[i] = pair[1]
@@ -174,7 +181,7 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q <: 
     sorted_parameters = parameters[parameter_order]
     sorted_values     = values[parameter_order]
 
-    return sorted_parameters, sorted_values
+    return sorted_parameters, sorted_values, unassigned_parameters
 
 end
 
@@ -333,7 +340,7 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q <: AbstractSt
     shocks                        = get_variables(model_array,"shocks:")
     variables                     = combine_states_and_jumps(states,jumps)
     equations                     = get_equations(model_array,"equations:")
-    (parameters, parametervalues) = get_parameters_and_values(model_array,"parameters:")
+    (parameters, parametervalues, unassigned_parameters) = get_parameters_and_values(model_array,"parameters:")
 
     for i in [variables;parameters]
         if sum(occursin.(i,equations)) == false
@@ -357,8 +364,8 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q <: AbstractSt
 
     reordered_equations, states = reorder_equations(equations,shocks,states,jumps)
     reorganized_equations, states, variables = reorganize_equations(reordered_equations,states,jumps,variables,lag_variables)
-  
-    re_model_primatives = REModelPrimatives(states,jumps,shocks,variables,parameters,parametervalues,reorganized_equations)
+
+    re_model_primatives = REModelPrimatives(states,jumps,shocks,variables,parameters,parametervalues,reorganized_equations,unassigned_parameters)
 
     return re_model_primatives
 
@@ -536,7 +543,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     # First, get or construct all the information needed for the processed-model file
 
     repackaged_equations = repackage_equations(model)
-    
+
     nonlinear_equations, jumps_to_be_approximated = create_projection_equations(repackaged_equations,model)
     projection_equations = make_equations_equal_zero(nonlinear_equations)
 
@@ -549,7 +556,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     number_shocks    = length(model.shocks)
     number_variables = length(model.variables)
     number_equations = length(model.equations)
-    
+
     variables = model.variables
 
     # Build up the string containing the processed model information that gets saved
@@ -561,15 +568,20 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     model_string = string(model_string,"ns = $number_shocks \n \n")
     model_string = string(model_string,"nv = $number_variables \n \n")
     model_string = string(model_string,"ne = $number_equations \n \n")
-    
+
     model_string = string(model_string,"jumps_to_approximate = $jumps_to_be_approximated \n \n")
     model_string = string(model_string,"variables = $variables \n \n")
 
     # Second, add the model's static information
 
-    static_string         = "function static_equations(x::Array{T,1}) where {T<:Number} \n \n"
+    if length(model.unassigned_parameters) != 0
+        nlsolve_static_string = "function nlsolve_static_equations(f,x,param) \n \n"
+        static_string         = "function static_equations(x::Array{T,1},param::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
+    else
+        nlsolve_static_string = "function nlsolve_static_equations(f,x) \n \n"
+        static_string         = "function static_equations(x::Array{T,1}) where {T<:Number} \n \n"
+    end
     static_string         = string(static_string,"  f = Array{T}(undef,length(x)) \n \n")
-    nlsolve_static_string = "function nlsolve_static_equations(f,x) \n \n"
     for i = 1:length(static_equations)
         static_string         = string(static_string,"  f[$i] = ",static_equations[i],"\n")
         nlsolve_static_string = string(nlsolve_static_string,"  f[$i] = ",static_equations[i],"\n")
@@ -582,7 +594,11 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
 
     # Third, add the model's dynamic information for perturbation solvers
 
-    dynamic_string = "function dynamic_equations(x::Array{T,1}) where {T<:Number} \n \n"
+    if length(model.unassigned_parameters) != 0
+        dynamic_string = "function dynamic_equations(x::Array{T,1},param::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
+    else
+        dynamic_string = "function dynamic_equations(x::Array{T,1}) where {T<:Number} \n \n"
+    end
     dynamic_string = string(dynamic_string,"  f = Array{T}(undef,$number_equations) \n \n")
     for i = 1:number_equations
         dynamic_string = string(dynamic_string,"  f[$i] = ",dynamic_equations[i],"\n")
@@ -593,7 +609,11 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     each_equation_string = Array{String}(undef,number_equations)
 
     for i = 1:number_equations
-        each_equation_string[i] = "function dynamic_eqn_$i(x::Array{T,1}) where {T<:Number} \n \n"
+        if length(model.unassigned_parameters) != 0
+            each_equation_string[i] = "function dynamic_eqn_$i(x::Array{T,1},param::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
+        else
+            each_equation_string[i] = "function dynamic_eqn_$i(x::Array{T,1}) where {T<:Number} \n \n"
+        end
         each_equation_string[i] = string(each_equation_string[i],"  f = ", dynamic_equations[i],"\n","\n  return f \n \n","end \n")
     end
 
@@ -610,10 +630,14 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     model_string = string(model_string,dynamic_string)
 
     # Fourth, add the model's dynamic information for projection solvers
-   
+
     # For Chebyshev and Smolyak
 
-    closure_string = "function closure_projection_equations(state,scaled_weights,order,domain,approximate) \n \n"
+    if length(model.unassigned_parameters) != 0
+        closure_string = "function closure_projection_equations(state,scaled_weights,order,domain,approximate,param) \n \n"
+    else
+        closure_string = "function closure_projection_equations(state,scaled_weights,order,domain,approximate) \n \n"
+    end
     closure_string = string(closure_string, "  function projection_equations(x::Array{T,1}) where {T<:Number} \n \n")
     weight_number = 1
     for i in jumps_to_be_approximated
@@ -628,10 +652,18 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
 
     # For piecewise linear
 
-    if number_shocks == 0  # We need to separate the function generated for the stochastic and deterministic cases
-        closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,approximate) \n \n"
+    if length(model.unassigned_parameters) != 0
+        if number_shocks == 0  # We need to separate the function generated for the stochastic and deterministic cases
+            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,approximate,param) \n \n"
+        else
+            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,integrals,approximate,param) \n \n"
+        end
     else
-        closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,integrals,approximate) \n \n"
+        if number_shocks == 0  # We need to separate the function generated for the stochastic and deterministic cases
+            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,approximate) \n \n"
+        else
+            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,integrals,approximate) \n \n"
+        end
     end
 
     closure_pl_string = string(closure_pl_string,"  function projection_equations_pl(x::Array{T,1}) where {T<:Number} \n \n")
@@ -652,6 +684,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
 
     model_string = string(model_string,"\n",closure_string)
     model_string = string(model_string,"\n",closure_pl_string)
+    model_string = string(model_string,"\n","unassigned_parameters = $(model.unassigned_parameters)" )
 
     model_path = replace(path,".txt" => "_processed.txt")
     open(model_path, "w") do io write(io, model_string) end
@@ -664,10 +697,13 @@ function process_re_model(model_array::Array{Q,1},path::Q) where {Q <: AbstractS
     # (anticipating that other types of models may come later).
 
     re_model_primatives = get_re_model_primatives(model_array)
-    
+
     create_processed_model_file(re_model_primatives,path)
 
     println("The model's variables are now in this order: ",re_model_primatives.variables)
+    if length(re_model_primatives.unassigned_parameters) != 0
+        println("The following parameters do not have values assigned: $(re_model_primatives.unassigned_parameters)")
+    end
 
 end
 
@@ -691,8 +727,41 @@ function retrieve_processed_model(path::Q) where {Q <: AbstractString}
 
     include(path) # The information included is placed in the global scope
 
-    dsge_model = REModel(nx,ny,ns,nv,ne,jumps_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_projection_equations,closure_projection_equations_pl)
+    if length(unassigned_parameters) != 0
+        dsge_model = REModelPartial(nx,ny,ns,nv,ne,jumps_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_projection_equations,closure_projection_equations_pl,unassigned_parameters)
+    else
+        dsge_model = REModel(nx,ny,ns,nv,ne,jumps_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_projection_equations,closure_projection_equations_pl)
+    end
 
     return dsge_model
+
+end
+
+function assign_parameters(model,param::Array{T,1}) where {T <: Number}
+
+    nx = model.number_states
+    ny = model.number_jumps
+    ns = model.number_shocks
+    nv = model.number_variables
+    ne = model.number_equations
+    jumps_approx = model.jumps_approximated
+    vars = model.variables
+
+    nlsse(f,x) = model.nlsolve_static_function(f,x,param)
+    sf(x)      = model.static_function(x,param)
+    df(x)      = model.dynamic_function(x,param)
+
+    ief        = Array{Function}(undef,ne)
+    for i = 1:ne
+        ffie(x) = model.each_eqn_function[i](x,param)
+        ief[i] = ffie
+    end
+
+    cf(state,scaled_weights,order,domain,approximate) = model.closure_function(state,scaled_weights,order,domain,approximate,param)
+    cfpl(variables,grid,state,integrals,approximate)  = model.closure_function_piecewise(variables,grid,state,integrals,approximate,param)
+
+    newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,vars,nlsse,sf,df,ief,cf,cfpl)
+
+    return newmod
 
 end

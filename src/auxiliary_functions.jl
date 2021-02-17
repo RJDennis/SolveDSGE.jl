@@ -8,7 +8,7 @@ end
 
 eye(n::Integer) = eye(Float64,n::Integer)
 
-function tracem(x::Array{T,2}) where {T <: AbstractFloat}
+function tracem(x::Array{T,2}) where {T <: Real}
 
   # Computes the matrix-trace as defined by Gomme and Klein (2011)
 
@@ -25,19 +25,17 @@ function tracem(x::Array{T,2}) where {T <: AbstractFloat}
   n = size(x,2)
   m = Int(size(x,1)/n)
 
-  y = zeros(m)  # We want this to be a 2-d array for subsequent matrix multiplication
+  y = zeros(m,1)  # We want this to be a 2-d array for subsequent matrix multiplication
 
-  for i = 1:m
-
-      @views y[i] = tr(x[(n*(i-1)+1):i*n,1:n])
-
+  @inbounds for i = 1:m
+    @views y[i,1] = tr(x[(n*(i-1)+1):i*n,1:n])
   end
 
   if trans == true
-    y = Matrix(y')
+    y = y'
   end
 
-  return y
+  return Matrix(y)
 
 end
 
@@ -145,7 +143,7 @@ function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},c::A
     p = zeros(n1*n3*n5,n8)
     for i = 1:n8
         @views v_tilda = reshape(v[:,i],n4*n6,n2)*a'
-        p[:,i]  = vec(kron_prod_times_matrix(b,c,v_tilda))
+        p[:,i] .= vec(kron_prod_times_matrix(b,c,v_tilda))
     end
 
     return p
@@ -160,7 +158,7 @@ function matrix_times_kron_prod(v::AbstractArray{T,2},a::AbstractArray{T,2},b::A
 
 end
 
-function dsylvester(a::AbstractArray{T,2}, b::AbstractArray{T,2}, c::Union{AbstractArray{T,1},AbstractArray{T,2}}) where {T <: AbstractFloat}
+function dsylvester(a::AbstractArray{T,2}, b::AbstractArray{T,2}, c::Union{AbstractArray{T,1},AbstractArray{T,2}}) where {T <: Real}
 
     #= Uses the Hessenberg-Schur method to find the bounded solution of the
        discrete Sylvester equation:
@@ -211,7 +209,7 @@ function dsylvester(a::AbstractArray{T,2}, b::AbstractArray{T,2}, c::Union{Abstr
 
 end
 
-function trm(x::AbstractArray{T,2}) where {T <: AbstractFloat}
+function trm(x::AbstractArray{T,2}) where {T <: Real}
 
     # Computes the matrix trace as defined by Binning (2013).  Used for
     # computing the second-order terms, hss, gss.
@@ -228,7 +226,7 @@ function trm(x::AbstractArray{T,2}) where {T <: AbstractFloat}
 
 end
 
-function trm2(x::AbstractArray{T,2}) where {T <: AbstractFloat}
+function trm2(x::AbstractArray{T,2}) where {T <: Real}
 
     # Computes the matrix trace as defined by Binning (2013).  Used for
     # computing the third-order terms, hssx, gssx.
@@ -268,7 +266,7 @@ function create_omega3(n::S) where {S <: Integer}
 
 end
 
-function kron_prod_times_vector(A::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},x::Union{Array{T,1},Array{Complex{T},1}},n::Array{S,1},p::S) where {T <: AbstractFloat, S <: Integer}
+function kron_prod_times_vector(A::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},x::Union{Array{T,1},Array{Complex{T},1}},n::Array{S,1},p::S) where {T <: Real, S <: Integer}
 
     # Computes y = (A[p] * A[p-1] * ... * A[1] )*x
 
@@ -283,7 +281,7 @@ function kron_prod_times_vector(A::Union{Array{Array{T,2},1},Array{Array{Complex
 
 end
 
-function kron_prod_times_matrix(A::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},x::Union{Array{T,2},Array{Complex{T},2}},n::Array{S,1},p::S) where {T <: AbstractFloat, S <: Integer}
+function kron_prod_times_matrix(A::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},x::Union{Array{T,2},Array{Complex{T},2}},n::Array{S,1},p::S) where {T <: Real, S <: Integer}
 
     # Computes y = (A[p] * A[p-1] * ... * A[1] )*x
 
@@ -294,14 +292,14 @@ function kron_prod_times_matrix(A::Union{Array{Array{T,2},1},Array{Array{Complex
         for i = 1:p
             z = (A[i]*reshape(z,n[i],Int(N/n[i])))'
         end
-        y[:,j] = reshape(Matrix(z),N)
+        y[:,j] .= reshape(Matrix(z),N)
     end
 
     return y
 
 end
 
-function KPShiftSolve(TT::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},n::Array{S,1},c::Union{Array{T,1},Array{Complex{T},1}},lambda::T,alpha::Union{T,Complex{T}}) where {T <: AbstractFloat, S <: Integer}
+function KPShiftSolve(TT::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},n::Array{S,1},c::Union{Array{T,1},Array{Complex{T},1}},lambda::T,alpha::Union{T,Complex{T}}) where {T <: Real, S <: Integer}
 
     p = length(n)
     N = prod(n)
@@ -329,7 +327,7 @@ function KPShiftSolve(TT::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}
 
 end
 
-function martin_van_loan(a::Array{T,2},b::Array{T,2},c::Array{T,2},d::Array{T,2},k::S) where {T <: AbstractFloat, S <: Integer}
+function martin_van_loan(a::Array{T,2},b::Array{T,2},c::Array{T,2},d::Array{T,2},k::S) where {T <: Real, S <: Integer}
 
     #= Uses a recursive Schur method to find the bounded solution of the Sylvester
        equation:
@@ -347,11 +345,10 @@ function martin_van_loan(a::Array{T,2},b::Array{T,2},c::Array{T,2},d::Array{T,2}
     c = copy(c)
     d = a\copy(d)
 
-    (v,s) = hessenberg(b)               # v*s*v' = b
-    (t,q) = schur(Matrix(complex(c')))  # q*t*q' = c'
+    (v,s) = hessenberg(b)       # v*s*v' = b
+    (t,q) = schur(complex(c'))  # q*t*q' = c'
 
     v = Matrix(v)
-    s = Matrix(s)
 
     p = k + 2
     TT = Array{typeof(t)}(undef,p)
@@ -378,7 +375,7 @@ function martin_van_loan(a::Array{T,2},b::Array{T,2},c::Array{T,2},d::Array{T,2}
 
 end
 
-function dlyap(a::Array{T,2}, b::Array{T,2}) where {T <: AbstractFloat}
+function dlyap(a::Array{T,2}, b::Array{T,2}) where {T <: Real}
 
     n = size(a,1)
     x = zeros(n,n)
