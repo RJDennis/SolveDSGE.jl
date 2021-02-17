@@ -772,10 +772,15 @@ function assign_parameters(model,param::Array{T,1}) where {T <: Number}
     end
 
     cf(state,scaled_weights,order,domain,approximate) = model.closure_function(state,scaled_weights,order,domain,approximate,param)
-    cfpl(variables,grid,state,integrals,approximate)  = model.closure_function_piecewise(variables,grid,state,integrals,approximate,param)
+    cfpl_stoch(variables,grid,state,integrals,approximate)  = model.closure_function_piecewise(variables,grid,state,integrals,approximate,param)
+    cfpl_det(variables,grid,state,approximate)  = model.closure_function_piecewise(variables,grid,state,approximate,param)
 
-    newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,vars,nlsse,sf,df,ief,cf,cfpl)
-
-    return newmod
+    if ns != 0
+        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,vars,nlsse,sf,df,ief,cf,cfpl_stoch)
+        return newmod
+    else
+        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,vars,nlsse,sf,df,ief,cf,cfpl_det)
+        return newmod
+    end
 
 end

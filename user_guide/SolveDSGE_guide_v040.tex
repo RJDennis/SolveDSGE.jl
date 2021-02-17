@@ -16,7 +16,7 @@
 %TCIDATA{Codepage=1252}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Wednesday, February 17, 2021 01:15:40}
+%TCIDATA{LastRevised=Wednesday, February 17, 2021 19:31:31}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -277,7 +277,7 @@ model file.
 
 \item Solve for the model's steady state. \ This is actually an optional
 step, if the model is to be solved using a projection method, but knowing
-the steady state is often useful. 
+the steady state is often useful.
 
 \item Specify a SolutionScheme. \ A SolutionScheme specifies the solution
 method along with any parameters needed to implement that solution method.
@@ -311,11 +311,11 @@ If this is the case, then values must be assigned to these parameters before
 the model can be solved. \ This is simple to do through the
 assign\_parameters() function:
 
-\bigskip 
+\bigskip
 
 \textit{dsge = assign\_parameters(dsge,params)}
 
-\bigskip 
+\bigskip
 
 where \textit{params} is a vector containing the needed values in the order
 that the parameters were earlier listed. \ (The name of the model generated
@@ -576,7 +576,7 @@ In the deterministic case the number of quadrature nodes is not needed, i,e,,
 
 \bigskip
 
-\textit{Pdet = PiecewiseLinearDet(ss,[21,21],9,[0.1 30.0; -0.1
+\textit{Pdet = PiecewiseLinearDet(ss,[21,21],[0.1 30.0; -0.1
 20.0],1e-8,1e-6,1000)}
 
 \subsection{Model solution}

@@ -1,6 +1,6 @@
 using SolveDSGE
 
-filename = "model1b.txt"
+filename = "model2b.txt"
 path = joinpath(@__DIR__,filename)
 process_model(path)
 dsge = retrieve_processed_model(path)
