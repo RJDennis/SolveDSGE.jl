@@ -273,12 +273,26 @@ function reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Arra
 
     states_that_have_been_reordered = Int64[]
     pos = 1
-    for i = 1:number_eqns_with_shocks
-        for j = pos:length(states)
-            if occursin(states[j],reordered_equations[i]) == true && (j in states_that_have_been_reordered) == false
-                reordered_states[pos], reordered_states[j] = reordered_states[j], reordered_states[pos]
-                push!(states_that_have_been_reordered,j)
-                pos += 1
+    if number_eqns_with_shocks != 0 # Get the right ordering for states for stochastic models
+        for i = 1:number_eqns_with_shocks
+            for j = pos:length(states)
+                if occursin(states[j],reordered_equations[i]) == true && (j in states_that_have_been_reordered) == false
+                    reordered_states[pos], reordered_states[j] = reordered_states[j], reordered_states[pos]
+                    push!(states_that_have_been_reordered,j)
+                    pos += 1
+                end
+            end
+        end
+    else
+        for i = 1:length(equations)
+            if states_number[i] != 0 && jumps_number[i] == 0 # Get the right ordering for states for deterministic models
+                for j = pos:length(states)
+                    if occursin(states[j],reordered_equations[i]) == true && (j in states_that_have_been_reordered) == false
+                        reordered_states[pos], reordered_states[j] = reordered_states[j], reordered_states[pos]
+                        push!(states_that_have_been_reordered,j)
+                        pos += 1
+                    end
+                end
             end
         end
     end
