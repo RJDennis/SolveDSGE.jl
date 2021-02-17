@@ -1,0 +1,26 @@
+# Example four --- Deterministic growth model with partial parameterization
+
+states:
+cap, tech
+end
+
+jumps:
+cons
+end
+
+shocks:
+end
+
+parameters:
+betta
+sigma = 1.1
+delta = 0.025
+alpha = 0.30
+rho = 0.8
+end
+
+equations:
+cap(+1) = (1.0 - delta)*cap + exp(tech)*cap^alpha - cons
+cons^(-sigma) = betta*cons(+1)^(-sigma)*(1.0 - delta + alpha*exp(tech(+1))*cap(+1)^(alpha - 1.0))
+tech(+1) = rho*tech
+end
