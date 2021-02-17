@@ -9,6 +9,7 @@ processed_filename = "model1a_processed.txt"
 processed_path =  joinpath(@__DIR__,processed_filename)
 
 dsge = retrieve_processed_model(processed_path)
+dsge = assign_parameters(dage,[0.99])
 
 x = [0.05, 3.05, 0.7]
 
