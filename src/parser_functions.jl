@@ -169,7 +169,6 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q <: 
             values[i] = "param[$unassigned_parameter_index]"
             push!(unassigned_parameters,revised_parameterblock[i])
             unassigned_parameter_index += 1
-            #error("Parameter line $i does not contain an '=' sign.")
         else
             pair = strip.(split(revised_parameterblock[i],"="))
             parameters[i] = pair[1]
@@ -589,10 +588,10 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     # Second, add the model's static information
 
     if length(model.unassigned_parameters) != 0
-        nlsolve_static_string = "function nlsolve_static_equations(f,x,param) \n \n"
+        nlsolve_static_string = "function nlsolve_static_equations(f::Array{T,1},x::Array{T,1},param::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
         static_string         = "function static_equations(x::Array{T,1},param::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
     else
-        nlsolve_static_string = "function nlsolve_static_equations(f,x) \n \n"
+        nlsolve_static_string = "function nlsolve_static_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n"
         static_string         = "function static_equations(x::Array{T,1}) where {T<:Number} \n \n"
     end
     static_string         = string(static_string,"  f = Array{T}(undef,length(x)) \n \n")
@@ -652,17 +651,17 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     else
         closure_string = "function closure_projection_equations(state,scaled_weights,order,domain,approximate) \n \n"
     end
-    closure_string = string(closure_string, "  function projection_equations(x::Array{T,1}) where {T<:Number} \n \n")
+    closure_string = string(closure_string, "  function projection_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n")
     weight_number = 1
     for i in jumps_to_be_approximated
         closure_string = string(closure_string, "    approx$i = approximate(scaled_weights[$weight_number],x[$number_jumps+1:end],order,domain)","\n")
         weight_number += 1
     end
-    closure_string = string(closure_string,"\n","    f = Array{T}(undef,$number_equations) \n \n")
+    closure_string = string(closure_string,"\n","    #f = Array{T}(undef,$number_equations) \n \n")
     for i = 1:length(projection_equations)
         closure_string = string(closure_string,"    f[$i] = ", projection_equations[i], "\n")
     end
-    closure_string = string(closure_string,"\n    return f \n \n  end \n \n  return projection_equations \n \n","end \n")
+    closure_string = string(closure_string,"\n    #return f \n \n  end \n \n  return projection_equations \n \n","end \n")
 
     # For piecewise linear
 
@@ -680,7 +679,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
         end
     end
 
-    closure_pl_string = string(closure_pl_string,"  function projection_equations_pl(x::Array{T,1}) where {T<:Number} \n \n")
+    closure_pl_string = string(closure_pl_string,"  function projection_equations_pl(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n")
     for i in jumps_to_be_approximated
         if number_shocks == 0
             closure_pl_string = string(closure_pl_string,"    approx$i = approximate(variables[$i],grid,x[$number_jumps+1:end])","\n")
@@ -689,12 +688,12 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
         end
     end
 
-    closure_pl_string = string(closure_pl_string,"\n","    f = Array{T}(undef,$number_equations) \n \n")
+    closure_pl_string = string(closure_pl_string,"\n","    #f = Array{T}(undef,$number_equations) \n \n")
     for i = 1:length(projection_equations)
         closure_pl_string = string(closure_pl_string,"    f[$i] = ",projection_equations[i], "\n")
     end
 
-    closure_pl_string = string(closure_pl_string,"\n    return f \n \n  end \n \n  return projection_equations_pl \n \n","end \n")
+    closure_pl_string = string(closure_pl_string,"\n    #return f \n \n  end \n \n  return projection_equations_pl \n \n","end \n")
 
     model_string = string(model_string,"\n",closure_string)
     model_string = string(model_string,"\n",closure_pl_string)

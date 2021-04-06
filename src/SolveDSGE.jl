@@ -8,6 +8,8 @@ using ChebyshevApprox
 using SmolyakApprox
 using PiecewiseLinearApprox
 using Random
+using ThreadPools
+using ThreadsX
 
 include("structures.jl")
 include("parser_functions.jl")

@@ -414,6 +414,18 @@ function dlyap(a::Array{T,2}, b::Array{T,2}) where {T <: Real}
 
 end
 
+function ind2sub(i::S,dims::Tuple{S,Vararg{S}}) where {S <: Integer}
+
+    if i < 1 || i > prod(dims)
+        error("index is out of bounds.")
+    end
+
+    subs = Tuple(CartesianIndices(dims)[i])
+
+    return subs
+
+end
+
 function compute_variances(soln::FirstOrderSolutionStoch)
 
     hx = soln.hx
@@ -434,7 +446,7 @@ function compute_chebyshev_integrals(eps_nodes,eps_weights,nodes,order,rho,sigma
   # it uses the mean integral across the nodes.
   # Using integrals[i] = sum(exp.(sqrt(2)*sigma*(i-1)*eps_nodes).*eps_weights)*pi^(-1/2)
   # leads to something much simplier and equally accurate, but is less recognizably appropriate
-  # or the case where the shocks are AR(1) processes and ordinary polynomials are not being used.
+  # for the case where the shocks are AR(1) processes and ordinary polynomials are not being used.
 
   terms_num  = Array{Float64}(undef,length(eps_nodes))
   integrals  = Array{Float64}(undef,order+1,length(nodes))

@@ -16,7 +16,7 @@
 %TCIDATA{Codepage=1252}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Tuesday, April 06, 2021 01:16:02}
+%TCIDATA{LastRevised=Tuesday, April 06, 2021 01:14:10}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -175,7 +175,7 @@ is consumption(-1). \ Similarly the first lead of a variable is denoted with
 a +1, so the lead of consumption is denoted consumption(+1). \ The first lag
 of any model variable is automatically included as a state variable, second
 and higher lags should be given a name, defined by an equation, and included
-as a state variable explicitly. \ The package may allow higher lags to
+as state variables explicitly. \ The package may allow higher lags to
 processed automatically at a later stage.
 
 In the package, shocks refers to the innovations to the shock processes, so

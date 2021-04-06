@@ -1116,10 +1116,9 @@ function approximate_distribution(sample::Array{T,2},point::Array{T,1},order::Ar
 
 end
 
-function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 123456) where {T<:Real,S<:Integer,R1<:ModelSolution,R2<:ModelSolution}
+function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 123456) where {T <: Real, S <:Integer, R1 <: ModelSolution, R2 <: ModelSolution}
 
     if typeof(solna) <: PerturbationSolution && typeof(solnb) <: PerturbationSolution
-        case = 1
         if length(solna.gbar) != length(solnb.gbar) || length(solna.hbar) != length(solnb.hbar)
             error("The solutions are not of the same model.")
         end
@@ -1127,7 +1126,6 @@ function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 1234
         ny = length(solna.gbar)
         sup_errors = zeros(ny)
     elseif typeof(solna) <: PerturbationSolution && typeof(solnb) <: ProjectionSolution
-        case = 2
         if length(solna.hbar) != size(solnb.domain,2) || length(solna.gbar) != length(solnb.variables) - size(solnb.domain,2)
             error("The solutions are not of the same model.")
         end
@@ -1135,7 +1133,6 @@ function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 1234
         ny = length(solna.gbar)
         sup_errors = zeros(ny)
     elseif typeof(solna) <: ProjectionSolution && typeof(solnb) <: PerturbationSolution
-        case = 3
         if length(solnb.hbar) != size(solna.domain,2) || length(solnb.gbar) != length(solna.variables) - size(solna.domain,2)
             error("The solutions are not of the same model.")
         end
@@ -1143,7 +1140,6 @@ function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 1234
         ny = length(solnb.gbar)
         sup_errors = zeros(ny)
     else
-        case = 4
         if size(solna.domain) != size(solnb.domain) || length(solna.variables) != length(solnb.variables)
             error("The solutions are not of the same model.")
         end
@@ -1158,7 +1154,7 @@ function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 1234
     n = 100000
     state = domain[2,:] .+ rand(nx,n).*(domain[1,:] - domain[2,:])
     vars = [zeros(ny,n),zeros(ny,n)]
-    for j = 1: length(solutions)
+    for j = 1:length(solutions)
         soln = solutions[j]
         for k = 1:ny
             if typeof(soln) <: FirstOrderSolutionDet{T,S}
