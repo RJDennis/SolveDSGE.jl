@@ -25,10 +25,10 @@ PPP = ChebyshevSchemeDet(ss,chebyshev_nodes,[71,71],6,[0.0960769 26.0; -0.096076
 
 soln_nla = solve_model(dsge,P)
 soln_nlb = solve_model(dsge,soln_fo,PP)
-soln_nlc = solve_model(dsge,soln_so,PPP)
+soln_nlc = solve_model(dsge,soln_so,PPP,2)
 soln_nld = solve_model(dsge,soln_to,P)
 soln_nle = solve_model(dsge,soln_nld,PP)
-soln_nlf = solve_model(dsge,soln_nle,PPP)
+soln_nlf = solve_model(dsge,soln_nle,PPP,2)
 
 L = SmolyakSchemeDet(ss,chebyshev_gauss_lobatto,4,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
 LL = SmolyakSchemeDet(ss,clenshaw_curtis_equidistant,4,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
@@ -36,7 +36,7 @@ LLL = SmolyakSchemeDet(ss,chebyshev_gauss_lobatto,5,[0.0960769 26.0; -0.0960769 
 
 soln_nlg = solve_model(dsge,L)
 soln_nlh = solve_model(dsge,soln_to,LL)
-soln_nli = solve_model(dsge,soln_nlh,LLL)
+soln_nli = solve_model(dsge,soln_nlh,LLL,2)
 soln_nlj = solve_model(dsge,soln_nlf,LL)
 
 M = PiecewiseLinearSchemeDet(ss,[21,21],[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
@@ -44,7 +44,7 @@ MM = PiecewiseLinearSchemeDet(ss,[31,31],[0.0960769 26.0; -0.0960769 8.0],tol,1e
 
 soln_nlk = solve_model(dsge,M)
 soln_nll = solve_model(dsge,soln_to,MM)
-soln_nlm = solve_model(dsge,soln_nlf,MM)
+soln_nlm = solve_model(dsge,soln_nlf,MM,2)
 soln_nln = solve_model(dsge,soln_nlj,MM)
 soln_nlo = solve_model(dsge,soln_nln,MM)
 
