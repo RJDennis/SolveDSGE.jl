@@ -244,7 +244,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: C
 
     w = Array{Array{T,N},1}(undef,length(soln.variables))
     for i = 1:nv
-        w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        w[i] = chebyshev_weights_threaded(soln.variables[i],soln.nodes,soln.order,soln.domain)
     end
 
     simulated_states = Array{T,2}(undef,nx,sim_length+1)
@@ -283,7 +283,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
     w = Array{Array{T,N},1}(undef,length(soln.variables))
     for i = 1:nv
-        w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        w[i] = chebyshev_weights_threaded(soln.variables[i],soln.nodes,soln.order,soln.domain)
     end
 
     simulated_states = Array{T,2}(undef,nx,sim_length+1)
@@ -650,7 +650,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
 
     w = Array{Array{eltype(soln.domain),N},1}(undef,length(soln.variables))
     for i = 1:nv
-        w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        w[i] = chebyshev_weights_threaded(soln.variables[i],soln.nodes,soln.order,soln.domain)
     end
 
     estimated_steady_state = zeros(nx)
@@ -1186,12 +1186,12 @@ function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 1234
                     vars[j][k,i] += (1/2)*soln.gss[k] + (1/2)*((soln.gxx[k:k,:])*kron((state[:,i] - soln.hbar),(state[:,i] - soln.hbar)))[1] + (3/6)*(soln.gssx[k:k,:]*(state[:,i] - soln.hbar))[1] + (1/6)*(soln.gxxx[k:k,:]*kron(kron((state[:,i] - soln.hbar),(state[:,i] - soln.hbar)),(state[:,i] - soln.hbar)))[1]
                 end
             elseif typeof(soln) <: ChebyshevSolutionDet{T,S}
-                w = chebyshev_weights(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
+                w = chebyshev_weights_threaded(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
                 for i = 1:n
                     vars[j][k,i] = chebyshev_evaluate(w,state[:,i],soln.order,domain)
                 end
             elseif typeof(soln) <: ChebyshevSolutionStoch{T,S}
-                w = chebyshev_weights(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
+                w = chebyshev_weights_threaded(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
                 for i = 1:n
                     vars[j][k,i] = chebyshev_evaluate(w,state[:,i],soln.order,domain)
                 end
