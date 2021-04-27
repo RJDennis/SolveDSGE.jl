@@ -16,7 +16,7 @@ ThreadPools = "b189fb0b-2eb5-4ed4-bc0c-d34c51242431"
 ThreadsX = "ac1d9e8a-700a-412c-b207-f0111f4b6c0d"
 
 [compat]
-ChebyshevApprox = "^0.1"
+ChebyshevApprox = "^0.1.5"
 SmolyakApprox = "^0.1"
 PiecewiseLinearApprox = "^0.1"
 ForwardDiff = "^0.10"
