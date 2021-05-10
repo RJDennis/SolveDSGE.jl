@@ -16,7 +16,7 @@
 %TCIDATA{Codepage=1252}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Tuesday, April 06, 2021 01:16:02}
+%TCIDATA{LastRevised=Monday, May 10, 2021 00:46:53}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -30,7 +30,7 @@ Glasgow, Main Building, University Avenue, Glasgow G12 8QQ; email:
 richard.dennis@glasgow.ac.uk.} \\
 %EndAName
 University of Glasgow and CAMA}
-\title{SolveDSGE v0.4.1 --- A User Guide}
+\title{SolveDSGE v0.4.4 --- A User Guide}
 \date{April 2021}
 \maketitle
 
@@ -631,15 +631,15 @@ Finally, the routines for obtaining projection solutions have multi-threaded
 variants where the final argument in the function is an integer specifying
 the number of threads to be used. \ For example:
 
-\bigskip 
+\bigskip
 
 \textit{soln\_chebyshev = solve\_model(dsge,C,4)}
 
-\bigskip 
+\bigskip
 
 \bigskip \textit{soln\_chebyshev = solve\_model(dsge,soln\_third\_order,C,4)}
 
-\bigskip 
+\bigskip
 
 would solve the model using $4$ threads. \ Before using these multi-threaded
 functions you will need to know how many threads are available on your
@@ -864,6 +864,8 @@ Chebyshev polynomials
 
 \item iteration\_count --- The number of iterations needed to achieve
 convergence
+
+\item node\_generator --- The function used to generate the nodes
 \end{itemize}
 
 The solution to a deterministic model has the same fields with the exception
@@ -893,6 +895,8 @@ polynominals
 
 \item iteration\_count --- The number of iterations needed to achieve
 convergence
+
+\item node\_generator --- The function used to generate the nodes
 \end{itemize}
 
 The solution to a deterministic model has the same fields with the exception

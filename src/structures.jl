@@ -290,6 +290,7 @@ struct ChebyshevSolutionStoch{T <: Real, S <: Integer, N} <: ProjectionSolutionS
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     sigma::Union{Array{T,2},Array{T,1}}  # Innovation variance-covariance matrix
     iteration_count::S                   # Number of iterations needed for convergence
+    node_generator::Function             # Function to generate the nodes
 
 end
 
@@ -301,6 +302,7 @@ struct ChebyshevSolutionDet{T <: Real, S <: Integer, N} <: ProjectionSolutionDet
     order::Union{S,Array{S,1}}           # Complete polynomial / tensor-product
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     iteration_count::S                   # Number of iterations needed for convergence
+    node_generator::Function             # Function to generate the nodes
 
 end
 
@@ -314,6 +316,7 @@ struct SmolyakSolutionStoch{T <: Real, S <: Integer} <: ProjectionSolutionStoch
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     sigma::Union{Array{T,2},Array{T,1}}  # Innovation variance-covariance matrix
     iteration_count::S                   # Number of iterations needed for convergence
+    node_generator::Function             # Function to generate the nodes
 
 end
 
@@ -326,6 +329,7 @@ struct SmolyakSolutionDet{T <: Real, S <: Integer} <: ProjectionSolutionDet
     layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     iteration_count::S                   # Number of iterations needed for convergence
+    node_generator::Function             # Function to generate the nodes
 
 end
 

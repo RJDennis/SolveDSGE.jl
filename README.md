@@ -5,6 +5,8 @@ SolveDSGE is a Julia package for solving Dynamic Stochastic General Equilibrium 
 
 To solve a model using SolveDSGE two files are required.  The model file contains the specifications, parameters, equations, etc for the model that is to be solved.  The solution file reads and processes the model file, specifies a solution scheme, solves the model, and performs any post-solution analysis.
 
+If you use this package, then please star the package on github and acknowledge its use appropriately in your work.
+
 Installation
 ------------
 
@@ -29,7 +31,7 @@ SolveDSGE can also solve DSGE models using projection methods that are based on 
 
 Further information
 -------------------
-This version (version 0.3) represents an important update on version 0.2, which didn't allow projection-based solutions, but all of the functionality present in version 0.2 remains.  This includes the optimal policy algorithms.  At some point in the future, SolveDSGE's approach to solving and analyzing optimal policy is likely to be based on the model-file/solution-file framework.  But for now, if you were using version 0.2, your code should still work as before.
+This version (version 0.4.x) represents an important update on version 0.3, which didn't allow any form of parallization.  In the current version, at the user's discretion, models can be solved using multi-threaded projection methods.  This version also removes support for the optimal policy routines that were present in version 0.2.  At some point in the future, SolveDSGE's approach to solving and analyzing optimal policy is likely to be reintroduced based on the model-file/solution-file framework.
 
 Examples of how to use SolveDSGE to solve a model are contained in the examples folder.  At the moment there are three examples: two stochastic models and one deterministic model.  The example models are intended to be familiar, easy to follow, and easy to replicate.
 
