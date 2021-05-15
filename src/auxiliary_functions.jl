@@ -512,7 +512,7 @@ end
 function weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,grid,RHO,sigma)
 
   unique_multi_index = sort(unique(multi_index))
-  unique_orders = m_i(unique_multi_index).-1
+  unique_orders = SmolyakApprox.m_i(unique_multi_index).-1
 
   # Here we construct the base integrals
 
