@@ -56,6 +56,7 @@ export process_model,
 
 export chebyshev_nodes,
        chebyshev_extrema,
+       chebyshev_extended,
        chebyshev_gauss_lobatto,
        clenshaw_curtis_equidistant,
        chebyshev_evaluate,
