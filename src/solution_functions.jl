@@ -4597,8 +4597,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
 
             if soln.node_generator == chebyshev_nodes
                 w = chebyshev_weights(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            else
+            elseif soln.node_generator == chebyshev_extrema
                 w = chebyshev_weights_extrema(soln_variables[i],soln.nodes,soln.order,soln.domain)
+            elseif soln.node_generator == chebyshev_extended
+                w = chebyshev_weights_extended(soln_variables[i],soln.nodes,soln.order,soln.domain)
             end
 
             for j = 1:N
@@ -4714,9 +4716,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
         if typeof(soln) <: ChebyshevSolutionDet
 
             if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            else
-                w = chebyshev_weights_extrema_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
+                w = chebyshev_weights(soln_variables[i],soln.nodes,soln.order,soln.domain)
+            elseif soln.node_generator == chebyshev_extrema
+                w = chebyshev_weights_extrema(soln_variables[i],soln.nodes,soln.order,soln.domain)
+            elseif soln.node_generator == chebyshev_extended
+                w = chebyshev_weights_extended(soln_variables[i],soln.nodes,soln.order,soln.domain)
             end
 
             @sync @qthreads for t = 1:threads
@@ -4861,8 +4865,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
             if soln.node_generator == chebyshev_nodes
                 w = chebyshev_weights(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            else
+            elseif soln.node_generator == chebyshev_extrema
                 w = chebyshev_weights_extrema(soln_variables[i],soln.nodes,soln.order,soln.domain)
+            elseif soln.node_generator == chebyshev_extended
+                w = chebyshev_weights_extended(soln_variables[i],soln.nodes,soln.order,soln.domain)
             end
 
             for j = 1:N
@@ -4996,9 +5002,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         if typeof(soln) <: ChebyshevSolutionStoch
 
             if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            else
-                w = chebyshev_weights_extrema_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
+                w = chebyshev_weights(soln_variables[i],soln.nodes,soln.order,soln.domain)
+            elseif soln.node_generator == chebyshev_extrema
+                w = chebyshev_weights_extrema(soln_variables[i],soln.nodes,soln.order,soln.domain)
+            elseif soln.node_generator == chebyshev_extended
+                w = chebyshev_weights_extended(soln_variables[i],soln.nodes,soln.order,soln.domain)
             end
 
             @sync @qthreads for t = 1:threads
