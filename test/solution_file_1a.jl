@@ -20,8 +20,8 @@ soln_so = solve_model(dsge,NN)
 soln_to = solve_model(dsge,NNN)
 
 P = ChebyshevSchemeStoch(ss,chebyshev_nodes,[21,21],9,3,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
-PP = ChebyshevSchemeStoch(ss,chebyshev_nodes,[21,21],9,4,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
-PPP = ChebyshevSchemeStoch(ss,chebyshev_nodes,[71,71],9,6,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
+PP = ChebyshevSchemeStoch(ss,chebyshev_extrema,[21,21],9,4,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
+PPP = ChebyshevSchemeStoch(ss,chebyshev_extended,[71,71],9,6,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
 
 soln_nla = solve_model(dsge,P,2)
 soln_nlb = solve_model(dsge,soln_fo,PP)

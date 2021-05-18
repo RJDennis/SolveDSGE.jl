@@ -1185,31 +1185,23 @@ function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 1234
                     vars[j][k,i] = soln.gbar[k] + (soln.gx[k:k,:]*(state[:,i] - soln.hbar))[1]
                     vars[j][k,i] += (1/2)*soln.gss[k] + (1/2)*((soln.gxx[k:k,:])*kron((state[:,i] - soln.hbar),(state[:,i] - soln.hbar)))[1] + (3/6)*(soln.gssx[k:k,:]*(state[:,i] - soln.hbar))[1] + (1/6)*(soln.gxxx[k:k,:]*kron(kron((state[:,i] - soln.hbar),(state[:,i] - soln.hbar)),(state[:,i] - soln.hbar)))[1]
                 end
-            elseif typeof(soln) <: ChebyshevSolutionDet{T,S}
-                w = chebyshev_weights_threaded(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
+            elseif typeof(soln) <: Union{ChebyshevSolutionDet{T,S},ChebyshevSolutionStoch{T,S}}
+                if soln.node_generator == chebyshev_nodes
+                    w = chebyshev_weights(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
+                elseif soln.node_generator == chebyshev_extrema
+                    w = chebyshev_weights_extrema(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
+                elseif soln.node_generator == chebyshev_extended
+                    w = chebyshev_weights_extended(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
+                end
                 for i = 1:n
                     vars[j][k,i] = chebyshev_evaluate(w,state[:,i],soln.order,domain)
                 end
-            elseif typeof(soln) <: ChebyshevSolutionStoch{T,S}
-                w = chebyshev_weights_threaded(soln.variables[nx+k],soln.nodes,soln.order,soln.domain)
-                for i = 1:n
-                    vars[j][k,i] = chebyshev_evaluate(w,state[:,i],soln.order,domain)
-                end
-            elseif typeof(soln) <: SmolyakSolutionDet{T,S}
+            elseif typeof(soln) <: Union{SmolyakSolutionDet{T,S},SmolyakSolutionStoch{T,S}}
                 w = smolyak_weights(soln.variables[nx+k],soln.grid,soln.multi_index,soln.domain)
                 for i = 1:n
                     vars[j][k,i] = smolyak_evaluate(w,state[:,i],soln.multi_index,domain)
                 end
-            elseif typeof(soln) <: SmolyakSolutionStoch{T,S}
-                w = smolyak_weights(soln.variables[nx+k],soln.grid,soln.multi_index,soln.domain)
-                for i = 1:n
-                    vars[j][k,i] = smolyak_evaluate(w,state[:,i],soln.multi_index,domain)
-                end
-            elseif typeof(soln) <: PiecewiseLinearSolutionDet{T,S}
-                for i = 1:n
-                    vars[j][k,i] = piecewise_linear_evaluate(soln.variables[nx+k],soln.nodes,state[:,i])
-                end
-            elseif typeof(soln) <: PiecewiseLinearSolutionStoch{T,S}
+            elseif typeof(soln) <: Union{PiecewiseLinearSolutionDet{T,S},PiecewiseLinearSolutionStoch{T,S}}
                 for i = 1:n
                     vars[j][k,i] = piecewise_linear_evaluate(soln.variables[nx+k],soln.nodes,state[:,i])
                 end
