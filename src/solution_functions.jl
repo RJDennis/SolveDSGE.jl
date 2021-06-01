@@ -1,3 +1,5 @@
+# Solution functions
+
 function compute_steady_state(model::REModel, x::Array{T,1}, tol::T, maxiters::S) where {T <: Real, S <: Integer}
 
     # Uses NLsolve (add this using the Package Manager if you don't have it) to
@@ -220,12 +222,12 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     # second-order states.
 
     m = [I; gx; hx; gx*hx]
-    q = kron_prod_times_matrix(eye(T,nv),m',deriv2*m)
-    b1 = kron(fxp,eye(T,nx))
-    b2 = kron(fyp,eye(T,nx))
-    b4 = kron(fy,eye(T,nx))
-    c1 = kron(eye(T,ny),hx')
-    c2 = kron(gx,eye(T,nx))
+    q = kron_prod_times_matrix(eye(T,nv),m',deriv2*m) #(eye(T,nv) ⊗ m')*(deriv2*m)
+    b1 = kron(fxp,eye(T,nx)) #fxp ⊗ eye(T,nx) 
+    b2 = kron(fyp,eye(T,nx)) #fyp ⊗ eye(T,nx)
+    b4 = kron(fy,eye(T,nx)) #fy ⊗ eye(T,nx) 
+    c1 = kron(eye(T,ny),hx') #eye(T,ny) ⊗ hx'
+    c2 = kron(gx,eye(T,nx)) #gx ⊗ eye(T,nx)
 
     # Use a Sylvester equation solver to compute the second order terms on the
     # states.
@@ -289,12 +291,12 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
     # second-order states.
 
     m = [I; gx; hx; gx*hx]
-    q = kron_prod_times_matrix(eye(T,nv),m',deriv2*m)
-    b1 = kron(fxp,eye(T,nx))
-    b2 = kron(fyp,eye(T,nx))
-    b4 = kron(fy,eye(T,nx))
-    c1 = kron(eye(T,ny),hx')
-    c2 = kron(gx,eye(T,nx))
+    q = kron_prod_times_matrix(eye(T,nv),m',deriv2*m) #(eye(T,nv) ⊗ m')*(deriv2*m)
+    b1 = kron(fxp,eye(T,nx)) #fxp ⊗ eye(T,nx) 
+    b2 = kron(fyp,eye(T,nx)) #fyp ⊗ eye(T,nx)
+    b4 = kron(fy,eye(T,nx)) #fy ⊗ eye(T,nx) 
+    c1 = kron(eye(T,ny),hx') #eye(T,ny) ⊗ hx'
+    c2 = kron(gx,eye(T,nx)) #gx ⊗ eye(T,nx)
 
     # Use a Sylvester equation solver to compute the second order terms on the
     # states.
@@ -1869,7 +1871,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
                 end
             end
         elseif typeof(soln) <: SmolyakSolutionDet
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
+            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
 
             @sync @qthreads for t = 1:threads
                 for j = t:threads:N
@@ -2229,7 +2231,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
                 end
             end
         elseif typeof(soln) <: SmolyakSolutionStoch
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
+            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
 
             @sync @qthreads for t = 1:threads
                 for j = t:threads:N
@@ -2453,7 +2455,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) whe
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
         end
 
         @sync @qthreads for t = 1:threads
@@ -2635,7 +2637,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i]        = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i]        = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
             scaled_weights[i] = scale_weights(weights[i],weight_scale_factor)
         end
 
@@ -2853,7 +2855,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
         end
 
         @sync @qthreads for t = 1:threads
@@ -3122,7 +3124,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i]        = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i]        = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
             scaled_weights[i] = scale_weights(weights[i],weight_scale_factor)
         end
 
@@ -3331,7 +3333,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
 
         elseif typeof(soln) <: SmolyakSolutionDet
 
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
+            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
 
             @sync @qthreads for t = 1:threads
                 for j = t:threads:N
@@ -3366,7 +3368,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
         end
 
         @sync @qthreads for t = 1:threads
@@ -3602,7 +3604,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
 
         elseif typeof(soln) <: SmolyakSolutionStoch
 
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
+            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
 
             @sync @qthreads for t = 1:threads
                 for j = t:threads:N
@@ -3638,7 +3640,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i]        = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i]        = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
             scaled_weights[i] = scale_weights(weights[i],weight_scale_factor)
         end
 
@@ -4739,7 +4741,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
 
         elseif typeof(soln) <: SmolyakSolutionDet
 
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
+            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
 
             @sync @qthreads for t = 1:threads
                 for j = t:threads:N
@@ -5024,7 +5026,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
             end
         elseif typeof(soln) <: SmolyakSolutionStoch
 
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
+            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
 
             @sync @qthreads for t = 1:threads
                 for j = t:threads:N

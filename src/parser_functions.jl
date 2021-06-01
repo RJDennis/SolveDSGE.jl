@@ -1,3 +1,5 @@
+# Parser functions
+
 function open_model_file(path::Q) where {Q <: AbstractString}
 
     #= Opens the model file and reads the contents, which are stored
@@ -166,7 +168,7 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q <: 
     for i = 1:length(revised_parameterblock)
         if occursin("=",revised_parameterblock[i]) == false
             parameters[i] = revised_parameterblock[i]
-            values[i] = "param[$unassigned_parameter_index]"
+            values[i] = "p[$unassigned_parameter_index]" # p is a reserved name
             push!(unassigned_parameters,revised_parameterblock[i])
             unassigned_parameter_index += 1
         else
@@ -366,7 +368,7 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q <: AbstractSt
         error("Some parameters, variables, or shocks have the same name.")
     end
 
-    reserved_names = ("exp","log")
+    reserved_names = ("exp","log","x","p")
     for name in reserved_names
         if name in combined_names
             error("$name cannot be a name for a variable, a shock, or a parameter.")
@@ -588,13 +590,13 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     # Second, add the model's static information
 
     if length(model.unassigned_parameters) != 0
-        nlsolve_static_string = "function nlsolve_static_equations(f::Array{T,1},x::Array{T,1},param::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
-        static_string         = "function static_equations(x::Array{T,1},param::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
+        nlsolve_static_string = "function nlsolve_static_equations(f::Array{T,1},x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
+        static_string         = "function static_equations(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
     else
         nlsolve_static_string = "function nlsolve_static_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n"
         static_string         = "function static_equations(x::Array{T,1}) where {T<:Number} \n \n"
     end
-    static_string         = string(static_string,"  f = Array{T}(undef,length(x)) \n \n")
+    static_string         = string(static_string,"  f = Array{T,1}(undef,length(x)) \n \n")
     for i = 1:length(static_equations)
         static_string         = string(static_string,"  f[$i] = ",static_equations[i],"\n")
         nlsolve_static_string = string(nlsolve_static_string,"  f[$i] = ",static_equations[i],"\n")
@@ -608,11 +610,11 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     # Third, add the model's dynamic information for perturbation solvers
 
     if length(model.unassigned_parameters) != 0
-        dynamic_string = "function dynamic_equations(x::Array{T,1},param::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
+        dynamic_string = "function dynamic_equations(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
     else
         dynamic_string = "function dynamic_equations(x::Array{T,1}) where {T<:Number} \n \n"
     end
-    dynamic_string = string(dynamic_string,"  f = Array{T}(undef,$number_equations) \n \n")
+    dynamic_string = string(dynamic_string,"  f = Array{T,1}(undef,$number_equations) \n \n")
     for i = 1:number_equations
         dynamic_string = string(dynamic_string,"  f[$i] = ",dynamic_equations[i],"\n")
     end
@@ -623,7 +625,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
 
     for i = 1:number_equations
         if length(model.unassigned_parameters) != 0
-            each_equation_string[i] = "function dynamic_eqn_$i(x::Array{T,1},param::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
+            each_equation_string[i] = "function dynamic_eqn_$i(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} \n \n"
         else
             each_equation_string[i] = "function dynamic_eqn_$i(x::Array{T,1}) where {T<:Number} \n \n"
         end
@@ -647,7 +649,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     # For Chebyshev and Smolyak
 
     if length(model.unassigned_parameters) != 0
-        closure_string = "function closure_projection_equations(state,scaled_weights,order,domain,approximate,param) \n \n"
+        closure_string = "function closure_projection_equations(state,scaled_weights,order,domain,approximate,p) \n \n"
     else
         closure_string = "function closure_projection_equations(state,scaled_weights,order,domain,approximate) \n \n"
     end
@@ -657,7 +659,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
         closure_string = string(closure_string, "    approx$i = approximate(scaled_weights[$weight_number],x[$number_jumps+1:end],order,domain)","\n")
         weight_number += 1
     end
-    closure_string = string(closure_string,"\n","    #f = Array{T}(undef,$number_equations) \n \n")
+    closure_string = string(closure_string,"\n","    #f = Array{T,1}(undef,$number_equations) \n \n")
     for i = 1:length(projection_equations)
         closure_string = string(closure_string,"    f[$i] = ", projection_equations[i], "\n")
     end
@@ -667,9 +669,9 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
 
     if length(model.unassigned_parameters) != 0
         if number_shocks == 0  # We need to separate the function generated for the stochastic and deterministic cases
-            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,approximate,param) \n \n"
+            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,approximate,p) \n \n"
         else
-            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,integrals,approximate,param) \n \n"
+            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,integrals,approximate,p) \n \n"
         end
     else
         if number_shocks == 0  # We need to separate the function generated for the stochastic and deterministic cases
@@ -688,7 +690,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
         end
     end
 
-    closure_pl_string = string(closure_pl_string,"\n","    #f = Array{T}(undef,$number_equations) \n \n")
+    closure_pl_string = string(closure_pl_string,"\n","    #f = Array{T,1}(undef,$number_equations) \n \n")
     for i = 1:length(projection_equations)
         closure_pl_string = string(closure_pl_string,"    f[$i] = ",projection_equations[i], "\n")
     end
