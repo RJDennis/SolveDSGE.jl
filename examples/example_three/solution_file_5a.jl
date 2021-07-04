@@ -15,6 +15,7 @@ tol = 1e-8
 maxiters = 1000
 
 ss5 = compute_steady_state(dsge5,x5,tol,maxiters)
+ss5 = ss5.zero
 
 N   = PerturbationScheme(ss5,1.0,"first")
 NN  = PerturbationScheme(ss5,1.0,"second")
