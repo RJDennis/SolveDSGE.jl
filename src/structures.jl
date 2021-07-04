@@ -310,7 +310,7 @@ struct SmolyakSolutionStoch{T <: Real, S <: Integer} <: ProjectionSolutionStoch
 
     variables::Array{Array{T,1},1}       # Variables
     weights::Array{Array{T,1},1}         # Smolyak polynominals
-    grid::Array{T,2}                     # Smolyak grid
+    grid::Union{Array{T,2},Array{T,1}}   # Smolyak grid
     multi_index::Array{S,2}              # Smolyak multi index
     layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
@@ -324,7 +324,7 @@ struct SmolyakSolutionDet{T <: Real, S <: Integer} <: ProjectionSolutionDet
 
     variables::Array{Array{T,1},1}       # Variables
     weights::Array{Array{T,1},1}         # Smolyak polynominals
-    grid::Array{T,2}                     # Smolyak grid
+    grid::Union{Array{T,2},Array{T,1}}   # Smolyak grid
     multi_index::Array{S,2}              # Smolyak multi index
     layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
