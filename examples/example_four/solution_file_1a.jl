@@ -16,7 +16,6 @@ x = [0.05, 3.05, 0.7]
 tol = 1e-8
 maxiters = 1000
 ss = compute_steady_state(dsge,x,tol,maxiters)
-ss = ss.zero
 
 N   = PerturbationScheme(ss,1.0,"first")
 NN  = PerturbationScheme(ss,1.0,"second")

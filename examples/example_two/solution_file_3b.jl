@@ -15,7 +15,6 @@ tol = 1e-8
 maxiters = 1000
 
 ss3 = compute_steady_state(dsge3,x3,tol,maxiters)
-ss3 = ss3.zero
 
 N   = PerturbationScheme(ss3,1.0,"first")
 NN  = PerturbationScheme(ss3,1.0,"second")
