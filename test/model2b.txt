@@ -1,26 +1,26 @@
-# Example four --- Deterministic growth model with partial parameterization
+# Test four --- Deterministic growth model with partial parameterization
 
 states:
-cap, tech
+k, z
 end
 
 jumps:
-cons
+c
 end
 
 shocks:
 end
 
 parameters:
-betta
-sigma = 1.1
-delta = 0.025
-alpha = 0.30
-rho = 0.8
+β 
+σ = 1.1
+δ = 0.025
+α = 0.30
+ρ = 0.8
 end
 
 equations:
-cap(+1) = (1.0 - delta)*cap + exp(tech)*cap^alpha - cons
-cons^(-sigma) = betta*cons(+1)^(-sigma)*(1.0 - delta + alpha*exp(tech(+1))*cap(+1)^(alpha - 1.0))
-tech(+1) = rho*tech
+k(+1) = (1.0 - δ)*k + exp(z)*k^α - c
+c^(-σ) = β*c(+1)^(-σ)*(1.0 - δ + α*exp(z(+1))*k(+1)^(α - 1.0))
+z(+1) = ρ*z
 end

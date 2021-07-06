@@ -5,12 +5,12 @@ path = joinpath(@__DIR__,filename)
 process_model(path)
 dsge = retrieve_processed_model(path)
 
-x = [0.05, 3.05, 0.7]
+x = [0.05, 21.4, 1.97, 0.4]
 
 tol = 1e-8
 maxiters = 1000
-ss = compute_steady_state(dsge,x,tol,maxiters)
-ss = ss.zero
+ss_obj = compute_steady_state(dsge,x,tol,maxiters)
+ss = ss_obj.zero
 
 N   = PerturbationScheme(ss,1.0,"first")
 NN  = PerturbationScheme(ss,1.0,"second")

@@ -1,27 +1,28 @@
 # Example two --- Deterministic growth model with habit formation
 
 states:
-tech, cap
+z, k
 end
 
 jumps:
-cons
+c, muc
 end
 
 shocks:
 end
 
 parameters:
-betta = 0.99
-sigma = 1.1
-gama = 0.8
-delta = 0.025
-alpha = 0.30
-rho = 0.8
+β = 0.99
+σ = 1.1
+γ = 0.8
+δ = 0.025
+α = 0.30
+ρ = 0.8
 end
 
 equations:
-exp(cap(+1)) = (1.0 - delta)*exp(cap) + exp(tech)*exp(cap)^alpha - exp(cons)
-(exp(cons) - gama*exp(cons(-1)))^(-sigma) = betta*(exp(cons(+1)) - gama*exp(cons))^(-sigma)*(1.0 - delta + alpha*exp(tech(+1))*exp(cap(+1))^(alpha - 1.0))
-tech(+1) = rho*tech
+exp(k(+1)) = (1.0 - δ)*exp(k) + exp(z)*exp(k)^α - exp(c)
+(exp(c) - γ*exp(c(-1)))^(-σ) = β*muc(+1)*(1.0 - δ + α*exp(z(+1))*exp(k(+1))^(α - 1.0))
+muc = (exp(c) - γ*exp(c(-1)))^(-σ)
+z(+1) = ρ*z
 end
