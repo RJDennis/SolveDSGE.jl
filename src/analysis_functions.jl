@@ -245,15 +245,15 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: C
     N = ndims(soln.weights[1])
 
     w = Array{Array{T,N},1}(undef,length(soln.variables))
-    if node_generator == chebyshev_nodes
+    if soln.node_generator == chebyshev_nodes
         for i = 1:nv
             w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
         end
-    elseif node_generator == chebyshev_extrema
+    elseif soln.node_generator == chebyshev_extrema
         for i = 1:nv
             w[i] = chebyshev_weights_extrema(soln.variables[i],soln.nodes,soln.order,soln.domain)
         end
-    elseif node_generator == chebyshev_extended
+    elseif soln.node_generator == chebyshev_extended
         for i = 1:nv
             w[i] = chebyshev_weights_extended(soln.variables[i],soln.nodes,soln.order,soln.domain)
         end

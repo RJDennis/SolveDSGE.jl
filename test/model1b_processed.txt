@@ -10,6 +10,8 @@ ne = 3
  
 jumps_to_approximate = [1] 
  
+eqns_to_approximate = [2] 
+ 
 variables = ["z", "k", "c"] 
  
 function nlsolve_static_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} 
