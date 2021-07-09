@@ -245,8 +245,18 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: C
     N = ndims(soln.weights[1])
 
     w = Array{Array{T,N},1}(undef,length(soln.variables))
-    for i = 1:nv
-        w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+    if node_generator == chebyshev_nodes
+        for i = 1:nv
+            w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif node_generator == chebyshev_extrema
+        for i = 1:nv
+            w[i] = chebyshev_weights_extrema(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif node_generator == chebyshev_extended
+        for i = 1:nv
+            w[i] = chebyshev_weights_extended(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
     end
 
     simulated_states = Array{T,2}(undef,nx,sim_length+1)
@@ -284,8 +294,18 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
     N = ndims(soln.weights[1])
 
     w = Array{Array{T,N},1}(undef,length(soln.variables))
-    for i = 1:nv
-        w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+    if soln.node_generator == chebyshev_nodes
+        for i = 1:nv
+            w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extrema
+        for i = 1:nv
+            w[i] = chebyshev_weights_extrema(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extended
+        for i = 1:nv
+            w[i] = chebyshev_weights_extended(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
     end
 
     simulated_states = Array{T,2}(undef,nx,sim_length+1)
@@ -651,8 +671,18 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     N = ndims(soln.weights[1])
 
     w = Array{Array{eltype(soln.domain),N},1}(undef,length(soln.variables))
-    for i = 1:nv
-        w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+    if soln.node_generator == chebyshev_nodes
+        for i = 1:nv
+            w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extrema
+        for i = 1:nv
+            w[i] = chebyshev_weights_extrema(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extended
+        for i = 1:nv
+            w[i] = chebyshev_weights_extended(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
     end
 
     estimated_steady_state = zeros(nx)
@@ -1342,9 +1372,19 @@ function decision_rule(soln::R) where {R <: Union{ChebyshevSolutionDet,Chebyshev
 
     T = eltype(soln.variables[1])
 
-    weights = Array{Array{T,nx},1}(undef,ny)
-    for i = 1:ny
-        weights[i] = chebyshev_weights(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+    w = Array{Array{T,nx},1}(undef,ny)
+    if soln.node_generator == chebyshev_nodes
+        for i = 1:ny
+            w[i] = chebyshev_weights(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extrema
+        for i = 1:ny
+            w[i] = chebyshev_weights_extrema(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extended
+        for i = 1:ny
+            w[i] = chebyshev_weights_extended(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
     end
 
     function create_decision_rule(state::Array{T,1}) where {T <: AbstractFloat}
@@ -1356,7 +1396,7 @@ function decision_rule(soln::R) where {R <: Union{ChebyshevSolutionDet,Chebyshev
         y = zeros(ny)
         
         for i = 1:ny
-            y[i] = chebyshev_evaluate(weights[i],state,soln.order,soln.domain)
+            y[i] = chebyshev_evaluate(w[i],state,soln.order,soln.domain)
         end
 
         return y
@@ -1537,7 +1577,7 @@ function state_transition(soln::R) where {R <: ThirdOrderSolutionDet}
 
 end
 
-function state_transition(soln::R) where {R <:ThirdOrderSolutionStoch}
+function state_transition(soln::R) where {R <: ThirdOrderSolutionStoch}
 
     function create_state_transition(state::Array{T,1},shocks::Array{T,1}) where {T <: AbstractFloat}
 
@@ -1569,9 +1609,19 @@ function state_transition(soln::R) where {R <: ChebyshevSolutionDet}
 
     T = eltype(soln.variables[1])
 
-    weights = Array{Array{T,nx},1}(undef,nx)
-    for i = 1:nx
-        weights[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+    w = Array{Array{T,nx},1}(undef,nx)
+    if soln.node_generator == chebyshev_nodes
+        for i = 1:nx
+            w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extrema
+        for i = 1:nx
+            w[i] = chebyshev_weights_extrema(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extended
+        for i = 1:nx
+            w[i] = chebyshev_weights_extended(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
     end
 
     function create_state_transition(state::Array{T,1}) where {T <: AbstractFloat}
@@ -1583,7 +1633,7 @@ function state_transition(soln::R) where {R <: ChebyshevSolutionDet}
         x_update = zeros(nx)
         
         for i = 1:nx
-            x_update[i] = chebyshev_evaluate(weights[i],state,soln.order,soln.domain)
+            x_update[i] = chebyshev_evaluate(w[i],state,soln.order,soln.domain)
         end
 
         return x_update
@@ -1601,9 +1651,19 @@ function state_transition(soln::R) where {R <: ChebyshevSolutionStoch}
 
     T = eltype(soln.variables[1])
 
-    weights = Array{Array{T,nx},1}(undef,nx)
-    for i = 1:nx
-        weights[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+    w = Array{Array{T,nx},1}(undef,nx)
+    if soln.node_generator == chebyshev_nodes
+        for i = 1:nx
+            w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extrema
+        for i = 1:nx
+            w[i] = chebyshev_weights_extrema(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extended
+        for i = 1:nx
+            w[i] = chebyshev_weights_extended(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
     end
 
     chol_decomp = cholesky(Hermitian(soln.sigma))
@@ -1620,7 +1680,7 @@ function state_transition(soln::R) where {R <: ChebyshevSolutionStoch}
         x_update = zeros(nx)
         
         for i = 1:nx
-            x_update[i] = chebyshev_evaluate(weights[i],state,soln.order,soln.domain)
+            x_update[i] = chebyshev_evaluate(w[i],state,soln.order,soln.domain)
         end
         x_update[1:ns] += chol_decomp.U*shocks
 
