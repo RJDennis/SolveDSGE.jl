@@ -1,3 +1,5 @@
+########################## Auxiliary functions #############################
+
 function eye(tpe::Type,n::S) where {S <: Integer}
 
     if tpe <: Number

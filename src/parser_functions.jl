@@ -1,4 +1,4 @@
-# Parser functions
+################# Parser functions ######################
 
 function open_model_file(path::Q) where {Q <: AbstractString}
 
@@ -536,17 +536,19 @@ function create_projection_equations(equations::Array{Q,1},model::ModelPrimative
     end
 
     jumps_to_be_approximated = Int64[]
+    eqns_to_be_approximated  = Int64[]
     for i = 1:ny
         for j = 1:ne
             if occursin("approx$i",projection_equations[j]) == true
                 push!(jumps_to_be_approximated,i)
+                push!(eqns_to_be_approximated,j)
             end
         end
     end
 
     jumps_to_be_approximated = unique(jumps_to_be_approximated)
 
-    return projection_equations, jumps_to_be_approximated
+    return projection_equations, jumps_to_be_approximated, eqns_to_be_approximated
 
 end
 
@@ -559,7 +561,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
 
     repackaged_equations = repackage_equations(model)
 
-    nonlinear_equations, jumps_to_be_approximated = create_projection_equations(repackaged_equations,model)
+    nonlinear_equations, jumps_to_be_approximated, eqns_to_be_approximated = create_projection_equations(repackaged_equations,model)
     projection_equations = make_equations_equal_zero(nonlinear_equations)
 
     steady_state_equations = create_steady_state_equations(model)
@@ -585,6 +587,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     model_string = string(model_string,"ne = $number_equations \n \n")
 
     model_string = string(model_string,"jumps_to_approximate = $jumps_to_be_approximated \n \n")
+    model_string = string(model_string,"eqns_to_approximate = $eqns_to_be_approximated \n \n")
     model_string = string(model_string,"variables = $variables \n \n")
 
     # Second, add the model's static information
@@ -743,9 +746,9 @@ function retrieve_processed_model(path::Q) where {Q <: AbstractString}
     include(path) # The information included is placed in the global scope
 
     if length(unassigned_parameters) != 0
-        dsge_model = REModelPartial(nx,ny,ns,nv,ne,jumps_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_projection_equations,closure_projection_equations_pl,unassigned_parameters)
+        dsge_model = REModelPartial(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_projection_equations,closure_projection_equations_pl,unassigned_parameters)
     else
-        dsge_model = REModel(nx,ny,ns,nv,ne,jumps_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_projection_equations,closure_projection_equations_pl)
+        dsge_model = REModel(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_projection_equations,closure_projection_equations_pl)
     end
 
     return dsge_model
@@ -760,6 +763,7 @@ function assign_parameters(model,param::Array{T,1}) where {T <: Number}
     nv = model.number_variables
     ne = model.number_equations
     jumps_approx = model.jumps_approximated
+    eqns_approx = model.eqns_approximated
     vars = model.variables
 
     nlsse(f,x) = model.nlsolve_static_function(f,x,param)
@@ -777,10 +781,10 @@ function assign_parameters(model,param::Array{T,1}) where {T <: Number}
     cfpl_det(variables,grid,state,approximate)  = model.closure_function_piecewise(variables,grid,state,approximate,param)
 
     if ns != 0
-        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,vars,nlsse,sf,df,ief,cf,cfpl_stoch)
+        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,vars,nlsse,sf,df,ief,cf,cfpl_stoch)
         return newmod
     else
-        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,vars,nlsse,sf,df,ief,cf,cfpl_det)
+        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,vars,nlsse,sf,df,ief,cf,cfpl_det)
         return newmod
     end
 

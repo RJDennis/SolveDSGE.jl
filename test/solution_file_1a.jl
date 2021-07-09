@@ -20,9 +20,9 @@ soln_fo = solve_model(dsge,N)
 soln_so = solve_model(dsge,NN)
 soln_to = solve_model(dsge,NNN)
 
-P = ChebyshevSchemeStoch(ss,chebyshev_nodes,[21,21],9,3,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
-PP = ChebyshevSchemeStoch(ss,chebyshev_extrema,[21,21],9,4,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
-PPP = ChebyshevSchemeStoch(ss,chebyshev_extended,[71,71],9,6,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
+P = ChebyshevSchemeStoch(ss,chebyshev_nodes,[21,21],9,3,[0.0960769 24.0; -0.0960769 20.0],tol,1e-6,maxiters)
+PP = ChebyshevSchemeStoch(ss,chebyshev_extrema,[21,21],9,4,[0.0960769 24.0; -0.0960769 20.0],tol,1e-6,maxiters)
+PPP = ChebyshevSchemeStoch(ss,chebyshev_extended,[71,71],9,6,[0.0960769 24.0; -0.0960769 20.0],tol,1e-6,maxiters)
 
 soln_nla = solve_model(dsge,P,2)
 soln_nlb = solve_model(dsge,soln_fo,PP)
@@ -31,17 +31,17 @@ soln_nld = solve_model(dsge,soln_to,P,2)
 soln_nle = solve_model(dsge,soln_nld,PP)
 soln_nlf = solve_model(dsge,soln_nle,PPP)
 
-L = SmolyakSchemeStoch(ss,chebyshev_gauss_lobatto,9,4,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
-LL = SmolyakSchemeStoch(ss,clenshaw_curtis_equidistant,9,4,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
-LLL = SmolyakSchemeStoch(ss,chebyshev_gauss_lobatto,9,5,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
+L = SmolyakSchemeStoch(ss,chebyshev_gauss_lobatto,9,4,[0.0960769 24.0; -0.0960769 20.0],tol,1e-6,maxiters)
+LL = SmolyakSchemeStoch(ss,clenshaw_curtis_equidistant,9,4,[0.0960769 24.0; -0.0960769 20.0],tol,1e-6,maxiters)
+LLL = SmolyakSchemeStoch(ss,chebyshev_gauss_lobatto,9,4,[0.0960769 24.0; -0.0960769 20.0],tol,1e-6,maxiters)
 
 soln_nlg = solve_model(dsge,L,2)
 soln_nlh = solve_model(dsge,soln_to,LL,2)
 soln_nli = solve_model(dsge,soln_nlh,LLL)
 soln_nlj = solve_model(dsge,soln_nlf,LL)
 
-M = PiecewiseLinearSchemeStoch(ss,[21,21],9,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
-MM = PiecewiseLinearSchemeStoch(ss,[31,31],9,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
+M = PiecewiseLinearSchemeStoch(ss,[21,21],9,[0.0960769 24.0; -0.0960769 20.0],tol,1e-6,maxiters)
+MM = PiecewiseLinearSchemeStoch(ss,[31,31],9,[0.0960769 24.0; -0.0960769 20.0],tol,1e-6,maxiters)
 
 soln_nlk = solve_model(dsge,M,2)
 soln_nll = solve_model(dsge,soln_to,MM,2)
@@ -54,3 +54,19 @@ pos_imps, neg_imps = impulses(soln_nlf,50,[1],10000)
 
 nodesf, f = approximate_density(simulated_data1[3,:],10,1.95,1.99)
 nodesF, F = approximate_distribution(simulated_data1[3,:],10,1.95,1.99)
+
+dyn_eqm_fo = state_space_eqm(soln_fo)
+dyn_eqm_so = state_space_eqm(soln_so)
+dyn_eqm_to = state_space_eqm(soln_to)
+dyn_eqm_c = state_space_eqm(soln_nla)
+dyn_eqm_s = state_space_eqm(soln_nlg)
+dyn_eqm_p = state_space_eqm(soln_nlk)
+
+ee1, ss1 = solution_accuracy(dsge,soln_fo,[0.0960769 24.0; -0.0960769 20.0],1000,123456)
+ee2, ss1 = solution_accuracy(dsge,soln_so,[0.0960769 24.0; -0.0960769 20.0],1000,123456)
+ee3, ss1 = solution_accuracy(dsge,soln_to,[0.0960769 24.0; -0.0960769 20.0],1000,123456)
+
+eec, ss1 = solution_accuracy(dsge,soln_nla,1000,123456)
+ees, ss1 = solution_accuracy(dsge,soln_nlg,1000,123456)
+eep, ss1 = solution_accuracy(dsge,soln_nlk,1000,123456)
+

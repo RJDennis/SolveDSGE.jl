@@ -36,7 +36,8 @@ export PerturbationScheme,
        SmolyakSolutionDet,
        SmolyakSolutionStoch,
        PiecewiseLinearSolutionStoch,
-       PiecewiseLinearSolutionDet
+       PiecewiseLinearSolutionDet,
+       StateSpaceEqm
 
 export process_model,
        retrieve_processed_model,
@@ -52,7 +53,9 @@ export process_model,
        impulses,
        approximate_density,
        approximate_distribution,
-       compare_solutions
+       compare_solutions,
+       state_space_eqm,
+       euler_errors
 
 export chebyshev_nodes,
        chebyshev_extrema,

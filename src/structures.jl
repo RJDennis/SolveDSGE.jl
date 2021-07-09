@@ -30,6 +30,7 @@ struct REModel{S <: Integer, Q <: AbstractString} <: DSGEModel
     number_variables::S
     number_equations::S
     jumps_approximated::Array{S,1}
+    eqns_approximated::Array{S,1}
     variables::Array{Q,1}
     nlsolve_static_function::Function
     static_function::Function
@@ -51,6 +52,7 @@ struct REModelPartial{S <: Integer, Q <: AbstractString} <: DSGEModel
     number_variables::S
     number_equations::S
     jumps_approximated::Array{S,1}
+    eqns_approximated::Array{S,1}
     variables::Array{Q,1}
     nlsolve_static_function::Function
     static_function::Function
@@ -284,7 +286,8 @@ end
 struct ChebyshevSolutionStoch{T <: Real, S <: Integer, N} <: ProjectionSolutionStoch
 
     variables::Array{Array{T,N},1}       # Variables
-    weights::Array{Array{T,N},1}         # Chebyshev polynomials
+    weights::Array{Array{T,N},1}         # Chebyshev weights
+    integrals::Array{Array{T,1},1}       # Integrals for computing scaled weights
     nodes::Array{Array{T,1},1}           # Chebyshev nodes
     order::Union{S,Array{S,1}}           # Complete polynomial / tensor-product
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
@@ -309,7 +312,8 @@ end
 struct SmolyakSolutionStoch{T <: Real, S <: Integer} <: ProjectionSolutionStoch
 
     variables::Array{Array{T,1},1}       # Variables
-    weights::Array{Array{T,1},1}         # Smolyak polynominals
+    weights::Array{Array{T,1},1}         # Smolyak weights
+    scale_factor::Array{T,1}             # Scale factor for computing scaled weights
     grid::Union{Array{T,2},Array{T,1}}   # Smolyak grid
     multi_index::Array{S,2}              # Smolyak multi index
     layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
@@ -349,5 +353,19 @@ struct PiecewiseLinearSolutionDet{T <: Real, S <: Integer, N} <: ProjectionSolut
     nodes::Array{Array{T,1},1}           # Nodes
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     iteration_count::S                   # Number of iterations needed for convergence
+
+end
+
+##################### Introduce the Equilibrium structure ########################
+
+struct StateSpaceEqm
+
+    # x(t+1)      = h(x(t))
+    #   y(t)      = g(x(t))
+    # E_{t}y(t+1) = gh(x(t))
+
+    g::Function    # Decision rules for jumps
+    h::Function    # State transition eqn
+    gh::Function   # Forecast eqns for future jumps
 
 end

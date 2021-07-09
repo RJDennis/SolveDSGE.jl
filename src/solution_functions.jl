@@ -1,4 +1,4 @@
-# Solution functions
+###################### Solution functions #############################
 
 function compute_steady_state(model::REModel, x::Array{T,1}, tol::T, maxiters::S) where {T <: Real, S <: Integer}
 
@@ -17,8 +17,6 @@ function compute_steady_state(model::REModel, x::Array{T,1}, tol::T, maxiters::S
     return nlsoln
 
 end
-
-##################################################################################
 
 function compute_linearization(model::REModel, steady_state::Array{T,1}) where {T <: Real}
 
@@ -896,7 +894,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
 
     return soln
 
@@ -1028,7 +1026,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,scaled_weights,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
 
     return soln
 
@@ -1475,7 +1473,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,order,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
 
     return soln
 
@@ -1653,7 +1651,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,order,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
 
 
     return soln
@@ -2146,7 +2144,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
 
     return soln
 
@@ -2334,7 +2332,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
 
     return soln
 
@@ -2578,7 +2576,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
 
     return soln
 
@@ -2670,7 +2668,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
 
     return soln
 
@@ -3021,7 +3019,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,multi_ind,layer,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
 
     return soln
 
@@ -3157,7 +3155,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,multi_ind,layer,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
 
     return soln
 
@@ -3533,7 +3531,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
 
     return soln
 
@@ -3673,7 +3671,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
 
     return soln
 
@@ -5101,13 +5099,13 @@ end
 function solve_model(model::REModel,scheme::PerturbationScheme)
 
     if scheme.order == "first"
-        soln = solve_first_order(model, scheme)
+        soln = solve_first_order(model,scheme)
         return soln
     elseif scheme.order == "second"
-        soln = solve_second_order(model, scheme)
+        soln = solve_second_order(model,scheme)
         return soln
     elseif scheme.order == "third"
-        soln = solve_third_order(model, scheme)
+        soln = solve_third_order(model,scheme)
         return soln
     else
         error("The chosen order has not been implemented")
@@ -5117,12 +5115,24 @@ end
 
 function solve_model(model::REModel,scheme::P) where {P <: ProjectionScheme}
 
+    if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,PiecewiseLinearSchemeDet}
+        error("Stochastic model but deterministic SolutionScheme")
+    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,PiecewiseLinearSchemeStoch}
+        error("Deterministic model but stochastic SolutionScheme")
+    end
+
     soln = solve_nonlinear(model,scheme)
     return soln
 
 end
 
 function solve_model(model::REModel,scheme::P,threads::S) where {P <: ProjectionScheme, S <: Integer}
+
+    if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,PiecewiseLinearSchemeDet}
+        error("Stochastic model but deterministic SolutionScheme")
+    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,PiecewiseLinearSchemeStoch}
+        error("Deterministic model but stochastic SolutionScheme")
+    end
 
     if threads < 0
         error("Number of threads cannot be negative")
@@ -5138,12 +5148,24 @@ end
 
 function solve_model(model::REModel,soln::ModelSolution,scheme::P) where {P <: ProjectionScheme}
 
+    if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,PiecewiseLinearSchemeDet}
+        error("Stochastic model but deterministic SolutionScheme")
+    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,PiecewiseLinearSchemeStoch}
+        error("Deterministic model but stochastic SolutionScheme")
+    end
+
     soln = solve_nonlinear(model,soln,scheme)
     return soln
 
 end
 
 function solve_model(model::REModel,soln::ModelSolution,scheme::P,threads::S) where {P <: ProjectionScheme, S <: Integer}
+
+    if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,PiecewiseLinearSchemeDet}
+        error("Stochastic model but deterministic SolutionScheme")
+    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,PiecewiseLinearSchemeStoch}
+        error("Deterministic model but stochastic SolutionScheme")
+    end
 
     if threads < 0
         error("Number of threads cannot be negative")

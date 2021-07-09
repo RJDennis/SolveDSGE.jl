@@ -16,7 +16,7 @@
 %TCIDATA{Codepage=1252}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Monday, May 10, 2021 00:46:53}
+%TCIDATA{LastRevised=Friday, July 09, 2021 13:57:53}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -30,8 +30,8 @@ Glasgow, Main Building, University Avenue, Glasgow G12 8QQ; email:
 richard.dennis@glasgow.ac.uk.} \\
 %EndAName
 University of Glasgow and CAMA}
-\title{SolveDSGE v0.4.4 --- A User Guide}
-\date{April 2021}
+\title{SolveDSGE v0.4.8 --- A User Guide}
+\date{July 2021}
 \maketitle
 
 \begin{abstract}
@@ -192,7 +192,42 @@ then it will contain no shocks.
 Every element in the equations category must contain an \textquotedblleft $=$%
 \textquotedblright\ sign, such as: \textquotedblleft $output=exp(tech)\ast
 capital\symbol{94}alpha\ast labor\symbol{94}(1.0-alpha)$\textquotedblright .
-\ In the case of the paramerters category, parameter values can (and will
+\ If the model is deterministic, or if you are only interested in a
+perturbation solution, then there is more flexibility regarding how the
+model is written. \ But if your model is stochastic and you are interested
+in a projection solution then the model must be written so that it is linear
+in expectations (to avid errors associated with Jensen's inequality). \ What
+does this mean? \ Well, taking the consumption-Euler equation as an example,
+in the former case you could write it as:
+
+\bigskip
+
+\textit{cons\symbol{94}(-sigma) = betta*cons(+1)\symbol{94}(-sigma)*(1.0 -
+delta + alpha*exp(tech(+1))*cap(+1)\symbol{94}(alpha - 1.0))}
+
+\bigskip
+
+while in the latter case you would need to write it as two equations
+
+\bigskip
+
+\textit{cons\symbol{94}(-sigma) = betta*muc(+1)*(1.0 - delta +
+alpha*exp(tech(+1))*cap(+1)\symbol{94}(alpha - 1.0))}
+
+\textit{muc = cons\symbol{94}(-sigma)}
+
+\bigskip
+
+My recommendation is that you write all models in the second form so that
+all solvers can be applied to the model. \ In many instances the errors
+associated with Jensen's inequality are small---certainly smaller than the
+errors between the model and reality---, but for some
+models/parameterizations or if you are interested in risk premia and such
+like, then the errors can matter.
+
+\bigskip
+
+In the case of the paramerters category, parameter values can (and will
 usually) be assigned in the model file, such as: \textquotedblleft $%
 alpha=0.33$\textquotedblright . \ However, parameters can also be assigned
 values at a later stage---after the model has been processed. \ It can be
@@ -218,7 +253,7 @@ The following is an example of a model file for the stochastic growth model:
 
 \textit{jumps:}
 
-\textit{cons}
+\textit{cons, muc}
 
 \textit{end}
 
@@ -254,8 +289,10 @@ The following is an example of a model file for the stochastic growth model:
 
 \textit{cap(+1) = (1.0 - delta)*cap + exp(tech)*cap\symbol{94}alpha - cons}
 
-\textit{cons\symbol{94}(-sigma) = betta*cons(+1)\symbol{94}(-sigma)*(1.0 -
-delta + alpha*exp(tech(+1))*cap(+1)\symbol{94}(alpha - 1.0))}
+\textit{cons\symbol{94}(-sigma) = betta*muc(+1)*(1.0 - delta +
+alpha*exp(tech(+1))*cap(+1)\symbol{94}(alpha - 1.0))}
+
+\textit{muc = cons\symbol{94}(-sigma)}
 
 \textit{tech(+1) = rho*tech + sd*epsilon}
 
@@ -325,13 +362,18 @@ solve for the model's steady state as follows:
 
 \bigskip
 
-\textit{ss = compute\_steady\_state(dsge,tol,maxiters)}
+\textit{ss\_obj = compute\_steady\_state(dsge,tol,maxiters)}
+
+\textit{ss = ss\_obj.zero}
 
 \bigskip
 
 where \textit{dsge} is the model whose steady state is to be computed, 
 \textit{tol} is a convergence tolerance, and \textit{maxiters} is an integer
-specifying the maximum number of iterations before the function exits.
+specifying the maximum number of iterations before the function exits. \ \ 
+\textit{ss\_obj} is a structure containing the steady state and information
+regarding convergence. \ The steady state vector itself is extracted from
+this structure in the second line (above).
 
 \subsection{Specifying a SolutionScheme}
 
@@ -613,7 +655,7 @@ requires only two arguments: the model to be solved and the SolutionScheme:
 
 \bigskip
 
-If we want the projection solution to be initialized using the third order
+If we want the projection solution to be initialized using the third-order
 perturbation solution, then solve\_model() requires three arguments: the
 model to be solved, the initializing solution, and the SolutionScheme:
 
@@ -623,8 +665,8 @@ model to be solved, the initializing solution, and the SolutionScheme:
 
 \bigskip
 
-Although this example uses a third order perturbation as the initializing
-solution, any solution (first order, second order, third order, Chebyshev,
+Although this example uses a third-order perturbation as the initializing
+solution, any solution (first-order, second-order, third-order, Chebyshev,
 Smolyak, or piecewise linear) can be used.
 
 Finally, the routines for obtaining projection solutions have multi-threaded
@@ -778,13 +820,13 @@ The third-order perturbation solution takes the following form:%
 \mathbf{x}_{t+1} &=&\mathbf{h}_{\mathbf{x}}\mathbf{x}_{t}+\frac{1}{2}\mathbf{%
 h}_{\mathbf{ss}}+\frac{1}{2}\mathbf{h}_{\mathbf{xx}}\left( \mathbf{x}%
 _{t}\otimes \mathbf{x}_{t}\right) +\frac{1}{6}\mathbf{h}_{\mathbf{sss}}+%
-\frac{1}{6}\mathbf{h}_{\mathbf{ssx}}\mathbf{x}_{t}+\frac{1}{6}\mathbf{h}_{%
+\frac{3}{6}\mathbf{h}_{\mathbf{ssx}}\mathbf{x}_{t}+\frac{1}{6}\mathbf{h}_{%
 \mathbf{xxx}}\left( \mathbf{x}_{t}\otimes \mathbf{x}_{t}\otimes \mathbf{x}%
 _{t}\right) +\mathbf{k\epsilon }_{t+1}, \\
 \mathbf{y}_{t} &=&\mathbf{g}_{\mathbf{x}}\mathbf{x}_{t}+\frac{1}{2}\mathbf{g}%
 _{\mathbf{ss}}+\frac{1}{2}\mathbf{g}_{\mathbf{xx}}\left( \mathbf{x}%
 _{t}\otimes \mathbf{x}_{t}\right) +\frac{1}{6}\mathbf{g}_{\mathbf{sss}}+%
-\frac{1}{6}\mathbf{g}_{\mathbf{ssx}}\mathbf{x}_{t}+\frac{1}{6}\mathbf{g}_{%
+\frac{3}{6}\mathbf{g}_{\mathbf{ssx}}\mathbf{x}_{t}+\frac{1}{6}\mathbf{g}_{%
 \mathbf{xxx}}\left( \mathbf{x}_{t}\otimes \mathbf{x}_{t}\otimes \mathbf{x}%
 _{t}\right) .
 \end{eqnarray*}
@@ -802,10 +844,10 @@ state-transion equation
 
 \item hxx --- The second-order coefficients in the state-transition equation
 
-\item hsss --- The third-order stochastic adjustment to the mean in the
-state-transition equation
+\item hsss --- The third-order stochastic adjustment for skewness to the
+mean in the state-transition equation
 
-\item hssx --- The skewness adjustment to the state-transition equation
+\item hssx --- The volatility adjustment to the state-transition equation
 
 \item hxxx --- The third-order coefficents in the state-transition equation
 
@@ -821,10 +863,10 @@ jump's equation
 
 \item gxx --- The second-order coefficients in the jump's equation
 
-\item gsss --- The third-order stochastic adjustment to the mean in the
-jump's equation
+\item gsss --- The third-order stochastic adjustment for skewness to the
+mean in the jump's equation
 
-\item gssx --- The skewness adjustment to the jump's equation
+\item gssx --- The volatility adjustment to the jump's equation
 
 \item gxxx --- The third-order coefficients in the jump's equation
 
@@ -1059,17 +1101,54 @@ where \textit{sample} is a 2D array of data, \textit{point} is a vector,
 \textit{order} is a vector of integers, and \textit{lower\_bound} and 
 \textit{upper\_bound} are vectors.
 
+\subsection{Decision rules, laws-of-motion}
+
+The model's solution can be used to construct functions of the state that
+govern the behavior of the jump variables (decision rules) and the future
+outcomes for the state variables (laws-of-motion or state-transition
+functions). \ These functions are produced by calling the \textit{%
+state\_space\_eqm()} function with the model as the only input, i.e.,
+
+\bigskip 
+
+\textit{eqm\_dyn = state\_space\_eqm(soln\_third\_order)}
+
+\bigskip 
+
+or
+
+\bigskip 
+
+\textit{eqm\_dyn = state\_space\_eqm(solna)}
+
+\bigskip 
+
+Then the decision rule function and the state-transition function are
+accessed via
+
+\bigskip 
+
+\textit{dec\_rule = eqm.dyn.g}
+
+\textit{state\_trans = eqm\_dyn.h}
+
+\bigskip 
+
+The former of these (\textit{dec\_rule}) is a function of the state (a
+vector) while the latter (\textit{state\_trans}) is a function of the state
+(a vector) for deterministic models and a function of the state (a vector)
+and the shocks (a vector) for stochastic models.
+
 \subsection{Evaluating accuracy}
 
-At this point SolveDSGE doesn't have routines to assess numerical accuracy
-according to conventional metrics like Euler equation errors. \ What
-SolveDSGE does do, however, is compare two solutions and assess the
-magnitudes of any differences. \ This facilitates an adaptive approach to
-approximation and it allows robustness of the solution to be assessed across
-approximation schemes. \ When comparing two models, SolveDSGE looks at the
-predicted values for the jump variables, returning the maximum absolute
-difference for each jump variable found for a random sample of 100,000
-realizations of the state variables. \ We compare two solution according to:
+SolveDSGE.jl offers two ways to think about solution accuracy. \ The first
+way is to compare two solutions and assess the magnitudes of any
+differences. \ This facilitates an adaptive approach to approximation and it
+allows robustness of the solution to be assessed across approximation
+schemes. \ When comparing two models, SolveDSGE looks at the predicted
+values for the jump variables, returning the maximum absolute difference for
+each jump variable found for a random sample of 100,000 realizations of the
+state variables. \ We compare two solution according to:
 
 \bigskip
 
@@ -1081,6 +1160,36 @@ where \textit{solna} and \textit{solnb} are the two solutions to be
 compared, \textit{domain} is the domain for the state variables over which
 the comparison takes place, and \textit{seed} is an optional argument that
 sets the seed for the random number generator.
+
+The second way of assessing solution accuray is through traditional
+Euler-equation errors. \ In the case of a perturbation solution, we compute
+the Euler-equation errors through:
+
+\bigskip
+
+\textit{e\_errors, states =
+euler\_errors(dsge,soln\_first\_order,domain,ndraws,seed)}
+
+\bigskip
+
+and in the case of a projection solution, through:
+
+\bigskip
+
+\textit{e\_errors, states = euler\_errors(dsge,solna,ndraws,seed)}
+
+\bigskip
+
+In each case, \textit{e\_errors} is a 2D matrix containing the Euler-errors, 
+\textit{dsge} is the model, \textit{ndraws} is an integer for the number of
+random points in the domain to be analyzed, and \textit{seed} is an
+(optional) seed for the random number generator. \ For a perturbation
+solution, the domain to be used needs to be supplied, while for a projection
+solution the domain is taken from that used to solve the model. \ In the
+case of the stochatic growth model presented earlier, approximation takes
+place in only one equation (the consumption Euler-equation) so \textit{%
+e\_errors} is a $1\times ndraws$ matrix. \ \textit{states} is a matrix
+containing the points in the domain that were randomly chosen to be analyzed.
 
 \begin{thebibliography}{99}
 \bibitem{} Andreasen, M., Fern\'{a}ndez-Villaverde, J., and J.
