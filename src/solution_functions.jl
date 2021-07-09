@@ -1026,7 +1026,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,scaled_weights,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
 
     return soln
 
