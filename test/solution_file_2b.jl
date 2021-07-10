@@ -6,7 +6,7 @@ process_model(path)
 dsge = retrieve_processed_model(path)
 dsge = assign_parameters(dsge,[0.99])
 
-x = [0.05, 21.4, 1.97]
+x = [0.05, 21.4, 1.97, 2.8]
 
 tol = 1e-8
 maxiters = 1000

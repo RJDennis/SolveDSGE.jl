@@ -5,7 +5,7 @@ path = joinpath(@__DIR__,filename)
 process_model(path)
 dsge = retrieve_processed_model(path)
 
-x = [0.05, 21.4, 1.97, 0.4]
+x = [0.05, 21.4, 1.97, 2.8]
 
 tol = 1e-8
 maxiters = 1000
@@ -62,9 +62,9 @@ dyn_eqm_c = state_space_eqm(soln_nla)
 dyn_eqm_s = state_space_eqm(soln_nlg)
 dyn_eqm_p = state_space_eqm(soln_nlk)
 
-ee1, ss1 = euler_errors(dsge,soln_fo,[0.0960769 24.0; -0.0960769 20.0],1000,123456)
-ee2, ss2 = euler_errors(dsge,soln_so,[0.0960769 24.0; -0.0960769 20.0],1000,123456)
-ee3, ss3 = euler_errors(dsge,soln_to,[0.0960769 24.0; -0.0960769 20.0],1000,123456)
+ee1, ss1 = euler_errors(dsge,soln_fo,[0.0960769 26.0; -0.0960769 18.0],1000,123456)
+ee2, ss2 = euler_errors(dsge,soln_so,[0.0960769 26.0; -0.0960769 18.0],1000,123456)
+ee3, ss3 = euler_errors(dsge,soln_to,[0.0960769 26.0; -0.0960769 18.0],1000,123456)
 
 eec, ssc = euler_errors(dsge,soln_nla,1000,123456)
 ees, sss = euler_errors(dsge,soln_nlg,1000,123456)

@@ -5,7 +5,7 @@ path = joinpath(@__DIR__,filename)
 process_model(path)
 dsge = retrieve_processed_model(path)
 
-x = [0.05, 21.4, 1.97]
+x = [0.05, 21.4, 1.97, 2.8]
 
 tol = 1e-8
 maxiters = 1000

@@ -5,7 +5,7 @@ k, z
 end
 
 jumps:
-c
+c, muc
 end
 
 shocks:
@@ -21,6 +21,7 @@ end
 
 equations:
 k(+1) = (1.0 - δ)*k + exp(z)*k^α - c
-c^(-σ) = β*c(+1)^(-σ)*(1.0 - δ + α*exp(z(+1))*k(+1)^(α - 1.0))
+c^(-σ) = β*muc(+1)*(1.0 - δ + α*exp(z(+1))*k(+1)^(α - 1.0))
+muc = c^(-σ)
 z(+1) = ρ*z
 end
