@@ -12,7 +12,7 @@ Installation
 
 You can install SolveDSGE by typing in REPL
 
-```
+```julia
 using Pkg
 Pkg.add("SolveDSGE")
 ```
