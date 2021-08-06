@@ -282,14 +282,12 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
-    ns = size(soln.sigma,2)
+    ns = size(soln.k,2)
     ny = nv - nx
 
     if length(initial_state) != nx
         error("The number of inital values for the states must equal the number of states")
     end
-
-    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     N = ndims(soln.weights[1])
 
@@ -316,7 +314,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
         for j = 1:nx
             simulated_states[j,i] = chebyshev_evaluate(w[j],simulated_states[:,i-1],soln.order,soln.domain)
         end
-        simulated_states[1:ns,i] += chol_decomp.U*randn(ns)
+        simulated_states[1:ns,i] += soln.k*randn(ns)
         for j = 1:ny
             simulated_jumps[j,i-1] = chebyshev_evaluate(w[nx+j],simulated_states[:,i-1],soln.order,soln.domain)
         end
@@ -364,14 +362,12 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
-    ns = size(soln.sigma,2)
+    ns = size(soln.k,2)
     ny = nv - nx
 
     if length(initial_state) != nx
         error("The number of inital values for the states must equal the number of states")
     end
-
-    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     w = Array{Array{T,1},1}(undef,length(soln.variables))
     for i = 1:nv
@@ -386,7 +382,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
         for j = 1:nx
             simulated_states[j,i] = smolyak_evaluate(w[j],simulated_states[:,i-1],soln.multi_index,soln.domain)
         end
-        simulated_states[1:ns,i] += chol_decomp.U*randn(ns)
+        simulated_states[1:ns,i] += soln.k*randn(ns)
         for j = 1:ny
             simulated_jumps[j,i-1] = smolyak_evaluate(w[nx+j],simulated_states[:,i-1],soln.multi_index,soln.domain)
         end
@@ -429,14 +425,12 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
-    ns = size(soln.sigma,2)
+    ns = size(soln.k,2)
     ny = nv - nx
 
     if length(initial_state) != nx
         error("The number of inital values for the states must equal the number of states")
     end
-
-    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     simulated_states = Array{T,2}(undef,nx,sim_length+1)
     simulated_jumps  = Array{T,2}(undef,ny,sim_length)
@@ -446,7 +440,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
         for j = 1:nx
             simulated_states[j,i] = piecewise_linear_evaluate(soln.variables[j],soln.nodes,simulated_states[:,i-1])
         end
-        simulated_states[1:ns,i] += chol_decomp.U*randn(ns)
+        simulated_states[1:ns,i] += soln.k*randn(ns)
         for j = 1:ny
             simulated_jumps[j,i-1] = piecewise_linear_evaluate(soln.variables[nx+j],soln.nodes,simulated_states[:,i-1])
         end
@@ -657,7 +651,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
-    ns = size(soln.sigma,2)
+    ns = size(soln.k,2)
     ny = nv - nx
 
     if length(innovation_vector) > ns
@@ -665,8 +659,6 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     elseif length(innovation_vector) < ns
         error("Each shock needs an innovation (even if it's zero).")
     end
-
-    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     N = ndims(soln.weights[1])
 
@@ -691,7 +683,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     end
 
     sample = simulate(soln,estimated_steady_state,5*reps+100)
-    innovations = randn(size(soln.sigma,2),n+1)
+    innovations = randn(size(soln.k,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
@@ -710,9 +702,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
 
         initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos[:,1]    = initial_state
-        simulated_states_pos[1:ns,1] += chol_decomp.U*innovation_vector
+        simulated_states_pos[1:ns,1] += soln.k*innovation_vector
         simulated_states_neg[:,1]    = initial_state
-        simulated_states_neg[1:ns,1] -= chol_decomp.U*innovation_vector
+        simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
         simulated_states_base[:,1]   = initial_state
 
         for i = 2:n+1
@@ -721,9 +713,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
                 simulated_states_neg[j,i]  = chebyshev_evaluate(w[j],simulated_states_neg[:,i-1],soln.order,soln.domain)
                 simulated_states_base[j,i] = chebyshev_evaluate(w[j],simulated_states_base[:,i-1],soln.order,soln.domain)
             end
-            simulated_states_pos[1:ns,i]  += chol_decomp.U*innovations[:,i]
-            simulated_states_neg[1:ns,i]  += chol_decomp.U*innovations[:,i]
-            simulated_states_base[1:ns,i] += chol_decomp.U*innovations[:,i]
+            simulated_states_pos[1:ns,i]  += soln.k*innovations[:,i]
+            simulated_states_neg[1:ns,i]  += soln.k*innovations[:,i]
+            simulated_states_base[1:ns,i] += soln.k*innovations[:,i]
             for j = 1:ny
                 simulated_jumps_pos[j,i-1]  = chebyshev_evaluate(w[nx+j],simulated_states_pos[:,i-1],soln.order,soln.domain)
                 simulated_jumps_neg[j,i-1]  = chebyshev_evaluate(w[nx+j],simulated_states_neg[:,i-1],soln.order,soln.domain)
@@ -743,7 +735,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     impulses_states_neg = impulses_states_neg/reps
     impulses_jumps_neg  = impulses_jumps_neg/reps
 
-    return [impulses_states_pos[:,1:n];impulses_jumps_pos], [impulses_states_neg[:,1:n];impulses_jumps_neg]
+    return [impulses_states_pos[:,1:n];impulses_jumps_pos],[impulses_states_neg[:,1:n];impulses_jumps_neg]
 
 end
 
@@ -753,7 +745,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
-    ns = size(soln.sigma,2)
+    ns = size(soln.k,2)
     ny = nv - nx
 
     if length(innovation_vector) > ns
@@ -761,8 +753,6 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     elseif length(innovation_vector) < ns
         error("Each shock needs an innovation (even if it's zero).")
     end
-
-    chol_decomp = cholesky(Hermitian(soln.sigma))
 
     w = Array{Array{eltype(soln.domain),1},1}(undef,length(soln.variables))
     for i = 1:nv
@@ -775,7 +765,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     end
 
     sample = simulate(soln,estimated_steady_state,5*reps+100)
-    innovations = randn(size(soln.sigma,2),n+1)
+    innovations = randn(size(soln.k,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
@@ -794,9 +784,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
 
         initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos[:,1]    = initial_state
-        simulated_states_pos[1:ns,1] += chol_decomp.U*innovation_vector
+        simulated_states_pos[1:ns,1] += soln.k*innovation_vector
         simulated_states_neg[:,1]    = initial_state
-        simulated_states_neg[1:ns,1] -= chol_decomp.U*innovation_vector
+        simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
         simulated_states_base[:,1]   = initial_state
 
         for i = 2:n+1
@@ -805,9 +795,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
                 simulated_states_neg[j,i]  = smolyak_evaluate(w[j],simulated_states_neg[:,i-1],soln.multi_index,soln.domain)
                 simulated_states_base[j,i] = smolyak_evaluate(w[j],simulated_states_base[:,i-1],soln.multi_index,soln.domain)
             end
-            simulated_states_pos[1:ns,i]  += chol_decomp.U*innovations[:,i]
-            simulated_states_neg[1:ns,i]  += chol_decomp.U*innovations[:,i]
-            simulated_states_base[1:ns,i] += chol_decomp.U*innovations[:,i]
+            simulated_states_pos[1:ns,i]  += soln.k*innovations[:,i]
+            simulated_states_neg[1:ns,i]  += soln.k*innovations[:,i]
+            simulated_states_base[1:ns,i] += soln.k*innovations[:,i]
             for j = 1:ny
                 simulated_jumps_pos[j,i-1]  = smolyak_evaluate(w[nx+j],simulated_states_pos[:,i-1],soln.multi_index,soln.domain)
                 simulated_jumps_neg[j,i-1]  = smolyak_evaluate(w[nx+j],simulated_states_neg[:,i-1],soln.multi_index,soln.domain)
@@ -837,7 +827,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
-    ns = size(soln.sigma,2)
+    ns = size(soln.k,2)
     ny = nv - nx
 
     if length(innovation_vector) > ns
@@ -846,12 +836,10 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
         error("Each shock needs an innovation (even if it's zero).")
     end
 
-    chol_decomp = cholesky(Hermitian(soln.sigma))
-
     estimated_steady_state = vec((soln.domain[1,:] + soln.domain[2,:]))/2
 
     sample = simulate(soln,estimated_steady_state,5*reps+100)
-    innovations = randn(size(soln.sigma,2),n+1)
+    innovations = randn(size(soln.k,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
@@ -870,9 +858,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
 
         initial_state = sample[1:nx,rand(101:5*reps+100)]
         simulated_states_pos[:,1]    = initial_state
-        simulated_states_pos[1:ns,1] += chol_decomp.U*innovation_vector
+        simulated_states_pos[1:ns,1] += soln.k*innovation_vector
         simulated_states_neg[:,1]    = initial_state
-        simulated_states_neg[1:ns,1] -= chol_decomp.U*innovation_vector
+        simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
         simulated_states_base[:,1]   = initial_state
 
         for i = 2:n+1
@@ -881,9 +869,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
                 simulated_states_neg[j,i]  = piecewise_linear_evaluate(soln.variables[j],soln.nodes,simulated_states_neg[:,i-1])
                 simulated_states_base[j,i] = piecewise_linear_evaluate(soln.variables[j],soln.nodes,simulated_states_base[:,i-1])
             end
-            simulated_states_pos[1:ns,i]  += chol_decomp.U*innovations[:,i]
-            simulated_states_neg[1:ns,i]  += chol_decomp.U*innovations[:,i]
-            simulated_states_base[1:ns,i] += chol_decomp.U*innovations[:,i]
+            simulated_states_pos[1:ns,i]  += soln.k*innovations[:,i]
+            simulated_states_neg[1:ns,i]  += soln.k*innovations[:,i]
+            simulated_states_base[1:ns,i] += soln.k*innovations[:,i]
             for j = 1:ny
                 simulated_jumps_pos[j,i-1]  = piecewise_linear_evaluate(soln.variables[nx+j],soln.nodes,simulated_states_pos[:,i-1])
                 simulated_jumps_neg[j,i-1]  = piecewise_linear_evaluate(soln.variables[nx+j],soln.nodes,simulated_states_neg[:,i-1])
@@ -1647,7 +1635,7 @@ end
 function state_transition(soln::R) where {R <: ChebyshevSolutionStoch}
 
     nx = length(soln.nodes)
-    ns = size(soln.sigma,2)
+    ns = size(soln.k,2)
 
     T = eltype(soln.variables[1])
 
@@ -1666,14 +1654,12 @@ function state_transition(soln::R) where {R <: ChebyshevSolutionStoch}
         end
     end
 
-    chol_decomp = cholesky(Hermitian(soln.sigma))
-
     function create_state_transition(state::Array{T,1},shocks::Array{T,1}) where {T <: AbstractFloat}
 
         if length(state) != nx
             error("state vector has incorrect size")
         end
-        if length(shocks) != size(soln.sigma,2)
+        if length(shocks) != size(soln.k,2)
             error("shocks vector has incorrect size")
         end
 
@@ -1682,7 +1668,7 @@ function state_transition(soln::R) where {R <: ChebyshevSolutionStoch}
         for i = 1:nx
             x_update[i] = chebyshev_evaluate(w[i],state,soln.order,soln.domain)
         end
-        x_update[1:ns] += chol_decomp.U*shocks
+        x_update[1:ns] += soln.k*shocks
 
         return x_update
     
@@ -1726,7 +1712,7 @@ end
 function state_transition(soln::R) where {R <: SmolyakSolutionStoch}
 
     nx = size(soln.grid,2)
-    ns = size(soln.sigma,2)
+    ns = size(soln.k,2)
 
     T = eltype(soln.variables[1])
 
@@ -1735,14 +1721,12 @@ function state_transition(soln::R) where {R <: SmolyakSolutionStoch}
         weights[i] = smolyak_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
     end
 
-    chol_decomp = cholesky(Hermitian(soln.sigma))
-
     function create_state_transition(state::Array{T,1},shocks::Array{T,1}) where {T <: AbstractFloat}
 
         if length(state) != nx
             error("state vector has incorrect size")
         end
-        if length(shocks) != size(soln.sigma,2)
+        if length(shocks) != size(soln.k,2)
             error("shocks vector has incorrect size")
         end
 
@@ -1751,7 +1735,7 @@ function state_transition(soln::R) where {R <: SmolyakSolutionStoch}
         for i = 1:nx
             x_update[i] = smolyak_evaluate(weights[i],state,soln.multi_index,soln.domain) 
         end
-        x_update[1:ns] += chol_decomp.U*shocks
+        x_update[1:ns] += soln.k*shocks
 
         return x_update
     
@@ -1788,16 +1772,14 @@ end
 function state_transition(soln::R) where {R <: PiecewiseLinearSolutionStoch}
 
     nx = length(soln.nodes) 
-    ns = size(soln.sigma,2) 
-
-    chol_decomp = cholesky(Hermitian(soln.sigma))
+    ns = size(soln.k,2) 
 
     function create_state_transition(state::Array{T,1},shocks::Array{T,1}) where {T <: AbstractFloat}
 
         if length(state) != nx
             error("state vector has incorrect size")
         end
-        if length(shocks) != size(soln.sigma,2)
+        if length(shocks) != size(soln.k,2)
             error("shocks vector has incorrect size")
         end
 
@@ -1806,7 +1788,7 @@ function state_transition(soln::R) where {R <: PiecewiseLinearSolutionStoch}
         for i = 1:nx
             x_update[i] = piecewise_linear_evaluate(soln.variables[i],soln.nodes,state) 
         end
-        x_update[1:ns] += chol_decomp.U*shocks
+        x_update[1:ns] += soln.k*shocks
 
         return x_update
     
@@ -1857,7 +1839,7 @@ function expected_jumps(soln::R) where {R <: ChebyshevSolutionStoch}
     nx = length(soln.nodes)
     nv = length(soln.variables)
     ny = nv - nx
-    ns = size(soln.sigma,2) 
+    ns = size(soln.k,2) 
 
     state_trans = state_transition(soln)
 
@@ -1869,11 +1851,19 @@ function expected_jumps(soln::R) where {R <: ChebyshevSolutionStoch}
         weights[i] = chebyshev_weights(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
     end
 
-    for i = 1:ny
-        for j = 1:ns
-            index = [1:ndims(weights[i]);]
-            index[1],index[j] = index[j],index[1]
-            scaled_weights[i] = permutedims(soln.integrals[j].*permutedims(weights[i],index),index)
+    if typeof(soln.integrals) == Array{T,ns}
+        for i = 1:ny
+            for j = 1:ns
+                scaled_weights[i] = soln.integrals.*weights[i]
+            end
+        end
+    else
+        for i = 1:ny
+            for j = 1:ns
+                index = [1:ndims(weights[i]);]
+                index[1],index[j] = index[j],index[1]
+                scaled_weights[i] = permutedims(soln.integrals[j].*permutedims(weights[i],index),index)
+            end
         end
     end
 
@@ -1900,7 +1890,7 @@ function expected_jumps(soln::R) where {R <: SmolyakSolutionStoch}
     nx = size(soln.grid,2)
     nv = length(soln.variables)
     ny = nv - nx
-    ns = size(soln.sigma,2) 
+    ns = size(soln.k,2) 
 
     state_trans = state_transition(soln)
 
@@ -1934,7 +1924,7 @@ function expected_jumps(soln::R) where {R <: PiecewiseLinearSolutionStoch}
     dec_rules   = decision_rule(soln)
     state_trans = state_transition(soln)
 
-    ns = size(soln.sigma,2) 
+    ns = size(soln.k,2) 
 
     function create_expected_jumps(state::Array{T,1}) where {T <: AbstractFloat}
 

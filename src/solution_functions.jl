@@ -795,10 +795,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -807,14 +806,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
     end
 
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
-    integrals = Array{Array{T,1},1}(undef,ns)
-    for i = 1:ns
-        if length(order) == 1
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order,-d[i,i],k[i,i])
-        else
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order[i],-d[i,i],k[i,i])
-        end
-    end
+    integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k)
 
     state = Array{T,1}(undef,nx)
 
@@ -856,11 +848,19 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
             end
         end
 
-        for i = 1:length(jumps_approximated)
-            for j = 1:ns
-                index = [1:ndims(weights[i]);]
-                index[1],index[j] = index[j],index[1]
-                scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+        if typeof(integrals) == Array{T,ns}
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    scaled_weights[i] = integrals.*weights[i]
+                end
+            end
+        else
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    index = [1:ndims(weights[i]);]
+                    index[1],index[j] = index[j],index[1]
+                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+                end
             end
         end
 
@@ -894,7 +894,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,k,iters,scheme.node_generator)
 
     return soln
 
@@ -924,10 +924,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -936,14 +935,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
     end
 
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
-    integrals = Array{Array{T,1},1}(undef,ns)
-    for i = 1:ns
-        if length(order) == 1
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order,-d[i,i],k[i,i])
-        else
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order[i],-d[i,i],k[i,i])
-        end
-    end
+    integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k)
 
     N = prod(length.(grid))
 
@@ -981,11 +973,19 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
             end
         end
 
-        for i = 1:length(jumps_approximated)
-            for j = 1:ns
-                index = [1:ndims(weights[i]);]
-                index[1],index[j] = index[j],index[1]
-                scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+        if typeof(integrals) == Array{T,ns}
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    scaled_weights[i] = integrals.*weights[i]
+                end
+            end
+        else
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    index = [1:ndims(weights[i]);]
+                    index[1],index[j] = index[j],index[1]
+                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+                end
             end
         end
 
@@ -1026,7 +1026,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,k,iters,scheme.node_generator)
 
     return soln
 
@@ -1049,10 +1049,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    gbar = soln.gbar
-    gx   = soln.gx
+    ss_eqm = state_space_eqm(soln)
 
     T = typeof(scheme.tol_fix_point_solver)
 
@@ -1077,29 +1074,14 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
             state[i] = grid[i][sub[i]]
         end
 
+        dr = ss_eqm.g(state)
+        te = ss_eqm.h(state)
+
         for i = 1:ny
-            variables[i][j] = gbar[i] + (gx[i:i,:]*(state - hbar))[1]
+            variables[i][j] = dr[i]
         end
         for i = 1:nx
-            variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(state - hbar))[1]
-        end
-
-        if typeof(soln) <: SecondOrderSolutionDet
-            for i = 1:ny
-                variables[i][j] += (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-            end
-        end
-
-        if typeof(soln) <: ThirdOrderSolutionDet
-            for i = 1:ny
-                variables[i][j] += (1/2)*((soln.gxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*((soln.hxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-            end
+            variables[ny+i][j] = te[i]
         end
 
     end
@@ -1184,10 +1166,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    gbar = soln.gbar
-    gx   = soln.gx
+    ss_eqm = state_space_eqm(soln)
 
     T = typeof(scheme.tol_fix_point_solver)
 
@@ -1212,29 +1191,14 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
                 state[i] = grid[i][sub[i]]
             end
 
+            dr = ss_eqm.g(state)
+            te = ss_eqm.h(state)
+    
             for i = 1:ny
-                variables[i][j] = gbar[i] + (gx[i:i,:]*(state - hbar))[1]
+                variables[i][j] = dr[i]
             end
             for i = 1:nx
-                variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(state - hbar))[1]
-            end
-
-            if typeof(soln) <: SecondOrderSolutionDet
-                for i = 1:ny
-                    variables[i][j] += (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-                end
-                for i = 1:nx
-                    variables[ny+i][j] += (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-                end
-            end
-
-            if typeof(soln) <: ThirdOrderSolutionDet
-                for i = 1:ny
-                    variables[i][j] += (1/2)*((soln.gxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-                end
-                for i = 1:nx
-                    variables[ny+i][j] += (1/2)*((soln.hxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-                end
+                variables[ny+i][j] = te[i]
             end
         end
     end
@@ -1323,16 +1287,13 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    k    = soln.k
-    gbar = soln.gbar
-    gx   = soln.gx
+    ss_eqm = state_space_eqm(soln)
 
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    k    = soln.k[1:ns,:]
+
+    RHO = soln.hx[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
 
     T = typeof(scheme.tol_fix_point_solver)
@@ -1355,14 +1316,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
     end
 
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
-    integrals = Array{Array{T,1},1}(undef,ns)
-    for i = 1:ns
-        if length(order) == 1
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order,hx[i,i],k[i,i])
-        else
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order[i],hx[i,i],k[i,i])
-        end
-    end
+    integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k[1:ns,1:ns]*k[1:ns,1:ns]')
 
     state = Array{T,1}(undef,nx)
 
@@ -1380,29 +1334,14 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
             state[i] = grid[i][sub[i]]
         end
 
+        dr = ss_eqm.g(state)
+        te = ss_eqm.h(state,zeros(ns))
+
         for i = 1:ny
-            variables[i][j] = gbar[i] + (gx[i:i,:]*(state - hbar))[1]
+            variables[i][j] = dr[i]
         end
         for i = 1:nx
-            variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(state - hbar))[1]
-        end
-
-        if typeof(soln) <: SecondOrderSolutionStoch
-            for i = 1:ny
-                variables[i][j] += (1/2)*soln.gss[i] + (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-            end
-        end
-
-        if typeof(soln) <: ThirdOrderSolutionStoch
-            for i = 1:ny
-                variables[i][j] += (1/2)*soln.gss[i] + (1/2)*((soln.gxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (3/6)*(soln.gssx[i:i,:]*(state - hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*((soln.hxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (3/6)*(soln.hssx[i:i,:]*(state - hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-            end
+            variables[ny+i][j] = te[i]
         end
 
     end
@@ -1435,11 +1374,19 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
             end
         end
 
-        for i = 1:length(jumps_approximated)
-            for j = 1:ns
-                index = [1:ndims(weights[i]);]
-                index[1],index[j] = index[j],index[1]
-                scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+        if typeof(integrals) == Array{T,ns}
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    scaled_weights[i] = integrals.*weights[i]
+                end
+            end
+        else
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    index = [1:ndims(weights[i]);]
+                    index[1],index[j] = index[j],index[1]
+                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+                end
             end
         end
 
@@ -1473,7 +1420,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,k[1:ns,:],iters,scheme.node_generator)
 
     return soln
 
@@ -1498,16 +1445,13 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    k    = soln.k
-    gbar = soln.gbar
-    gx   = soln.gx
+    ss_eqm = state_space_eqm(soln)
 
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    k = soln.k[1:ns,:]
+    
+    RHO = soln.hx[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
 
     T = typeof(scheme.tol_fix_point_solver)
@@ -1530,14 +1474,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
     end
 
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
-    integrals = Array{Array{T,1},1}(undef,ns)
-    for i = 1:ns
-        if length(order) == 1
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order,hx[i,i],k[i,i])
-        else
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order[i],hx[i,i],k[i,i])
-        end
-    end
+    integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k[1:ns,1:ns]*k[1:ns,1:ns]')
 
     N = prod(length.(grid))
 
@@ -1555,30 +1492,16 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
             state[i] = grid[i][sub[i]]
         end
 
+        dr = ss_eqm.g(state)
+        te = ss_eqm.h(state,zeros(ns))
+
         for i = 1:ny
-            variables[i][j] = gbar[i] + (gx[i:i,:]*(state - hbar))[1]
+            variables[i][j] = dr[i]
         end
         for i = 1:nx
-            variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(state - hbar))[1]
+            variables[ny+i][j] = te[i]
         end
 
-        if typeof(soln) <: SecondOrderSolutionStoch
-            for i = 1:ny
-                variables[i][j] += (1/2)*soln.gss[i] + (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-            end
-        end
-
-        if typeof(soln) <: ThirdOrderSolutionStoch
-            for i = 1:ny
-                variables[i][j] += (1/2)*soln.gss[i] + (1/2)*((soln.gxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (3/6)*(soln.gssx[i:i,:]*(state - hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*((soln.hxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (3/6)*(soln.hssx[i:i,:]*(state - hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-            end
-        end
     end
 
     weights        = Array{Array{T,nx},1}(undef,length(jumps_approximated))
@@ -1607,11 +1530,19 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
             end
         end
 
-        for i = 1:length(jumps_approximated)
-            for j = 1:ns
-                index = [1:ndims(weights[i]);]
-                index[1],index[j] = index[j],index[1]
-                scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+        if typeof(integrals) == Array{T,ns}
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    scaled_weights[i] = integrals.*weights[i]
+                end
+            end
+        else
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    index = [1:ndims(weights[i]);]
+                    index[1],index[j] = index[j],index[1]
+                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+                end
             end
         end
 
@@ -1651,7 +1582,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,k[1:ns,:],iters,scheme.node_generator)
 
 
     return soln
@@ -1676,6 +1607,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -1689,61 +1622,29 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
 
     state = Array{T,1}(undef,nx)
 
-    N = prod(length.(grid))
-
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
-        if typeof(soln) <: ChebyshevSolutionDet
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            end
+    end
 
-            for j = 1:N
-                sub = ind2sub(j,Tuple(length.(grid)))
+    N = prod(length.(grid))
+    
+    for j = 1:N
+        sub = ind2sub(j,Tuple(length.(grid)))
 
-                for l = 1:nx
-                    state[l] = grid[l][sub[l]]
-                end
-
-                variables[i][j] = chebyshev_evaluate(w,state,soln.order,domain)
-
-            end
-        elseif typeof(soln) <: SmolyakSolutionDet
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            for j = 1:N
-                sub = ind2sub(j,Tuple(length.(grid)))
-
-                for l = 1:nx
-                    state[l] = grid[l][sub[l]]
-                end
-
-                variables[i][j] = smolyak_evaluate(w,state,soln.multi_index,domain)
-
-            end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionDet
-
-            for j = 1:N
-                sub = ind2sub(j,Tuple(length.(grid)))
-
-                for l = 1:nx
-                    state[l] = grid[l][sub[l]]
-                end
-
-                variables[i][j] = piecewise_linear_evaluate(soln_variables[i],soln.nodes,state)
-
-            end
-
+        for l = 1:nx
+            state[l] = grid[l][sub[l]]
         end
 
+        dr = ss_eqm.g(state)
+        te = ss_eqm.h(state)
+
+        for i = 1:ny
+            variables[i][j] = dr[i]
+        end
+        for i = 1:nx
+            variables[ny+i][j] = te[i]
+        end
     end
 
     weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
@@ -1839,66 +1740,30 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
         grid[i] = node_generator(node_number[i],domain[:,i])
     end
 
-    N = prod(length.(grid))
-
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
-        if typeof(soln) <: ChebyshevSolutionDet
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
+    end
+
+    N = prod(length.(grid))
+
+    @sync @qthreads for t = 1:threads
+        for j = t:threads:N
+            sub = ind2sub(j,Tuple(length.(grid)))
+
+            state = Array{T,1}(undef,nx)
+            for l = 1:nx
+                state[l] = grid[l][sub[l]]
             end
 
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-                    sub = ind2sub(j,Tuple(length.(grid)))
-
-                    state = Array{T,1}(undef,nx)
-                    for l = 1:nx
-                        state[l] = grid[l][sub[l]]
-                    end
-
-                    variables[i][j] = chebyshev_evaluate(w,state,soln.order,domain)
-
-                end
+            dr = ss_eqm.g(state)
+            te = ss_eqm.h(state)
+    
+            for i = 1:ny
+                variables[i][j] = dr[i]
             end
-        elseif typeof(soln) <: SmolyakSolutionDet
-            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-                    sub = ind2sub(j,Tuple(length.(grid)))
-
-                    state = Array{T,1}(undef,nx)
-                    for l = 1:nx
-                        state[l] = grid[l][sub[l]]
-                    end
-
-                    variables[i][j] = smolyak_evaluate(w,state,soln.multi_index,domain)
-
-                end
-            end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionDet
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-                    sub = ind2sub(j,Tuple(length.(grid)))
-
-                    state = Array{T,1}(undef,nx)
-                    for l = 1:nx
-                        state[l] = grid[l][sub[l]]
-                    end
-
-                    variables[i][j] = piecewise_linear_evaluate(soln_variables[i],soln.nodes,state)
-
-                end
+            for i = 1:nx
+                variables[ny+i][j] = te[i]
             end
         end
     end
@@ -1989,6 +1854,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -1997,10 +1864,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -2009,72 +1875,33 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
     end
 
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
-    integrals = Array{Array{T,1},1}(undef,ns)
-    for i = 1:ns
-        if length(order) == 1
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order,-d[i,i],k[i,i])
-        else
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order[i],-d[i,i],k[i,i])
-        end
-    end
+    integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k)
 
     state = Array{T,1}(undef,nx)
 
     N = prod(length.(grid))
 
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
-        if typeof(soln) <: ChebyshevSolutionStoch
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            end
+    end
 
-            for j = 1:N
-                sub = ind2sub(j,Tuple(length.(grid)))
+    for j = 1:N
+        sub = ind2sub(j,Tuple(length.(grid)))
 
-                for l = 1:nx
-                    state[l] = grid[l][sub[l]]
-                end
-
-                variables[i][j] = chebyshev_evaluate(w,state,soln.order,domain)
-
-            end
-        elseif typeof(soln) <: SmolyakSolutionStoch
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            for j = 1:N
-                sub = ind2sub(j,Tuple(length.(grid)))
-
-                for l = 1:nx
-                    state[l] = grid[l][sub[l]]
-                end
-
-                variables[i][j] = smolyak_evaluate(w,state,soln.multi_index,domain)
-
-            end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionStoch
-
-            for j = 1:N
-                sub = ind2sub(j,Tuple(length.(grid)))
-
-                for l = 1:nx
-                    state[l] = grid[l][sub[l]]
-                end
-
-                variables[i][j] = piecewise_linear_evaluate(soln_variables[i],soln.nodes,state)
-
-            end
-
+        for l = 1:nx
+            state[l] = grid[l][sub[l]]
         end
 
+        dr = ss_eqm.g(state)
+        te = ss_eqm.h(state,zeros(ns))
+
+        for i = 1:ny
+            variables[i][j] = dr[i]
+        end
+        for i = 1:nx
+            variables[ny+i][j] = te[i]
+        end
     end
 
     weights        = Array{Array{T,nx},1}(undef,length(jumps_approximated))
@@ -2105,11 +1932,19 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
             end
         end
 
-        for i = 1:length(jumps_approximated)
-            for j = 1:ns
-                index = [1:ndims(weights[i]);]
-                index[1],index[j] = index[j],index[1]
-                scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+        if typeof(integrals) == Array{T,ns}
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    scaled_weights[i] = integrals.*weights[i]
+                end
+            end
+        else
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    index = [1:ndims(weights[i]);]
+                    index[1],index[j] = index[j],index[1]
+                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+                end
             end
         end
 
@@ -2144,7 +1979,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,k,iters,scheme.node_generator)
 
     return soln
 
@@ -2170,6 +2005,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -2178,10 +2015,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -2190,75 +2026,32 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
     end
 
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
-    integrals = Array{Array{T,1},1}(undef,ns)
-    for i = 1:ns
-        if length(order) == 1
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order,-d[i,i],k[i,i])
-        else
-            integrals[i] = compute_chebyshev_integrals(eps_nodes,eps_weights,grid[i],order[i],-d[i,i],k[i,i])
-        end
-    end
+    integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k)
 
     N = prod(length.(grid))
-
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
 
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
-        if typeof(soln) <: ChebyshevSolutionStoch
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
+    end
+
+    @sync @qthreads for t = 1:threads
+        for j = t:threads:N
+            sub = ind2sub(j,Tuple(length.(grid)))
+
+            state = Array{T,1}(undef,nx)
+            for l = 1:nx
+                state[l] = grid[l][sub[l]]
             end
 
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-                    sub = ind2sub(j,Tuple(length.(grid)))
-
-                    state = Array{T,1}(undef,nx)
-                    for l = 1:nx
-                        state[l] = grid[l][sub[l]]
-                    end
-
-                    variables[i][j] = chebyshev_evaluate(w,state,soln.order,domain)
-
-                end
+            dr = ss_eqm.g(state)
+            te = ss_eqm.h(state,zeros(ns))
+    
+            for i = 1:ny
+                variables[i][j] = dr[i]
             end
-        elseif typeof(soln) <: SmolyakSolutionStoch
-            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-                    sub = ind2sub(j,Tuple(length.(grid)))
-
-                    state = Array{T,1}(undef,nx)
-                    for l = 1:nx
-                        state[l] = grid[l][sub[l]]
-                    end
-
-                    variables[i][j] = smolyak_evaluate(w,state,soln.multi_index,domain)
-
-                end
-            end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionStoch
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-                    sub = ind2sub(j,Tuple(length.(grid)))
-
-                    state = Array{T,1}(undef,nx)
-                    for l = 1:nx
-                        state[l] = grid[l][sub[l]]
-                    end
-
-                    variables[i][j] = piecewise_linear_evaluate(soln_variables[i],soln.nodes,state)
-
-                end
+            for i = 1:nx
+                variables[ny+i][j] = te[i]
             end
         end
     end
@@ -2289,11 +2082,19 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
             end
         end
 
-        for i = 1:length(jumps_approximated)
-            for j = 1:ns
-                index = [1:ndims(weights[i]);]
-                index[1],index[j] = index[j],index[1]
-                scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+        if typeof(integrals) == Array{T,ns}
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    scaled_weights[i] = integrals.*weights[i]
+                end
+            end
+        else
+            for i = 1:length(jumps_approximated)
+                for j = 1:ns
+                    index = [1:ndims(weights[i]);]
+                    index[1],index[j] = index[j],index[1]
+                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
+                end
             end
         end
 
@@ -2332,7 +2133,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
 
     end
 
-    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = ChebyshevSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,integrals,grid,order,domain,k,iters,scheme.node_generator)
 
     return soln
 
@@ -2511,9 +2312,12 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
     RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
+    end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
 
@@ -2576,7 +2380,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,k,iters,scheme.node_generator)
 
     return soln
 
@@ -2602,9 +2406,12 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
     RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
+    end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
 
@@ -2668,7 +2475,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,k,iters,scheme.node_generator)
 
     return soln
 
@@ -2687,10 +2494,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
     layer          = scheme.layer
     domain         = scheme.domain
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    gbar = soln.gbar
-    gx   = soln.gx
+    ss_eqm = state_space_eqm(soln)
 
     T = typeof(scheme.tol_fix_point_solver)
 
@@ -2705,29 +2509,14 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
 
     for j = 1:N
 
+        dr = ss_eqm.g(grid[j,:])
+        te = ss_eqm.h(grid[j,:])
+
         for i = 1:ny
-            variables[i][j] = gbar[i] + (gx[i:i,:]*(grid[j,:] - hbar))[1]
+            variables[i][j] = dr[i]
         end
         for i = 1:nx
-            variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(grid[j,:] - hbar))[1]
-        end
-
-        if typeof(soln) <: SecondOrderSolutionDet
-            for i = 1:ny
-                variables[i][j] += (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))
-            end
-        end
-
-        if typeof(soln) <: ThirdOrderSolutionDet
-            for i = 1:ny
-                variables[i][j] += (1/2)*((soln.gxx[i:i,:])*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((grid[j,:] - hbar),(grid[j,:] - hbar)),(grid[j,:] - hbar)))[1]
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*((soln.hxx[i:i,:])*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((grid[j,:] - hbar),(grid[j,:] - hbar)),(grid[j,:] - hbar)))[1]
-            end
+            variables[ny+i][j] = te[i]
         end
 
     end
@@ -2794,10 +2583,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
     layer          = scheme.layer
     domain         = scheme.domain
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    gbar = soln.gbar
-    gx   = soln.gx
+    ss_eqm = state_space_eqm(soln)
 
     T = typeof(scheme.tol_fix_point_solver)
 
@@ -2813,30 +2599,16 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
     @sync @qthreads for t = 1:threads
         for j = t:threads:N
 
+            dr = ss_eqm.g(grid[j,:])
+            te = ss_eqm.h(grid[j,:])
+
             for i = 1:ny
-                variables[i][j] = gbar[i] + (gx[i:i,:]*(grid[j,:] - hbar))[1]
+                variables[i][j] = dr[i]
             end
             for i = 1:nx
-                variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(grid[j,:] - hbar))[1]
+                variables[ny+i][j] = te[i]
             end
 
-            if typeof(soln) <: SecondOrderSolutionDet
-                for i = 1:ny
-                    variables[i][j] += (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))
-                end
-                for i = 1:nx
-                    variables[ny+i][j] += (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))
-                end
-            end
-
-            if typeof(soln) <: ThirdOrderSolutionDet
-                for i = 1:ny
-                    variables[i][j] += (1/2)*((soln.gxx[i:i,:])*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((grid[j,:] - hbar),(grid[j,:] - hbar)),(grid[j,:] - hbar)))[1]
-                end
-                for i = 1:nx
-                    variables[ny+i][j] += (1/2)*((soln.hxx[i:i,:])*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((grid[j,:] - hbar),(grid[j,:] - hbar)),(grid[j,:] - hbar)))[1]
-                end
-            end
         end
 
     end
@@ -2906,17 +2678,17 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
     layer          = scheme.layer
     domain         = scheme.domain
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    k    = soln.k
-    gbar = soln.gbar
-    gx   = soln.gx
+    ss_eqm = state_space_eqm(soln)
 
-    RHO = hx[1:ns,1:ns]
+    k = soln.k[1:ns,:]
 
+    RHO = soln.hx[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
+    end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
 
@@ -2947,29 +2719,14 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     for j = 1:N
 
+        dr = ss_eqm.g(grid[j,:])
+        te = ss_eqm.h(grid[j,:],zeros(ns))
+
         for i = 1:ny
-            variables[i][j] = gbar[i] + (gx[i:i,:]*(grid[j,:] - hbar))[1]
+            variables[i][j] = dr[i]
         end
         for i = 1:nx
-            variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(grid[j,:] - hbar))[1]
-        end
-
-        if typeof(soln) <: SecondOrderSolutionStoch
-            for i = 1:ny
-                variables[i][j] += (1/2)*soln.gss[i] + (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))
-            end
-        end
-
-        if typeof(soln) <: ThirdOrderSolutionStoch
-            for i = 1:ny
-                variables[i][j] += (1/2)*soln.gss[i] + (1/2)*((soln.gxx[i:i,:])*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))[1] + (3/6)*(soln.gssx[i:i,:]*(grid[j,:] - hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((grid[j,:] - hbar),(grid[j,:] - hbar)),(grid[j,:] - hbar)))[1]
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*((soln.hxx[i:i,:])*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))[1] + (3/6)*(soln.hssx[i:i,:]*(grid[j,:] - hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((grid[j,:] - hbar),(grid[j,:] - hbar)),(grid[j,:] - hbar)))[1]
-            end
+            variables[ny+i][j] = te[i]
         end
 
     end
@@ -3019,7 +2776,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,k[1:ns,:],iters,scheme.node_generator)
 
     return soln
 
@@ -3040,19 +2797,19 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
     layer          = scheme.layer
     domain         = scheme.domain
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    k    = soln.k
-    gbar = soln.gbar
-    gx   = soln.gx
+    k = soln.k[1:ns,:]
 
-    RHO = hx[1:ns,1:ns]
-
+    RHO = soln.hx[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
+    end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
+
+    ss_eqm = state_space_eqm(soln)
 
     T = typeof(scheme.tol_fix_point_solver)
 
@@ -3082,30 +2839,16 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
     @sync @qthreads for t = 1:threads
         for j = t:threads:N
 
+            dr = ss_eqm.g(grid[j,:])
+            te = ss_eqm.h(grid[j,:],zeros(ns))
+ 
             for i = 1:ny
-                variables[i][j] = gbar[i] + (gx[i:i,:]*(grid[j,:] - hbar))[1]
+                variables[i][j] = dr[i]
             end
             for i = 1:nx
-                variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(grid[j,:] - hbar))[1]
+                variables[ny+i][j] = te[i]
             end
 
-            if typeof(soln) <: SecondOrderSolutionStoch
-                for i = 1:ny
-                    variables[i][j] += (1/2)*soln.gss[i] + (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))
-                end
-                for i = 1:nx
-                    variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))
-                end
-            end
-
-            if typeof(soln) <: ThirdOrderSolutionStoch
-                for i = 1:ny
-                    variables[i][j] += (1/2)*soln.gss[i] + (1/2)*((soln.gxx[i:i,:])*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))[1] + (3/6)*(soln.gssx[i:i,:]*(grid[j,:] - hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((grid[j,:] - hbar),(grid[j,:] - hbar)),(grid[j,:] - hbar)))[1]
-                end
-                for i = 1:nx
-                    variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*((soln.hxx[i:i,:])*kron((grid[j,:] - hbar),(grid[j,:] - hbar)))[1] + (3/6)*(soln.hssx[i:i,:]*(grid[j,:] - hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((grid[j,:] - hbar),(grid[j,:] - hbar)),(grid[j,:] - hbar)))[1]
-                end
-            end
         end
     end
 
@@ -3155,7 +2898,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,k[1:ns,:],iters,scheme.node_generator)
 
     return soln
 
@@ -3174,6 +2917,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
     layer          = scheme.layer
     domain         = scheme.domain
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -3189,45 +2934,18 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
         variables[i] = zeros(N)
     end
 
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
+    for j = 1:N
 
-    for i = 1:nv
-        variables[i] = zeros(N)
-        if typeof(soln) <: ChebyshevSolutionDet
+        dr = ss_eqm.g(grid[j,:])
+        te = ss_eqm.h(grid[j,:])
 
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            end
-
-            for j = 1:N
-
-                variables[i][j] = chebyshev_evaluate(w,grid[j,:],soln.order,domain)
-
-            end
-
-        elseif typeof(soln) <: SmolyakSolutionDet
-
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            for j = 1:N
-
-                variables[i][j] = smolyak_evaluate(w,grid[j,:],soln.multi_index,soln.domain)
-
-            end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionDet
-
-            for j = 1:N
-
-                variables[i][j] = piecewise_linear_evaluate(soln_variables[i],soln.nodes,grid[j,:])
-
-            end
-
+        for i = 1:ny
+            variables[i][j] = dr[i]
         end
+        for i = 1:nx
+            variables[ny+i][j] = te[i]
+        end
+
     end
 
     weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
@@ -3292,6 +3010,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
     layer          = scheme.layer
     domain         = scheme.domain
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -3307,50 +3027,23 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
         variables[i] = zeros(N)
     end
 
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
-
     for i = 1:nv
         variables[i] = zeros(N)
-        if typeof(soln) <: ChebyshevSolutionDet
+    end
 
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
+    @sync @qthreads for t = 1:threads
+        for j = t:threads:N
+                    
+            dr = ss_eqm.g(grid[j,:])
+            te = ss_eqm.h(grid[j,:])
+            
+            for i = 1:ny
+                variables[i][j] = dr[i]
             end
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-
-                    variables[i][j] = chebyshev_evaluate(w,grid[j,:],soln.order,domain)
-
-                end
+            for i = 1:nx
+                variables[ny+i][j] = te[i]
             end
-
-        elseif typeof(soln) <: SmolyakSolutionDet
-
-            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-
-                    variables[i][j] = smolyak_evaluate(w,grid[j,:],soln.multi_index,soln.domain)
-
-                end
-            end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionDet
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-
-                    variables[i][j] = piecewise_linear_evaluate(soln_variables[i],soln.nodes,grid[j,:])
-
-                end
-            end
-
+            
         end
     end
 
@@ -3419,6 +3112,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
     layer          = scheme.layer
     domain         = scheme.domain
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -3428,9 +3123,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
     RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
+    end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
 
@@ -3445,45 +3143,18 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
         variables[i] = zeros(N)
     end
 
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
+    for j = 1:N
 
-    for i = 1:nv
-        variables[i] = zeros(N)
-        if typeof(soln) <: ChebyshevSolutionStoch
-
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            end
-
-            for j = 1:N
-
-                variables[i][j] = chebyshev_evaluate(w,grid[j,:],soln.order,domain)
-
-            end
-
-        elseif typeof(soln) <: SmolyakSolutionStoch
-
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            for j = 1:N
-
-                variables[i][j] = smolyak_evaluate(w,grid[j,:],soln.multi_index,soln.domain)
-
-            end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionStoch
-
-            for j = 1:N
-
-                variables[i][j] = piecewise_linear_evaluate(soln_variables[i],soln.nodes,grid[j,:])
-
-            end
-
+        dr = ss_eqm.g(grid[j,:])
+        te = ss_eqm.h(grid[j,:],zeros(ns))
+        
+        for i = 1:ny
+            variables[i][j] = dr[i]
         end
+        for i = 1:nx
+            variables[ny+i][j] = te[i]
+        end
+
     end
 
     weights        = Array{Array{T,1},1}(undef,length(jumps_approximated))
@@ -3531,7 +3202,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,k,iters,scheme.node_generator)
 
     return soln
 
@@ -3552,6 +3223,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
     layer          = scheme.layer
     domain         = scheme.domain
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -3561,9 +3234,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
     RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
+    end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
 
@@ -3578,48 +3254,17 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
         variables[i] = zeros(N)
     end
 
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
+    @sync @qthreads for t = 1:threads
+        for j = t:threads:N
 
-    for i = 1:nv
-        variables[i] = zeros(N)
-        if typeof(soln) <: ChebyshevSolutionStoch
-
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended_threaded(soln_variables[i],soln.nodes,soln.order,soln.domain)
+            dr = ss_eqm.g(grid[j,:])
+            te = ss_eqm.h(grid[j,:],zeros(ns))
+            
+            for i = 1:ny
+                variables[i][j] = dr[i]
             end
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-
-                    variables[i][j] = chebyshev_evaluate(w,grid[j,:],soln.order,domain)
-
-                end
-            end
-
-        elseif typeof(soln) <: SmolyakSolutionStoch
-
-            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-
-                    variables[i][j] = smolyak_evaluate(w,grid[j,:],soln.multi_index,soln.domain)
-
-                end
-            end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionStoch
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-
-                    variables[i][j] = piecewise_linear_evaluate(soln_variables[i],soln.nodes,grid[j,:])
-
-                end
+            for i = 1:nx
+                variables[ny+i][j] = te[i]
             end
 
         end
@@ -3671,7 +3316,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
 
     end
 
-    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,Matrix(k*k'),iters,scheme.node_generator)
+    soln = SmolyakSolutionStoch([variables[ny+1:end];variables[1:ny]],weights,weight_scale_factor,grid,multi_ind,layer,domain,k,iters,scheme.node_generator)
 
     return soln
 
@@ -3863,10 +3508,9 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -3933,7 +3577,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
 
     end
 
-    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,Matrix(k*k'),iters)
+    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,k,iters)
 
     return soln
 
@@ -3961,10 +3605,9 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch,threa
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -4031,7 +3674,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch,threa
 
     end
 
-    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,Matrix(k*k'),iters)
+    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,k,iters)
 
     return soln
 
@@ -4051,10 +3694,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    gbar = soln.gbar
-    gx   = soln.gx
+    ss_eqm = state_space_eqm(soln)
 
     T = typeof(scheme.tol_fix_point_solver)
 
@@ -4079,31 +3719,15 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
             state[i] = grid[i][sub[i]]
         end
 
+        dr = ss_eqm.g(state)
+        te = ss_eqm.h(state)
+        
         for i = 1:ny
-            variables[i][j] = gbar[i] + (gx[i:i,:]*(state - hbar))[1]
+            variables[i][j] = dr[i]
         end
         for i = 1:nx
-            variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(state - hbar))[1]
+            variables[ny+i][j] = te[i]
         end
-
-        if typeof(soln) <: SecondOrderSolutionDet
-            for i = 1:ny
-                variables[i][j] += (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-            end
-        end
-
-        if typeof(soln) <: ThirdOrderSolutionDet
-            for i = 1:ny
-                variables[i][j] += (1/2)*((soln.gxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*((soln.hxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-            end
-        end
-
     end
 
     new_variables = Array{Array{T,nx},1}(undef,nv)
@@ -4167,11 +3791,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    gbar = soln.gbar
-    gx   = soln.gx
-
+    ss_eqm = state_space_eqm(soln)
+    
     T = typeof(scheme.tol_fix_point_solver)
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -4195,30 +3816,16 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
                 state[i] = grid[i][sub[i]]
             end
 
+            dr = ss_eqm.g(state)
+            te = ss_eqm.h(state)
+            
             for i = 1:ny
-                variables[i][j] = gbar[i] + (gx[i:i,:]*(state - hbar))[1]
+                variables[i][j] = dr[i]
             end
             for i = 1:nx
-                variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(state - hbar))[1]
+                variables[ny+i][j] = te[i]
             end
-
-            if typeof(soln) <: SecondOrderSolutionDet
-                for i = 1:ny
-                    variables[i][j] += (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-                end
-                for i = 1:nx
-                    variables[ny+i][j] += (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-                end
-            end
-
-            if typeof(soln) <: ThirdOrderSolutionDet
-                for i = 1:ny
-                    variables[i][j] += (1/2)*((soln.gxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-                end
-                for i = 1:nx
-                    variables[ny+i][j] += (1/2)*((soln.hxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-                end
-            end
+                
         end
     end
 
@@ -4287,17 +3894,14 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    k    = soln.k
-    gbar = soln.gbar
-    gx   = soln.gx
+    k = soln.k[1:ns,:]
 
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    RHO = soln.hx[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
+
+    ss_eqm = state_space_eqm(soln)
 
     T = typeof(scheme.tol_fix_point_solver)
 
@@ -4340,31 +3944,15 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
             state[i] = grid[i][sub[i]]
         end
 
+        dr = ss_eqm.g(state)
+        te = ss_eqm.h(state,zeros(ns))
+            
         for i = 1:ny
-            variables[i][j] = gbar[i] + (gx[i:i,:]*(state - hbar))[1]
+            variables[i][j] = dr[i]
         end
         for i = 1:nx
-            variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(state - hbar))[1]
+            variables[ny+i][j] = te[i]
         end
-
-        if typeof(soln) <: SecondOrderSolutionStoch
-            for i = 1:ny
-                variables[i][j] += (1/2)*soln.gss[i] + (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-            end
-        end
-
-        if typeof(soln) <: ThirdOrderSolutionStoch
-            for i = 1:ny
-                variables[i][j] += (1/2)*soln.gss[i] + (1/2)*((soln.gxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (3/6)*(soln.gssx[i:i,:]*(state - hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-            end
-            for i = 1:nx
-                variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*((soln.hxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (3/6)*(soln.hssx[i:i,:]*(state - hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-            end
-        end
-
     end
 
     new_variables = Array{Array{T,nx},1}(undef,nv)
@@ -4408,7 +3996,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     end
 
-    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters)
+    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,k[1:ns,:],iters)
 
     return soln
 
@@ -4430,17 +4018,14 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    hbar = soln.hbar
-    hx   = soln.hx
-    k    = soln.k
-    gbar = soln.gbar
-    gx   = soln.gx
+    k = soln.k[1:ns,:]
 
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    RHO = soln.hx[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
+
+    ss_eqm = state_space_eqm(soln)
 
     T = typeof(scheme.tol_fix_point_solver)
 
@@ -4483,30 +4068,16 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
                 state[i] = grid[i][sub[i]]
             end
 
+            dr = ss_eqm.g(state)
+            te = ss_eqm.h(state,zeros(ns))
+                
             for i = 1:ny
-                variables[i][j] = gbar[i] + (gx[i:i,:]*(state - hbar))[1]
+                variables[i][j] = dr[i]
             end
             for i = 1:nx
-                variables[ny+i][j] = hbar[i] + (hx[i:i,:]*(state - hbar))[1]
+                variables[ny+i][j] = te[i]
             end
-
-            if typeof(soln) <: SecondOrderSolutionStoch
-                for i = 1:ny
-                    variables[i][j] += (1/2)*soln.gss[i] + (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-                end
-                for i = 1:nx
-                    variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]).*kron((state - hbar),(state - hbar)))
-                end
-            end
-
-            if typeof(soln) <: ThirdOrderSolutionStoch
-                for i = 1:ny
-                    variables[i][j] += (1/2)*soln.gss[i] + (1/2)*((soln.gxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (3/6)*(soln.gssx[i:i,:]*(state - hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-                end
-                for i = 1:nx
-                    variables[ny+i][j] += (1/2)*soln.hss[i] + (1/2)*((soln.hxx[i:i,:])*kron((state - hbar),(state - hbar)))[1] + (3/6)*(soln.hssx[i:i,:]*(state - hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - hbar),(state - hbar)),(state-hbar)))[1]
-                end
-            end
+    
         end
     end
 
@@ -4553,7 +4124,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     end
 
-    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,Matrix(k[1:ns,:]*k[1:ns,:]'),iters)
+    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,k[1:ns,:],iters)
 
     return soln
 
@@ -4573,6 +4144,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -4588,49 +4161,26 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
 
     N = prod(length.(grid))
 
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
-        if typeof(soln) <: ChebyshevSolutionDet
+    end
 
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            end
+    for j = 1:N
+        sub = ind2sub(j,Tuple(length.(grid)))
 
-            for j = 1:N
-                sub = ind2sub(j,Tuple(length.(grid)))
+        for l = 1:nx
+            state[l] = grid[l][sub[l]]
+        end
 
-                for l = 1:nx
-                    state[l] = grid[l][sub[l]]
-                end
-
-                variables[i][j] = chebyshev_evaluate(w,state,soln.order,domain)
-
-            end
-        elseif typeof(soln) <: SmolyakSolutionDet
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            for j = 1:N
-                sub = ind2sub(j,Tuple(length.(grid)))
-
-                for l = 1:nx
-                    state[l] = grid[l][sub[l]]
-                end
-
-                variables[i][j] = smolyak_evaluate(w,state,soln.multi_index,domain)
-
-            end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionDet
-
-            variables[i] = PiecewiseLinearApprox.grid_reshape(soln_variables[i],tuple(grid...))
-
+        dr = ss_eqm.g(state)
+        te = ss_eqm.h(state)
+            
+        for i = 1:ny
+            variables[i][j] = dr[i]
+        end
+        for i = 1:nx
+            variables[ny+i][j] = te[i]
         end
     end
 
@@ -4695,6 +4245,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -4708,56 +4260,29 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
 
     N = prod(length.(grid))
 
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
-        if typeof(soln) <: ChebyshevSolutionDet
+    end
 
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended(soln_variables[i],soln.nodes,soln.order,soln.domain)
+    @sync @qthreads for t = 1:threads
+        for j = t:threads:N
+            sub = ind2sub(j,Tuple(length.(grid)))
+
+            state = Array{T,1}(undef,nx)
+            for l = 1:nx
+                state[l] = grid[l][sub[l]]
             end
 
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-                    sub = ind2sub(j,Tuple(length.(grid)))
-
-                    state = Array{T,1}(undef,nx)
-                    for l = 1:nx
-                        state[l] = grid[l][sub[l]]
-                    end
-
-                    variables[i][j] = chebyshev_evaluate(w,state,soln.order,domain)
-
-                end
+            dr = ss_eqm.g(state)
+            te = ss_eqm.h(state)
+                
+            for i = 1:ny
+                variables[i][j] = dr[i]
             end
-
-        elseif typeof(soln) <: SmolyakSolutionDet
-
-            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-                    sub = ind2sub(j,Tuple(length.(grid)))
-
-                    state = Array{T,1}(undef,nx)
-                    for l = 1:nx
-                        state[l] = grid[l][sub[l]]
-                    end
-
-                    variables[i][j] = smolyak_evaluate(w,state,soln.multi_index,domain)
-
-                end
+            for i = 1:nx
+                variables[ny+i][j] = te[i]
             end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionDet
-
-            variables[i] = PiecewiseLinearApprox.grid_reshape(soln_variables[i],tuple(grid...))
 
         end
     end
@@ -4827,6 +4352,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -4835,10 +4362,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -4856,52 +4382,28 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     N = prod(length.(grid))
 
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
-        if typeof(soln) <: ChebyshevSolutionStoch
+    end
 
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            end
+    for j = 1:N
+        sub = ind2sub(j,Tuple(length.(grid)))
 
-            for j = 1:N
-                sub = ind2sub(j,Tuple(length.(grid)))
-
-                for l = 1:nx
-                    state[l] = grid[l][sub[l]]
-                end
-
-                variables[i][j] = chebyshev_evaluate(w,state,soln.order,domain)
-
-            end
-
-        elseif typeof(soln) <: SmolyakSolutionStoch
-
-            w = smolyak_weights(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            for j = 1:N
-                sub = ind2sub(j,Tuple(length.(grid)))
-
-                for l = 1:nx
-                    state[l] = grid[l][sub[l]]
-                end
-
-                variables[i][j] = smolyak_evaluate(w,state,soln.multi_index,domain)
-
-            end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionStoch
-
-            variables[i] = PiecewiseLinearApprox.grid_reshape(soln_variables[i],tuple(grid...))
-
+        for l = 1:nx
+            state[l] = grid[l][sub[l]]
         end
+
+        dr = ss_eqm.g(state)
+        te = ss_eqm.h(state,zeros(ns))
+            
+        for i = 1:ny
+            variables[i][j] = dr[i]
+        end
+        for i = 1:nx
+            variables[ny+i][j] = te[i]
+        end
+
     end
 
     new_variables = Array{Array{T,nx},1}(undef,nv)
@@ -4945,7 +4447,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     end
 
-    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,Matrix(k*k'),iters)
+    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,k,iters)
 
     return soln
 
@@ -4967,6 +4469,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
+    ss_eqm = state_space_eqm(soln)
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -4975,10 +4479,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
-    for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns-1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via projection methods")
-        end
+    RHO = -d[1:ns,1:ns]
+    if !isdiag(RHO.>sqrt(eps()))
+        error("This solver requires the shocks to be AR(1) processes")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -4994,56 +4497,30 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     N = prod(length.(grid))
 
-    soln_variables = [soln.variables[nx+1:end];soln.variables[1:nx]]
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
-        if typeof(soln) <: ChebyshevSolutionStoch
+    end
 
-            if soln.node_generator == chebyshev_nodes
-                w = chebyshev_weights(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extrema
-                w = chebyshev_weights_extrema(soln_variables[i],soln.nodes,soln.order,soln.domain)
-            elseif soln.node_generator == chebyshev_extended
-                w = chebyshev_weights_extended(soln_variables[i],soln.nodes,soln.order,soln.domain)
+    @sync @qthreads for t = 1:threads
+        for j = t:threads:N
+            sub = ind2sub(j,Tuple(length.(grid)))
+
+            state = Array{T,1}(undef,nx)
+            for l = 1:nx
+                state[l] = grid[l][sub[l]]
             end
 
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-                    sub = ind2sub(j,Tuple(length.(grid)))
-
-                    state = Array{T,1}(undef,nx)
-                    for l = 1:nx
-                        state[l] = grid[l][sub[l]]
-                    end
-
-                    variables[i][j] = chebyshev_evaluate(w,state,soln.order,domain)
-
-                end
+            dr = ss_eqm.g(state)
+            te = ss_eqm.h(state,zeros(ns))
+                
+            for i = 1:ny
+                variables[i][j] = dr[i]
             end
-        elseif typeof(soln) <: SmolyakSolutionStoch
-
-            w = smolyak_weights_threaded(soln_variables[i],soln.grid,soln.multi_index,soln.domain)
-
-            @sync @qthreads for t = 1:threads
-                for j = t:threads:N
-                    sub = ind2sub(j,Tuple(length.(grid)))
-
-                    state = Array{T,1}(undef,nx)
-                    for l = 1:nx
-                        state[l] = grid[l][sub[l]]
-                    end
-
-                    variables[i][j] = smolyak_evaluate(w,state,soln.multi_index,domain)
-
-                end
+            for i = 1:nx
+                variables[ny+i][j] = te[i]
             end
-
-        elseif typeof(soln) <: PiecewiseLinearSolutionStoch
-
-            variables[i] = PiecewiseLinearApprox.grid_reshape(soln_variables[i],tuple(grid...))
-
+    
         end
     end
 
@@ -5090,7 +4567,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     end
 
-    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,Matrix(k*k'),iters)
+    soln = PiecewiseLinearSolutionStoch([variables[ny+1:end];variables[1:ny]],grid,domain,k,iters)
 
     return soln
 

@@ -253,22 +253,51 @@ function reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Arra
 
     pos = 1
     for i = 1:length(equations)
-        if jumps_number[i] == 0 && i != pos
-            reordered_equations[pos], reordered_equations[i] = reordered_equations[i], reordered_equations[pos]
-            shocks_number[pos], shocks_number[i] = shocks_number[i], shocks_number[pos]
-            states_number[pos], states_number[i] = states_number[i], states_number[pos]
-            jumps_number[pos], jumps_number[i]   = jumps_number[i], jumps_number[pos]
+        if jumps_number[i] == 0 
+            if i != pos
+                reordered_equations[pos], reordered_equations[i] = reordered_equations[i], reordered_equations[pos]
+                shocks_number[pos], shocks_number[i] = shocks_number[i], shocks_number[pos]
+                states_number[pos], states_number[i] = states_number[i], states_number[pos]
+                jumps_number[pos], jumps_number[i]   = jumps_number[i], jumps_number[pos]
+            end
             pos += 1
         end
     end
 
-    # Put the shock equations with the fewest states at the top
+    # Put the shock equations with the fewest shocks at the top
 
-    new_order = sortperm(states_number[1:number_eqns_with_shocks])
+    new_order = sortperm(shocks_number[1:number_eqns_with_shocks])
     reordered_equations[1:number_eqns_with_shocks] .= reordered_equations[new_order]
     shocks_number[1:number_eqns_with_shocks] .= shocks_number[new_order]
     states_number[1:number_eqns_with_shocks] .= states_number[new_order]
     jumps_number[1:number_eqns_with_shocks]  .= jumps_number[new_order]
+    
+    # Order the shock processes to try to make shock's variance matrix have non-zero diagonals.  Only applies to stochastic models.
+
+    for j = 1:number_eqns_with_shocks
+        if shocks_number[j] == 1
+           for i = 1:length(shocks)
+                if occursin(shocks[i],reordered_equations[j]) && j != i
+                    reordered_equations[i], reordered_equations[j] = reordered_equations[j], reordered_equations[i]
+                    shocks_number[j], shocks_number[i] = shocks_number[i], shocks_number[j]
+                    states_number[j], states_number[i] = states_number[i], states_number[j]
+                    jumps_number[j], jumps_number[i]   = jumps_number[i], jumps_number[j]
+                    break
+                end
+            end
+        end
+    end
+
+    #pos = 1
+    #for i = 1:length(shocks)
+    #    for j = pos:number_eqns_with_shocks
+    #        if occursin(shocks[i],reordered_equations[j]) && j != pos
+    #            reordered_equations[pos], reordered_equations[j] = reordered_equations[j], reordered_equations[pos]
+    #            break
+    #        end
+    #    end
+    #    pos += 1
+    #end
 
     # Now sort out the order of the states in the system
 

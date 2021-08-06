@@ -236,11 +236,11 @@ end
 struct ThirdOrderSolutionStoch{T <: Real, S <: Integer} <: PerturbationSolutionStoch
 
     # x(t+1) = hx*x(t) + (1/2)*hss + (1/2)*hxx*[kron(x(t),x(t)]
-    #        + (1/6)*hsss + (1/6)*hssx*[x(t)] + (1/6)*hxxx*[kron(x(t),x(t),x(t))]
+    #        + (1/6)*hsss + (3/6)*hssx*[x(t)] + (1/6)*hxxx*[kron(x(t),x(t),x(t))]
     #        + k*v(t+1)
 
     #   y(t) = gx*x(t) + (1/2)*gss + (1/2)*gxx*[kron(x(t),x(t)]
-    #        +(1/6)*gsss + (1/6)*gssx*[x(t)] + (1/6)*gxxx*[kron(x(t),x(t),x(t))]
+    #        +(1/6)*gsss + (3/6)*gssx*[x(t)] + (1/6)*gxxx*[kron(x(t),x(t),x(t))]
 
     hbar::Union{T,Array{T,1}}              # steady state values for predetermined variables
     hx::Union{Array{T,2},Array{T,1}}       # Linear component in predetermined block
@@ -285,15 +285,16 @@ end
 
 struct ChebyshevSolutionStoch{T <: Real, S <: Integer, N} <: ProjectionSolutionStoch
 
-    variables::Array{Array{T,N},1}       # Variables
-    weights::Array{Array{T,N},1}         # Chebyshev weights
-    integrals::Array{Array{T,1},1}       # Integrals for computing scaled weights
-    nodes::Array{Array{T,1},1}           # Chebyshev nodes
-    order::Union{S,Array{S,1}}           # Complete polynomial / tensor-product
-    domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
-    sigma::Union{Array{T,2},Array{T,1}}  # Innovation variance-covariance matrix
-    iteration_count::S                   # Number of iterations needed for convergence
-    node_generator::Function             # Function to generate the nodes
+    variables::Array{Array{T,N},1}                   # Variables
+    weights::Array{Array{T,N},1}                     # Chebyshev weights
+    integrals::Union{Array{T},Array{Array{T,1},1}} # Integrals for computing scaled weights
+    nodes::Array{Array{T,1},1}                       # Chebyshev nodes
+    order::Union{S,Array{S,1}}                       # Complete polynomial / tensor-product
+    domain::Union{Array{T,2},Array{T,1}}             # Domain for state variables / state variable
+    k::Union{Array{T,2},Array{T,1}}                  # Innovation loading matrix
+    #sigma::Union{Array{T,2},Array{T,1}}              # Innovation variance-covariance matrix
+    iteration_count::S                               # Number of iterations needed for convergence
+    node_generator::Function                         # Function to generate the nodes
 
 end
 
@@ -318,7 +319,8 @@ struct SmolyakSolutionStoch{T <: Real, S <: Integer} <: ProjectionSolutionStoch
     multi_index::Array{S,2}              # Smolyak multi index
     layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
-    sigma::Union{Array{T,2},Array{T,1}}  # Innovation variance-covariance matrix
+    k::Union{Array{T,2},Array{T,1}}      # Innovation loading matrix
+    #sigma::Union{Array{T,2},Array{T,1}}  # Innovation variance-covariance matrix
     iteration_count::S                   # Number of iterations needed for convergence
     node_generator::Function             # Function to generate the nodes
 
@@ -342,7 +344,8 @@ struct PiecewiseLinearSolutionStoch{T <: Real, S <: Integer, N} <: ProjectionSol
     variables::Array{Array{T,N},1}       # Variables
     nodes::Array{Array{T,1},1}           # Nodes
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
-    sigma::Union{Array{T,2},Array{T,1}}  # Innovation variance-covariance matrix
+    k::Union{Array{T,2},Array{T,1}}      # Innovation loading matrix
+    #sigma::Union{Array{T,2},Array{T,1}}  # Innovation variance-covariance matrix
     iteration_count::S                   # Number of iterations needed for convergence
 
 end
