@@ -1729,6 +1729,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
+    ss_eqm = state_space_eqm(soln)
+    
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
