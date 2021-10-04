@@ -960,60 +960,6 @@ function approximate_density(sample::Array{T,1},order::S,a::T,b::T) where {T<:Re
 
 end
 
-function approximate_density(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:Real,S<:Integer}
-
-    if length(point) != length(a) || length(point) != length(b)
-        error("'point', 'a', and 'b' must be the same length")
-    end
-
-    for i = 1:length(point)
-        if a[i] >= b[i]
-            error("'a' must be less than 'b'")
-        elseif point[i] < a[i] || point[i] > b[i]
-            error("'point' must be between 'a' and 'b'")
-        end
-    end
-
-    n_vars = size(sample,2)
-    C = zeros(tuple(order...).+1)
-
-    sample .= (sample.-a')./(b'-a')
-    n = 0
-
-    for j in 1:size(sample,1)^n_vars
-        jj = CartesianIndices(tuple(repeat([size(sample,1)],n_vars)...))[j]
-        for m = 1:n_vars
-            if sample[jj[m],m] >= 0.0 && sample[jj[m],m] < 1.0
-                n += 1
-                for i in CartesianIndices(C)
-                    k = Tuple(i)
-                    l = sum(k.==1)
-                    p = cos((k[1]-1)*pi*sample[jj[1],1])
-                    for m = 2:n_vars
-                        p *= cos((k[m]-1)*pi*sample[jj[m],m])
-                    end
-                    C[i] += ((2.0^(n_vars-l))/prod(b-a))*p
-                end
-            end
-        end
-    end
-    C = C/n
-
-    point .= (point-a)./(b-a)
-    prob = 0.0
-    for i in CartesianIndices(C)
-        k = Tuple(i)
-        p = cos((k[1]-1)*pi*point[1])
-        for m = 2:n_vars
-            p *= cos((k[m]-1)*pi*point[m])
-        end
-        prob += C[i]*p
-    end
-
-    return prob
-
-end
-
 function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:Real, S<:Integer}
 
     if a >= b
@@ -1076,63 +1022,6 @@ function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {
     end
 
     return collect(points), FF
-
-end
-
-function approximate_distribution(sample::Array{T,2},point::Array{T,1},order::Array{S,1},a::Array{T,1},b::Array{T,1}) where {T<:Real,S<:Integer}
-
-    if length(point) != length(a) || length(point) != length(b)
-        error("'point', 'a', and 'b' must be the same length")
-    end
-
-    for i = 1:length(point)
-        if a[i] >= b[i]
-            error("'a' must be less than 'b'")
-        elseif point[i] < a[i] || point[i] > b[i]
-            error("'point' must be between 'a' and 'b'")
-        end
-    end
-
-    n_vars = size(sample,2)
-    C = Array{Array{T,1}}(undef,n_vars)
-    n = zeros(n_vars)
-
-    for i = 1:n_vars
-        c = zeros(order[i]+1)
-        samp = sample[:,i]
-        for j in eachindex(samp)
-            if samp[j] >= a[i] && samp[j] <= b[i]
-                n[i] += 1
-                for k = 1:order[i]+1
-                    c[k] += (2.0/(b[i]-a[i]))*cos((k-1)*pi*(samp[j]-a[i])/(b[i]-a[i]))
-                end
-            end
-        end
-        C[i] = c/n[i]
-        C[i][1] = 1.0
-    end
-
-    V = Array{Array{T,1}}(undef,n_vars)
-    for i = 1:n_vars
-        v = Array{T,1}(undef,order[i]+1)
-        for j = 1:order[i]+1
-            if j == 1
-                v[1] = (point[i]-a[i])/(b[i]-a[i])
-            else
-                v[j] = ((b[i]-a[i])/(pi*(j-1)))*sin((j-1)*pi*(point[i]-a[i])/(b[i]-a[i]))
-            end
-        end
-        V[i] = v
-    end
-
-    coefs = C[1]
-    vars = V[1]
-    for i = 2:n_vars
-        coefs = kron(coefs,C[i])
-        vars = kron(vars,V[i])
-    end
-
-    return (coefs'vars)[1]
 
 end
 

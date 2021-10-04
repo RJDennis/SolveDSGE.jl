@@ -292,7 +292,6 @@ struct ChebyshevSolutionStoch{T <: Real, S <: Integer, N} <: ProjectionSolutionS
     order::Union{S,Array{S,1}}                       # Complete polynomial / tensor-product
     domain::Union{Array{T,2},Array{T,1}}             # Domain for state variables / state variable
     k::Union{Array{T,2},Array{T,1}}                  # Innovation loading matrix
-    #sigma::Union{Array{T,2},Array{T,1}}              # Innovation variance-covariance matrix
     iteration_count::S                               # Number of iterations needed for convergence
     node_generator::Function                         # Function to generate the nodes
 
@@ -320,7 +319,6 @@ struct SmolyakSolutionStoch{T <: Real, S <: Integer} <: ProjectionSolutionStoch
     layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     k::Union{Array{T,2},Array{T,1}}      # Innovation loading matrix
-    #sigma::Union{Array{T,2},Array{T,1}}  # Innovation variance-covariance matrix
     iteration_count::S                   # Number of iterations needed for convergence
     node_generator::Function             # Function to generate the nodes
 
@@ -345,7 +343,6 @@ struct PiecewiseLinearSolutionStoch{T <: Real, S <: Integer, N} <: ProjectionSol
     nodes::Array{Array{T,1},1}           # Nodes
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     k::Union{Array{T,2},Array{T,1}}      # Innovation loading matrix
-    #sigma::Union{Array{T,2},Array{T,1}}  # Innovation variance-covariance matrix
     iteration_count::S                   # Number of iterations needed for convergence
 
 end

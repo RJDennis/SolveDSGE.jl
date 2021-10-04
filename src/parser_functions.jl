@@ -89,9 +89,9 @@ function get_variables(model_array::Array{Q,1},term::Q) where {Q <: AbstractStri
 
     # Extract the names and place them in a vector
 
-    variables = String.(strip.(split(term_block[1], union(",",";"))))
+    variables = String.(setdiff(strip.(split(term_block[1], union(",",";"))),[""]))
     for i = 2:length(term_block)
-        variables = [variables;String.(strip.(split(term_block[i], union(",",";"))))]
+        variables = [variables;String.(setdiff(strip.(split(term_block[i], union(",",";"))),[""]))]
     end
 
     # Check whether names are repeated
@@ -215,9 +215,22 @@ function get_equations(model_array::Array{Q,1},term::Q) where {Q <: AbstractStri
         equations = [equations;String.(strip.(split(equation_block[i], union(",",";"))))]
     end
 
+    # For every model equation...
+
     for i = 1:length(equation_block)
-        if occursin("=",equations[i]) == false
+        if occursin("[",equations[i]) == true # Replace open square bracket with open round parenthesis
+            equations[i] = replace(equations[i],"["=>"(")
+        elseif occursin("]",equations[i]) == true # Replace close square bracket with close round parenthesis
+            equations[i] = replace(equations[i],"]"=>")")
+        elseif occursin("{",equations[i]) == true # Replace open curly brace with open round parenthesis
+            equations[i] = replace(equations[i],"{"=>"(")
+        elseif occursin("}",equations[i]) == true # Replace close curly brace with close round parenthesis
+            equations[i] = replace(equations[i],"}"=>")")
+        end
+        if occursin("=",equations[i]) == false # Check that each equation contains an equals sign
             error("Equation line $i does not contain an '=' sign.")
+        elseif length(findall("(",equations[i])) != length(findall(")",equations[i]))
+            error("Equation line $i has unbalanced parentheses")
         end
     end
 
@@ -397,10 +410,10 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q <: AbstractSt
         error("Some parameters, variables, or shocks have the same name.")
     end
 
-    reserved_names = ("exp","log","x","p")
+    reserved_names = ("exp","log","x","p",":",";")
     for name in reserved_names
         if name in combined_names
-            error("$name cannot be a name for a variable, a shock, or a parameter.")
+            error("$name cannot be the name for a variable, a shock, or a parameter.")
         end
     end
 
@@ -436,6 +449,17 @@ function repackage_equations(model::ModelPrimatives)
 
     sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
 
+    #= First we go through every equation and replace exp with : and log with ;.  
+       This is to guard them during variables and parameter substitution. =#
+       
+    for i = 1:length(repackaged_equations)
+        if occursin(equations[i],"exp") == true
+            repackaged_equations[i] = replace(repackaged_equations[i],"exp" => ":")
+        elseif occursin(repackaged_equations[i],"log") == true
+            repackaged_equations[i] = replace(repackaged_equations[i],"log" => ";")
+        end
+    end
+
     #= Now we go through every equation and replace future variables, variables, and
       shocks with a numbered element of a vector, "x".  We also replace parameter
       names with parameter values. =#
@@ -457,6 +481,16 @@ function repackage_equations(model::ModelPrimatives)
             for i = 1:length(repackaged_equations)
                 repackaged_equations[i] = replace(repackaged_equations[i],j => "x[$(2*length(variables) + shock_index)]")
             end
+        end
+    end
+
+    #= Finally, go back through every equation and restore exp and log where necessary =#
+       
+    for i = 1:length(repackaged_equations)
+        if occursin(equations[i],":") == true
+            repackaged_equations[i] = replace(repackaged_equations[i],":" => "exp")
+        elseif occursin(repackaged_equations[i],";") == true
+            repackaged_equations[i] = replace(repackaged_equations[i],";" => "log")
         end
     end
 
@@ -576,6 +610,7 @@ function create_projection_equations(equations::Array{Q,1},model::ModelPrimative
     end
 
     jumps_to_be_approximated = unique(jumps_to_be_approximated)
+    eqns_to_be_approximated  = sort(unique(eqns_to_be_approximated))
 
     return projection_equations, jumps_to_be_approximated, eqns_to_be_approximated
 

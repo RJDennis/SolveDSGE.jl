@@ -16,7 +16,7 @@
 %TCIDATA{Codepage=1252}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Friday, July 09, 2021 13:57:53}
+%TCIDATA{LastRevised=Monday, October 04, 2021 15:21:48}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -30,8 +30,8 @@ Glasgow, Main Building, University Avenue, Glasgow G12 8QQ; email:
 richard.dennis@glasgow.ac.uk.} \\
 %EndAName
 University of Glasgow and CAMA}
-\title{SolveDSGE v0.4.8 --- A User Guide}
-\date{July 2021}
+\title{SolveDSGE v0.4.11 --- A User Guide}
+\date{October 2021}
 \maketitle
 
 \begin{abstract}
@@ -902,7 +902,7 @@ Chebyshev polynomials
 
 \item domain --- The domain for the state variables
 
-\item sigma --- The variance-covariance matrix for the shocks
+\item k --- Innovation loading matrix
 
 \item iteration\_count --- The number of iterations needed to achieve
 convergence
@@ -933,7 +933,7 @@ polynominals
 
 \item domain --- The domain for the state variables
 
-\item sigma --- The variance-covariance matrix for the shocks
+\item k --- Innovation loading matrix
 
 \item iteration\_count --- The number of iterations needed to achieve
 convergence
@@ -957,7 +957,7 @@ variable
 
 \item domain --- The domain for the state variables
 
-\item sigma --- The variance-covariance matrix for the shocks
+\item k --- Innovation loading matrix
 
 \item iteration\_count --- The number of iterations needed to achieve
 convergence
@@ -1073,34 +1073,6 @@ approximate\_distribution(sample,order,lower\_bound,upper\_bound)}
 
 \bigskip
 
-\subsubsection{Multivariate}
-
-In the multivaraite case the PDF can be approximated and evaluated at a
-point using the function:
-
-\bigskip
-
-\textit{f =
-approximate\_density(sample,point,order,lower\_bound,upper\_bound)}
-
-\bigskip
-
-where \textit{sample} is a 2D array of data, \textit{point} is a vector, 
-\textit{order} is a vector of integers, and \textit{lower\_bound} and 
-\textit{upper\_bound} are vectors. \ Similarly, the CDF can be approximated
-and evaluated at a point using the function:
-
-\bigskip
-
-\textit{F =
-approximate\_distribution(sample,point,order,lower\_bound,upper\_bound)}
-
-\bigskip
-
-where \textit{sample} is a 2D array of data, \textit{point} is a vector, 
-\textit{order} is a vector of integers, and \textit{lower\_bound} and 
-\textit{upper\_bound} are vectors.
-
 \subsection{Decision rules, laws-of-motion}
 
 The model's solution can be used to construct functions of the state that
@@ -1109,30 +1081,30 @@ outcomes for the state variables (laws-of-motion or state-transition
 functions). \ These functions are produced by calling the \textit{%
 state\_space\_eqm()} function with the model as the only input, i.e.,
 
-\bigskip 
+\bigskip
 
 \textit{eqm\_dyn = state\_space\_eqm(soln\_third\_order)}
 
-\bigskip 
+\bigskip
 
 or
 
-\bigskip 
+\bigskip
 
 \textit{eqm\_dyn = state\_space\_eqm(solna)}
 
-\bigskip 
+\bigskip
 
 Then the decision rule function and the state-transition function are
 accessed via
 
-\bigskip 
+\bigskip
 
 \textit{dec\_rule = eqm.dyn.g}
 
 \textit{state\_trans = eqm\_dyn.h}
 
-\bigskip 
+\bigskip
 
 The former of these (\textit{dec\_rule}) is a function of the state (a
 vector) while the latter (\textit{state\_trans}) is a function of the state

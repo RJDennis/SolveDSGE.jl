@@ -596,10 +596,6 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
         grid[i] = node_generator(node_number[i],domain[:,i])
     end
 
-    state = Array{T,1}(undef,nx)
-
-    N = prod(length.(grid))
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:ny
         variables[i] = fill(initial_guess[nx+i],Tuple(length.(grid)))
@@ -608,41 +604,45 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
         variables[ny+i] = fill(initial_guess[i],Tuple(length.(grid)))
     end
 
-    weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
     end
 
+    weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
+    state = Array{T,1}(undef,nx)
     init  = Array{T,1}(undef,nv)
+
+    N = prod(length.(grid))
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
+    end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
         for i = 1:N
 
-            ind = ind2sub(i,Tuple(length.(grid)))
+            sub = ind2sub(i,Tuple(length.(grid)))
             for j = 1:nx
-                state[j] = grid[j][ind[j]]
+                state[j] = grid[j][sub[j]]
             end
             for j = 1:nv
-                init[j] = variables[j][ind...]
+                init[j] = variables[j][i]
             end
 
             projection_equations = model.closure_function(state,weights,order,domain,chebyshev_evaluate)
@@ -652,9 +652,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -696,8 +696,6 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet,threads::S) w
         grid[i] = node_generator(node_number[i],domain[:,i])
     end
 
-    N = prod(length.(grid))
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:ny
         variables[i] = fill(initial_guess[nx+i],Tuple(length.(grid)))
@@ -706,29 +704,32 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet,threads::S) w
         variables[ny+i] = fill(initial_guess[i],Tuple(length.(grid)))
     end
 
-    weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
+    end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    weights       = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
+    N = prod(length.(grid))
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
     end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
         @sync @qthreads for t = 1:threads
@@ -752,9 +753,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet,threads::S) w
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -808,10 +809,6 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
     integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k)
 
-    state = Array{T,1}(undef,nx)
-
-    N = prod(length.(grid))
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:ny
         variables[i] = fill(initial_guess[nx+i],Tuple(length.(grid)))
@@ -820,58 +817,48 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
         variables[ny+i] = fill(initial_guess[i],Tuple(length.(grid)))
     end
 
-    weights        = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
     end
 
+    weights        = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
+    state = Array{T,1}(undef,nx)
     init  = Array{T,1}(undef,nv)
+
+    N = prod(length.(grid))
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
+    end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
-        if typeof(integrals) == Array{T,ns}
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    scaled_weights[i] = integrals.*weights[i]
-                end
-            end
-        else
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    index = [1:ndims(weights[i]);]
-                    index[1],index[j] = index[j],index[1]
-                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
-                end
-            end
-        end
+        scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
         for i = 1:N
 
-            ind = ind2sub(i,Tuple(length.(grid)))
+            sub = ind2sub(i,Tuple(length.(grid)))
             for j = 1:nx
-                state[j] = grid[j][ind[j]]
+                state[j] = grid[j][sub[j]]
             end
             for j = 1:nv
-                init[j] = variables[j][ind...]
+                init[j] = variables[j][i]
             end
 
             projection_equations = model.closure_function(state,scaled_weights,order,domain,chebyshev_evaluate)
@@ -881,9 +868,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -937,8 +924,6 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
     integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k)
 
-    N = prod(length.(grid))
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:ny
         variables[i] = fill(initial_guess[nx+i],Tuple(length.(grid)))
@@ -947,47 +932,36 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
         variables[ny+i] = fill(initial_guess[i],Tuple(length.(grid)))
     end
 
-    weights        = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
+    end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    weights        = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
+    N = prod(length.(grid))
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
     end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
-        if typeof(integrals) == Array{T,ns}
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    scaled_weights[i] = integrals.*weights[i]
-                end
-            end
-        else
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    index = [1:ndims(weights[i]);]
-                    index[1],index[j] = index[j],index[1]
-                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
-                end
-            end
-        end
+        scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
         @sync @qthreads for t = 1:threads
             for i = t:threads:N
@@ -1013,9 +987,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -1058,14 +1032,13 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
         grid[i] = node_generator(node_number[i],domain[:,i])
     end
 
-    state = Array{T,1}(undef,nx)
-
-    N = prod(length.(grid))
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
     end
+
+    N = prod(length.(grid))
+    state = Array{T,1}(undef,nx)
 
     for j = 1:N
         sub = ind2sub(j,Tuple(length.(grid)))
@@ -1086,31 +1059,32 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
 
     end
 
-    weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
     end
 
+    weights       = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
     init  = Array{T,1}(undef,nv)
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
+    end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
         for i = 1:N
@@ -1130,9 +1104,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -1175,12 +1149,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
         grid[i] = node_generator(node_number[i],domain[:,i])
     end
 
-    N = prod(length.(grid))
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
     end
+
+    N = prod(length.(grid))
 
     @sync @qthreads for t = 1:threads
         for j = t:threads:N
@@ -1203,29 +1177,30 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
         end
     end
 
-    weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
+    end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    weights       = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
     end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
         @sync @qthreads for t = 1:threads
@@ -1249,9 +1224,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -1318,14 +1293,13 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
     integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k[1:ns,1:ns]*k[1:ns,1:ns]')
 
-    state = Array{T,1}(undef,nx)
-
-    N = prod(length.(grid))
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
     end
+
+    N = prod(length.(grid))
+    state = Array{T,1}(undef,nx)
 
     for j = 1:N
         sub = ind2sub(j,Tuple(length.(grid)))
@@ -1346,49 +1320,36 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
     end
 
-    weights        = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
     end
 
+    weights        = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
     init  = Array{T,1}(undef,nv)
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
+    end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
-        if typeof(integrals) == Array{T,ns}
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    scaled_weights[i] = integrals.*weights[i]
-                end
-            end
-        else
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    index = [1:ndims(weights[i]);]
-                    index[1],index[j] = index[j],index[1]
-                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
-                end
-            end
-        end
+        scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
         for i = 1:N
 
@@ -1407,9 +1368,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -1476,12 +1437,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
     integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k[1:ns,1:ns]*k[1:ns,1:ns]')
 
-    N = prod(length.(grid))
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
     end
+
+    N = prod(length.(grid))
 
     for j = 1:N
 
@@ -1504,47 +1465,34 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
 
     end
 
-    weights        = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
+    end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    weights        = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
     end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
-        if typeof(integrals) == Array{T,ns}
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    scaled_weights[i] = integrals.*weights[i]
-                end
-            end
-        else
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    index = [1:ndims(weights[i]);]
-                    index[1],index[j] = index[j],index[1]
-                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
-                end
-            end
-        end
+        scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
         @sync @qthreads for t = 1:threads
             for i = t:threads:N
@@ -1569,9 +1517,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -1620,15 +1568,14 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
         grid[i] = node_generator(node_number[i],domain[:,i])
     end
 
-    state = Array{T,1}(undef,nx)
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
     end
-
-    N = prod(length.(grid))
     
+    N = prod(length.(grid))
+    state = Array{T,1}(undef,nx)
+
     for j = 1:N
         sub = ind2sub(j,Tuple(length.(grid)))
 
@@ -1647,31 +1594,32 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
         end
     end
 
-    weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
     end
 
+    weights       = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
     init  = Array{T,1}(undef,nv)
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
+    end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
         for i = 1:N
@@ -1692,9 +1640,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
 
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -1730,7 +1678,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
     end
 
     ss_eqm = state_space_eqm(soln)
-    
+
     T = typeof(scheme.tol_fix_point_solver)
 
     if domain == []
@@ -1770,29 +1718,30 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
         end
     end
 
-    weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
+    end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    weights       = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
     end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
         @sync @qthreads for t = 1:threads
@@ -1817,9 +1766,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -1879,14 +1828,13 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
     integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k)
 
-    state = Array{T,1}(undef,nx)
-
-    N = prod(length.(grid))
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
     end
+
+    N = prod(length.(grid))
+    state = Array{T,1}(undef,nx)
 
     for j = 1:N
         sub = ind2sub(j,Tuple(length.(grid)))
@@ -1906,49 +1854,36 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
         end
     end
 
-    weights        = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
     end
 
+    weights        = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
     init  = Array{T,1}(undef,nv)
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
+    end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
-        if typeof(integrals) == Array{T,ns}
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    scaled_weights[i] = integrals.*weights[i]
-                end
-            end
-        else
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    index = [1:ndims(weights[i]);]
-                    index[1],index[j] = index[j],index[1]
-                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
-                end
-            end
-        end
+        scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
         for i = 1:N
             sub = ind2sub(i,Tuple(length.(grid)))
@@ -1968,9 +1903,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -2030,12 +1965,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
     (eps_nodes,eps_weights) = hermite(num_quad_nodes)
     integrals = compute_chebyshev_integrals(eps_nodes,eps_weights,grid,order,RHO,k)
 
-    N = prod(length.(grid))
-
     variables = Array{Array{T,nx},1}(undef,nv)
     for i = 1:nv
         variables[i] = zeros(Tuple(length.(grid)))
     end
+
+    N = prod(length.(grid))
 
     @sync @qthreads for t = 1:threads
         for j = t:threads:N
@@ -2058,47 +1993,34 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
         end
     end
 
-    weights        = Array{Array{T,nx},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,nx},1}(undef,length(jumps_approximated))
+    if typeof(order) <: Integer
+        ord = fill(order,nx)
+    else
+        ord = copy(order)
+    end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
+    weights        = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
+
+    if node_generator == chebyshev_nodes
+        cheb_weights =  chebyshev_weights
+    elseif node_generator == chebyshev_extrema
+        cheb_weights =  chebyshev_weights_extrema
+    elseif node_generator == chebyshev_extended
+        cheb_weights =  chebyshev_weights_extended
     end
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
-        if node_generator == chebyshev_nodes
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extrema
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extrema(variables[jumps_approximated[i]],grid,order,domain)
-            end
-        elseif node_generator == chebyshev_extended
-            for i = 1:length(jumps_approximated)
-                weights[i] = chebyshev_weights_extended(variables[jumps_approximated[i]],grid,order,domain)
-            end
+        for i = 1:length(jumps_approximated)
+            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
-        if typeof(integrals) == Array{T,ns}
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    scaled_weights[i] = integrals.*weights[i]
-                end
-            end
-        else
-            for i = 1:length(jumps_approximated)
-                for j = 1:ns
-                    index = [1:ndims(weights[i]);]
-                    index[1],index[j] = index[j],index[1]
-                    scaled_weights[i] = permutedims(integrals[j].*permutedims(weights[i],index),index)
-                end
-            end
-        end
+        scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
         @sync @qthreads for t = 1:threads
             for i = t:threads:N
@@ -2122,9 +2044,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -2168,12 +2090,9 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights       = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables = [zeros(N) for _ in 1:nv]
 
     init  = Array{T}(undef,nv)
 
@@ -2182,7 +2101,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
         end
 
         for i = 1:N
@@ -2198,9 +2117,9 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -2244,19 +2163,16 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) whe
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights       = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables = [zeros(N) for _ in 1:nv]
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
         end
 
         @sync @qthreads for t = 1:threads
@@ -2275,9 +2191,9 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) whe
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -2337,13 +2253,10 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights        = Array{Array{T,1},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights        = [zeros(N) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables  = [zeros(N) for _ in 1:nv]
 
     init  = Array{T}(undef,nv)
 
@@ -2352,8 +2265,8 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i]        = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
-            scaled_weights[i] = scale_weights(weights[i],weight_scale_factor)
+            weights[i]        .= smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            scaled_weights[i] .= scale_smolyak_weights(weights[i],weight_scale_factor)
         end
 
         for i = 1:N
@@ -2369,9 +2282,9 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -2431,21 +2344,18 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights        = Array{Array{T,1},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights        = [zeros(N) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables  = [zeros(N) for _ in 1:nv]
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i]        = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
-            scaled_weights[i] = scale_weights(weights[i],weight_scale_factor)
+            weights[i]        .= smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            scaled_weights[i] .= scale_smolyak_weights(weights[i],weight_scale_factor)
         end
 
         @sync @qthreads for t = 1:threads
@@ -2464,9 +2374,9 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -2523,12 +2433,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
 
     end
 
-    weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights       = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables = [zeros(N) for _ in 1:nv]
 
     init  = Array{T}(undef,nv)
 
@@ -2537,7 +2444,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
         end
 
         for i = 1:N
@@ -2553,9 +2460,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -2615,19 +2522,16 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
 
     end
 
-    weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights       = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables = [zeros(N) for _ in 1:nv]
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
         end
 
         @sync @qthreads for t = 1:threads
@@ -2646,9 +2550,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -2733,13 +2637,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     end
 
-    weights        = Array{Array{T,1},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights        = [zeros(N) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables  = [zeros(N) for _ in 1:nv]
 
     init  = Array{T}(undef,nv)
 
@@ -2748,8 +2649,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i]        = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
-            scaled_weights[i] = scale_weights(weights[i],weight_scale_factor)
+            weights[i]        .= smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            scaled_weights[i] .= scale_smolyak_weights(weights[i],weight_scale_factor)
         end
 
         for i = 1:N
@@ -2765,9 +2666,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -2854,21 +2755,18 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
         end
     end
 
-    weights        = Array{Array{T,1},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights        = [zeros(N) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables  = [zeros(N) for _ in 1:nv]
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i]        = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
-            scaled_weights[i] = scale_weights(weights[i],weight_scale_factor)
+            weights[i]        .= smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            scaled_weights[i] .= scale_smolyak_weights(weights[i],weight_scale_factor)
         end
 
         @sync @qthreads for t = 1:threads
@@ -2887,9 +2785,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -2950,12 +2848,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
 
     end
 
-    weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights        = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables  = [zeros(N) for _ in 1:nv]
 
     init  = Array{T}(undef,nv)
 
@@ -2964,7 +2859,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
         end
 
         for i = 1:N
@@ -2980,9 +2875,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -3049,19 +2944,16 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
         end
     end
 
-    weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights       = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables = [zeros(N) for _ in 1:nv]
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
         end
 
         @sync @qthreads for t = 1:threads
@@ -3080,9 +2972,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -3159,13 +3051,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     end
 
-    weights        = Array{Array{T,1},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights        = [zeros(N) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables  = [zeros(N) for _ in 1:nv]
 
     init  = Array{T}(undef,nv)
 
@@ -3174,8 +3063,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i]        = smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
-            scaled_weights[i] = scale_weights(weights[i],weight_scale_factor)
+            weights[i]        .= smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            scaled_weights[i] .= scale_smolyak_weights(weights[i],weight_scale_factor)
         end
 
         for i = 1:N
@@ -3191,9 +3080,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -3272,21 +3161,18 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
         end
     end
 
-    weights        = Array{Array{T,1},1}(undef,length(jumps_approximated))
-    scaled_weights = Array{Array{T,1},1}(undef,length(jumps_approximated))
+    weights        = [zeros(N) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
 
-    new_variables = Array{Array{T,1},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(N)
-    end
+    new_variables  = [zeros(N) for _ in 1:nv]
 
     iters = 0
     len = Inf
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i]        = smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
-            scaled_weights[i] = scale_weights(weights[i],weight_scale_factor)
+            weights[i]        .= smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            scaled_weights[i] .= scale_smolyak_weights(weights[i],weight_scale_factor)
         end
 
         @sync @qthreads for t = 1:threads
@@ -3305,9 +3191,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -3359,10 +3245,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet)
         variables[ny+i] = fill(initial_guess[i],Tuple(length.(grid)))
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     init = Array{T,1}(undef,nv)
 
@@ -3387,9 +3270,9 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet)
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -3439,10 +3322,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet,threads
         variables[ny+i] = fill(initial_guess[i],Tuple(length.(grid)))
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     iters = 0
     len = Inf
@@ -3469,9 +3349,9 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet,threads
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -3538,10 +3418,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
         variables[ny+i] = fill(initial_guess[i],Tuple(length.(grid)))
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     init  = Array{T,1}(undef,nv)
 
@@ -3566,9 +3443,9 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -3633,10 +3510,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch,threa
         variables[ny+i] = fill(initial_guess[i],Tuple(length.(grid)))
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     iters = 0
     len = Inf
@@ -3663,9 +3537,9 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch,threa
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -3732,10 +3606,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
         end
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     init  = Array{T,1}(undef,nv)
 
@@ -3760,9 +3631,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -3831,10 +3702,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
         end
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     iters = 0
     len = Inf
@@ -3861,9 +3729,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -3957,10 +3825,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         end
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     init  = Array{T,1}(undef,nv)
 
@@ -3985,9 +3850,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -4083,10 +3948,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         end
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     iters = 0
     len = Inf
@@ -4113,9 +3975,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -4186,10 +4048,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
         end
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     init  = Array{T,1}(undef,nv)
 
@@ -4214,9 +4073,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -4289,10 +4148,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
         end
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     iters = 0
     len = Inf
@@ -4319,9 +4175,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -4408,10 +4264,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     init  = Array{T,1}(undef,nv)
 
@@ -4436,9 +4289,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
             end
         end
 
-        len = maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
@@ -4526,10 +4379,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         end
     end
 
-    new_variables = Array{Array{T,nx},1}(undef,nv)
-    for i = 1:nv
-        new_variables[i] = zeros(Tuple(length.(grid)))
-    end
+    new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
     iters = 0
     len = Inf
@@ -4556,9 +4406,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
             end
         end
 
-        len = ThreadsX.maximum(abs,new_variables[1]-variables[1])
-        for j = 2:nv
-           len = max(ThreadsX.maximum(abs,new_variables[j]-variables[j]),len)
+        len = zero(T)
+        for j = 1:nv
+            len = mylen(len,new_variables[j],variables[j])
         end
 
         for j = 1:nv
