@@ -648,7 +648,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
             projection_equations = model.closure_function(state,weights,order,domain,chebyshev_evaluate)
             nlsoln = nlsolve(projection_equations, init, xtol = scheme.tol_fix_point_solver, iterations = scheme.maxiters, inplace = :true)
             for j = 1:nv
-                new_variables[j][ind...] = nlsoln.zero[j]
+                new_variables[j][i] = nlsoln.zero[j]
             end
         end
 
