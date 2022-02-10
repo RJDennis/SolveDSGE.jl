@@ -547,9 +547,9 @@ for i = 1:order_prod
       eps_w    *= eps_weights[jj[k]]
       eps_node = [eps_node;eps_nodes[jj[k]]]
     end
-    int2 += exp(2^(N/2)*sqrt(det(k*k'))*collect(ii.-1)'*(k*k')*eps_node)*eps_w*pi^(-N/2)
+    int2 += exp(2^(N/2)*sqrt(det(k*k'))*collect(Tuple(ii).-1)'*(k*k')*eps_node)*eps_w*pi^(-N/2)
   end
-  integrals2[ii...] = int2 # exp(collect(ii.-1)'*(k*k')*collect(ii.-1)/2) # This is the analytic expression
+  integrals2[Tuple(ii)...] = int2 # exp(collect(ii.-1)'*(k*k')*collect(ii.-1)/2) # This is the analytic expression
 end
 
 for i = 1:order_prod
@@ -579,7 +579,7 @@ for i = 1:order_prod
       end
       int2 += (prod(num)/prod(den))*eps_w*pi^(-N/2)
     end
-    integrals[ii...,mm...] = int2 
+    integrals[Tuple(ii)...,Tuple(mm)...] = int2 
   end
 end
   

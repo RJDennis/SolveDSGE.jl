@@ -12,7 +12,7 @@ function compute_steady_state(model::REModel, x::Array{T,1}, tol::T, maxiters::S
     #equations = model.static_function
     #nlsoln = nlsolve(equations, x, xtol = tol, iterations = maxiters, autodiff = :forward, inplace = :false)
     equations = model.nlsolve_static_function
-    nlsoln = nlsolve(equations, x, xtol = tol, iterations = maxiters, autodiff = :forward, inplace = :true)
+    nlsoln = nlsolve(equations, x, ftol = tol, xtol = tol, iterations = maxiters, autodiff = :forward, inplace = :true)
 
     return nlsoln
 
