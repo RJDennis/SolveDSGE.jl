@@ -10,6 +10,7 @@ using PiecewiseLinearApprox
 using Random
 using ThreadPools
 using ThreadsX
+using HyperbolicCrossApprox
 
 include("structures.jl")
 include("parser_functions.jl")
@@ -65,7 +66,9 @@ export chebyshev_nodes,
        chebyshev_evaluate,
        smolyak_evaluate,
        piecewise_linear_evaluate,
+       hyperbolic_cross_evaluate,
        chebyshev_weights,
-       smolyak_weights
+       smolyak_weights,
+       hyperbolic_cross_weights
 
 end
