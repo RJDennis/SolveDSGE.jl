@@ -1252,6 +1252,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
     jumps_approximated = model.jumps_approximated
 
+    initial_guess  = scheme.initial_guess
     node_generator = scheme.node_generator
     node_number    = scheme.node_number
     num_quad_nodes = scheme.num_quad_nodes
