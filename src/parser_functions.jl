@@ -114,7 +114,7 @@ function get_variables(model_array::Array{Q,1},term::Q) where {Q <: AbstractStri
 
 end
 
-function combine_variables(x::Array{Q,1},y::Array{Q,1}) where {Q <: AbstractString}
+function combine_states_and_jumps(x::Array{Q,1},y::Array{Q,1}) where {Q <: AbstractString}
 
     #= This function combines the states, "x", with the jump variables, "y", to
        generate the model's variables. =#
@@ -238,47 +238,33 @@ function get_equations(model_array::Array{Q,1},term::Q) where {Q <: AbstractStri
 
 end
 
-function reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q <: AbstractString}
-
+function reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1}) where {Q <: AbstractString}
     if isempty(shocks) == false # Case for stochastic models
-        reordered_equations, reordered_states, reordered_shocks = reorder_equations_stochastic(equations,shocks,states,jumps,parameters)
+        reordered_equations, reordered_states, reordered_shocks = reorder_equations_stochastic(equations,shocks,states,jumps)
         return reordered_equations, reordered_states, reordered_shocks
     else # Case for deterministic models
-        reordered_equations, reordered_states = reorder_equations_deterministic(equations,states,jumps,parameters)
+        reordered_equations, reordered_states = reorder_equations_deterministic(equations,states,jumps)
         return reordered_equations, reordered_states, shocks
     end
-
 end
 
-function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q <: AbstractString}
+function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1}) where {Q <: AbstractString}
 
     #= This function reorders the model's equations so that the equations
        containing the shock processes appear first. =#
 
     reordered_equations = copy(equations)
-    reordered_states    = copy(states)
+    reordered_states = copy(states)
 
     # Construct summary information about each equation
-
-    trash_equations = copy(equations)
-
-    variables = combine_variables(combine_variables(combine_variables(states,jumps),parameters),["exp","log"])
-    variables = variables[sortperm(length.(variables),rev = true)] # sort variables so that longer names are first
 
     states_number = zeros(Int64,length(equations))
     jumps_number  = zeros(Int64,length(equations))
     for i = 1:length(equations)
-      for j in variables
-        if j in states
-            states_number[i] += occursin(j,trash_equations[i])
-            trash_equations[i] = replace(trash_equations[i],j => ":")
-        elseif j in jumps
-            jumps_number[i] += occursin(j,trash_equations[i])
-            trash_equations[i] = replace(trash_equations[i],j => ":")
-        else
-            trash_equations[i] = replace(trash_equations[i],j => ":")
+        if length(states) != 0
+            states_number[i] = sum(occursin.(states,equations[i]))
         end
-      end
+        jumps_number[i] = sum(occursin.(jumps,equations[i]))
     end
     number_eqns_with_no_jumps = sum(jumps_number .== 0)
 
@@ -288,7 +274,7 @@ function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1
     reordered_equations .= reordered_equations[ind]
     states_number .= states_number[ind]
     jumps_number .= jumps_number[ind]
-  
+
     # Now sort out the order of the states in the system
 
     states_that_have_been_ordered = Int64[]
@@ -310,7 +296,7 @@ function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1
 
 end
 
-function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q <: AbstractString}
+function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1}) where {Q <: AbstractString}
 
     #= This function reorders the model's equations so that the equations
        containing the shock processes appear first. =#
@@ -321,30 +307,15 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
 
     # Construct summary information about each equation
 
-    trash_equations = copy(equations)
-
-    variables = combine_variables(combine_variables(combine_variables(combine_variables(states,jumps),shocks),parameters),["exp","log"])
-
-    variables = variables[sortperm(length.(variables),rev = true)] # sort variables so that longer names are first
-
     shocks_number = zeros(Int64,length(equations))
     states_number = zeros(Int64,length(equations))
     jumps_number  = zeros(Int64,length(equations))
     for i = 1:length(equations)
-      for j in variables
-        if j in shocks
-          shocks_number[i] += occursin(j,trash_equations[i])
-          trash_equations[i] = replace(trash_equations[i],j => ":")
-        elseif j in states
-          states_number[i] += occursin(j,trash_equations[i])
-          trash_equations[i] = replace(trash_equations[i],j => ":")
-        elseif j in jumps
-          jumps_number[i] += occursin(j,equations[i])
-          trash_equations[i] = replace(trash_equations[i],j => ":")
-        else
-          trash_equations[i] = replace(trash_equations[i],j => ":")
+        shocks_number[i] = sum(occursin.(shocks,equations[i]))
+        if length(states) != 0
+            states_number[i] = sum(occursin.(states,equations[i]))
         end
-      end
+        jumps_number[i] = sum(occursin.(jumps,equations[i]))
     end
     number_eqns_with_shocks = sum(shocks_number .!= 0)
 
@@ -452,7 +423,7 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q <: AbstractSt
     states                        = get_variables(model_array,"states:")
     jumps                         = get_variables(model_array,"jumps:")
     shocks                        = get_variables(model_array,"shocks:")
-    variables                     = combine_variables(states,jumps)
+    variables                     = combine_states_and_jumps(states,jumps)
     equations                     = get_equations(model_array,"equations:")
     (parameters, parametervalues, unassigned_parameters) = get_parameters_and_values(model_array,"parameters:")
 
@@ -476,7 +447,7 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q <: AbstractSt
 
     lag_variables  = string.(variables,"(-1)")
 
-    reordered_equations, states, shocks = reorder_equations(equations,shocks,states,jumps,parameters)
+    reordered_equations, states, shocks = reorder_equations(equations,shocks,states,jumps)
     reorganized_equations, states, variables = reorganize_equations(reordered_equations,states,jumps,variables,lag_variables)
 
     re_model_primatives = REModelPrimatives(states,jumps,shocks,variables,parameters,parametervalues,reorganized_equations,unassigned_parameters)
@@ -499,12 +470,23 @@ function repackage_equations(model::ModelPrimatives)
     repackaged_equations = copy(equations)
 
     if length(shocks) != 0
-        combined_names = [variables;parameters;shocks;["exp","log"]]
+        combined_names = [variables;parameters;shocks]
     else
-        combined_names = [variables;parameters;["exp","log"]]
+        combined_names = [variables;parameters]
     end
 
     sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
+
+    #= First we go through every equation and replace exp with : and log with ;.  
+       This is to guard them during variables and parameter substitution. =#
+       
+    for i = 1:length(repackaged_equations)
+        if occursin(equations[i],"exp") == true
+            repackaged_equations[i] = replace(repackaged_equations[i],"exp" => ":")
+        elseif occursin(repackaged_equations[i],"log") == true
+            repackaged_equations[i] = replace(repackaged_equations[i],"log" => ";")
+        end
+    end
 
     #= Now we go through every equation and replace future variables, variables, and
       shocks with a numbered element of a vector, "x".  We also replace parameter
@@ -527,23 +509,15 @@ function repackage_equations(model::ModelPrimatives)
             for i = 1:length(repackaged_equations)
                 repackaged_equations[i] = replace(repackaged_equations[i],j => "x[$(2*length(variables) + shock_index)]")
             end
-        elseif j == "exp"
-            for i = 1:length(repackaged_equations)
-                repackaged_equations[i] = replace(repackaged_equations[i],j => ":")
-            end
-        elseif j == "log"
-            for i = 1:length(repackaged_equations)
-                repackaged_equations[i] = replace(repackaged_equations[i],j => ";")
-            end
         end
-    end   
+    end
 
-    #= Now go back through every equation and restore exp and log where necessary =#
+    #= Finally, go back through every equation and restore exp and log where necessary =#
        
     for i = 1:length(repackaged_equations)
-        if occursin(":",repackaged_equations[i]) == true
+        if occursin(equations[i],":") == true
             repackaged_equations[i] = replace(repackaged_equations[i],":" => "exp")
-        elseif occursin(";",repackaged_equations[i]) == true
+        elseif occursin(repackaged_equations[i],";") == true
             repackaged_equations[i] = replace(repackaged_equations[i],";" => "log")
         end
     end
@@ -574,17 +548,6 @@ function create_steady_state_equations(model::ModelPrimatives)
 
     sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
 
-    #= First we go through every equation and replace exp with : and log with ;.  
-       This is to guard them during variables and parameter substitution. =#
-    
-    for i = 1:length(steady_state_equations)
-      if occursin("exp",steady_state_equations[i]) == true
-        steady_state_equations[i] = replace(steady_state_equations[i],"exp" => ":")
-      elseif occursin("log",steady_state_equations[i]) == true
-        steady_state_equations[i] = replace(steady_state_equations[i],"log" => ";")
-      end
-    end
-
     # Now we go through every equation and replace future variables, variables, and
     # shocks with a numbered element of a vector, "x".  We also replace parameter
     # names with parameter values
@@ -610,16 +573,6 @@ function create_steady_state_equations(model::ModelPrimatives)
         end
     end
 
-    #= Finally, go back through every equation and restore exp and log where necessary =#
-       
-    for i = 1:length(steady_state_equations)
-        if occursin(":",steady_state_equations[i]) == true
-            steady_state_equations[i] = replace(steady_state_equations[i],":" => "exp")
-        elseif occursin(";",steady_state_equations[i]) == true
-            steady_state_equations[i] = replace(steady_state_equations[i],";" => "log")
-        end
-    end
-    
     return steady_state_equations
 
 end
@@ -740,12 +693,12 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
     end
     static_string         = string(static_string,"  f = Array{T,1}(undef,length(x)) \n \n")
     for i = 1:length(static_equations)
-        static_string         = string(static_string,"  f[$i] = ",static_equations[i],"\n")
         nlsolve_static_string = string(nlsolve_static_string,"  f[$i] = ",static_equations[i],"\n")
+        static_string         = string(static_string,"  f[$i] = ",static_equations[i],"\n")
     end
 
-    static_string         = string(static_string,"\n  return f \n \n","end")
     nlsolve_static_string = string(nlsolve_static_string,"\n","end")
+    static_string         = string(static_string,"\n  return f \n \n","end")
 
     model_string = string(model_string,nlsolve_static_string," \n \n",static_string," \n \n")
 
@@ -788,7 +741,7 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q <:
 
     # Fourth, add the model's dynamic information for projection solvers
 
-    # For Chebyshev and Smolyak
+    # For Chebyshev, Smolyak, and Hyperbolic-cross
 
     if length(model.unassigned_parameters) != 0
         closure_string = "function closure_projection_equations(state,scaled_weights,order,domain,approximate,p) \n \n"

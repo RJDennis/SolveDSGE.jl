@@ -392,6 +392,74 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
 end
 
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: HyperbolicCrossSolutionDet, T <: Real, S <: Integer}
+
+    nv = length(soln.variables)
+    nx = size(soln.domain,2)
+    ny = nv - nx
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
+    w = Array{Array{T,1},1}(undef,length(soln.variables))
+    for i = 1:nv
+        w[i] = hyperbolic_cross_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+    end
+
+    simulated_states = Array{T,2}(undef,nx,sim_length+1)
+    simulated_jumps  = Array{T,2}(undef,ny,sim_length)
+    simulated_states[:,1] = initial_state
+
+    for i = 2:sim_length+1
+        for j = 1:nx
+            simulated_states[j,i] = hyperbolic_cross_evaluate(w[j],simulated_states[:,i-1],soln.multi_index,soln.domain)
+        end
+        for j = 1:ny
+            simulated_jumps[j,i-1] = hyperbolic_cross_evaluate(w[nx+j],simulated_states[:,i-1],soln.multi_index,soln.domain)
+        end
+    end
+
+    return [simulated_states[:,1:sim_length];simulated_jumps[:,1:end]]
+
+end
+
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456) where {R <: HyperbolicCrossSolutionStoch, T <: Real, S <: Integer}
+
+    Random.seed!(rndseed)
+
+    nv = length(soln.variables)
+    nx = size(soln.domain,2)
+    ns = size(soln.k,2)
+    ny = nv - nx
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
+    w = Array{Array{T,1},1}(undef,length(soln.variables))
+    for i = 1:nv
+        w[i] = hyperbolic_cross_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+    end
+
+    simulated_states = Array{T,2}(undef,nx,sim_length+1)
+    simulated_jumps  = Array{T,2}(undef,ny,sim_length)
+    simulated_states[:,1] = initial_state
+
+    for i = 2:sim_length+1
+        for j = 1:nx
+            simulated_states[j,i] = hyperbolic_cross_evaluate(w[j],simulated_states[:,i-1],soln.multi_index,soln.domain)
+        end
+        simulated_states[1:ns,i] += soln.k*randn(ns)
+        for j = 1:ny
+            simulated_jumps[j,i-1] = hyperbolic_cross_evaluate(w[nx+j],simulated_states[:,i-1],soln.multi_index,soln.domain)
+        end
+    end
+
+    return [simulated_states[:,1:sim_length];simulated_jumps[:,1:end]]
+
+end
+
 function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R <: PiecewiseLinearSolutionDet, T <: Real, S <: Integer}
 
     nv = length(soln.variables)
@@ -450,6 +518,36 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S;rndseed=123456
 
 end
 
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},rndseed=123456) where {R <: FirstOrderSolutionStoch, S <: Integer, T <: Real}
+
+    if length(innovation_vector) > size(soln.k,2)
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < size(soln.k,2)
+        error("Each shock needs an innovation (even if it's zero).")
+    end
+
+    nx = length(soln.hbar)
+    ny = length(soln.gbar)
+
+    simulated_states_pos_f      = zeros(nx,n+1)
+    simulated_jumps_pos_f       = zeros(ny,n)
+    simulated_states_pos_f[:,1] = soln.k*innovation_vector
+
+    simulated_states_neg_f      = zeros(nx,n+1)
+    simulated_jumps_neg_f       = zeros(ny,n)
+    simulated_states_neg_f[:,1] = -soln.k*innovation_vector
+
+    for i = 2:n+1
+        simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1]
+        simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
+        simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1]
+        simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
+    end
+
+    return [simulated_states_pos_f[:,1:n];simulated_jumps_pos_f], [simulated_states_neg_f[:,1:n];simulated_jumps_neg_f]
+
+end
+
 function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123456) where {R <: FirstOrderSolutionStoch, S <: Integer, T <: Real}
 
     if length(innovation_vector) > size(soln.k,2)
@@ -497,7 +595,6 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     gxx = Matrix(reshape(soln.gxx',nx*nx,ny)')
 
     sample = simulate(soln,soln.hss,5*reps+100)
-    innovations = randn(size(soln.k,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
@@ -524,6 +621,8 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
         simulated_states_pos_f[:,1]  = initial_state + soln.k*innovation_vector
         simulated_states_neg_f[:,1]  = initial_state - soln.k*innovation_vector
         simulated_states_base_f[:,1] = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
 
         for i = 2:n+1
             simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
@@ -574,8 +673,6 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
     hxx = Matrix(reshape(soln.hxx',nx*nx,nx)')
     gxx = Matrix(reshape(soln.gxx',nx*nx,ny)')
 
-    innovations = randn(size(soln.k,2),n+1)
-
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
     impulses_states_neg = zeros(nx,n+1)
@@ -600,6 +697,8 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         simulated_states_pos_f[:,1]  = initial_state + soln.k*innovation_vector
         simulated_states_neg_f[:,1]  = initial_state - soln.k*innovation_vector
         simulated_states_base_f[:,1] = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
 
         for i = 2:n+1
             simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
@@ -648,7 +747,6 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     ny = length(soln.gbar)
 
     sample = simulate(soln,soln.hss,5*reps+100)
-    innovations = randn(size(soln.k,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
@@ -681,6 +779,8 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
         simulated_states_pos_f[:,1]  = initial_state + soln.k*innovation_vector
         simulated_states_neg_f[:,1]  = initial_state - soln.k*innovation_vector
         simulated_states_base_f[:,1] = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
 
         for i = 2:n+1
             simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
@@ -734,8 +834,6 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
     nx = length(soln.hbar)
     ny = length(soln.gbar)
 
-    innovations = randn(size(soln.k,2),n+1)
-
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
     impulses_states_neg = zeros(nx,n+1)
@@ -766,6 +864,8 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         simulated_states_pos_f[:,1]  = initial_state + soln.k*innovation_vector
         simulated_states_neg_f[:,1]  = initial_state - soln.k*innovation_vector
         simulated_states_base_f[:,1] = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
 
         for i = 2:n+1
             simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
@@ -844,7 +944,6 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     end
 
     sample = simulate(soln,estimated_steady_state,5*reps+100)
-    innovations = randn(size(soln.k,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
@@ -867,6 +966,8 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
         simulated_states_neg[:,1]    = initial_state
         simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
         simulated_states_base[:,1]   = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
 
         for i = 2:n+1
             for j = 1:nx
@@ -932,8 +1033,6 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         end
     end
 
-    innovations = randn(size(soln.k,2),n+1)
-
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
     impulses_states_neg = zeros(nx,n+1)
@@ -954,6 +1053,8 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         simulated_states_neg[:,1]    = initial_state
         simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
         simulated_states_base[:,1]   = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
 
         for i = 2:n+1
             for j = 1:nx
@@ -1013,7 +1114,6 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     end
 
     sample = simulate(soln,estimated_steady_state,5*reps+100)
-    innovations = randn(size(soln.k,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
@@ -1036,6 +1136,8 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
         simulated_states_neg[:,1]    = initial_state
         simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
         simulated_states_base[:,1]   = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
 
         for i = 2:n+1
             for j = 1:nx
@@ -1089,7 +1191,163 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         w[i] = smolyak_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
     end
 
-    innovations = randn(size(soln.k,2),n+1)
+    impulses_states_pos = zeros(nx,n+1)
+    impulses_jumps_pos  = zeros(ny,n)
+    impulses_states_neg = zeros(nx,n+1)
+    impulses_jumps_neg  = zeros(ny,n)
+
+    for l = 1:reps
+        simulated_states_pos = zeros(nx,n+1)
+        simulated_jumps_pos  = zeros(ny,n)
+
+        simulated_states_neg = zeros(nx,n+1)
+        simulated_jumps_neg  = zeros(ny,n)
+
+        simulated_states_base = zeros(nx,n+1)
+        simulated_jumps_base  = zeros(ny,n)
+
+        simulated_states_pos[:,1]    = initial_state
+        simulated_states_pos[1:ns,1] += soln.k*innovation_vector
+        simulated_states_neg[:,1]    = initial_state
+        simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
+        simulated_states_base[:,1]   = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
+
+        for i = 2:n+1
+            for j = 1:nx
+                simulated_states_pos[j,i]  = smolyak_evaluate(w[j],simulated_states_pos[:,i-1],soln.multi_index,soln.domain)
+                simulated_states_neg[j,i]  = smolyak_evaluate(w[j],simulated_states_neg[:,i-1],soln.multi_index,soln.domain)
+                simulated_states_base[j,i] = smolyak_evaluate(w[j],simulated_states_base[:,i-1],soln.multi_index,soln.domain)
+            end
+            simulated_states_pos[1:ns,i]  += soln.k*innovations[:,i]
+            simulated_states_neg[1:ns,i]  += soln.k*innovations[:,i]
+            simulated_states_base[1:ns,i] += soln.k*innovations[:,i]
+            for j = 1:ny
+                simulated_jumps_pos[j,i-1]  = smolyak_evaluate(w[nx+j],simulated_states_pos[:,i-1],soln.multi_index,soln.domain)
+                simulated_jumps_neg[j,i-1]  = smolyak_evaluate(w[nx+j],simulated_states_neg[:,i-1],soln.multi_index,soln.domain)
+                simulated_jumps_base[j,i-1] = smolyak_evaluate(w[nx+j],simulated_states_base[:,i-1],soln.multi_index,soln.domain)
+            end
+        end
+
+        impulses_states_pos += (simulated_states_pos - simulated_states_base)
+        impulses_jumps_pos  += (simulated_jumps_pos - simulated_jumps_base)
+        impulses_states_neg += (simulated_states_neg - simulated_states_base)
+        impulses_jumps_neg  += (simulated_jumps_neg - simulated_jumps_base)
+
+    end
+
+    impulses_states_pos = impulses_states_pos/reps
+    impulses_jumps_pos  = impulses_jumps_pos/reps
+    impulses_states_neg = impulses_states_neg/reps
+    impulses_jumps_neg  = impulses_jumps_neg/reps
+
+    return [impulses_states_pos[:,1:n];impulses_jumps_pos], [impulses_states_neg[:,1:n];impulses_jumps_neg]
+
+end
+
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123456) where {R <: HyperbolicCrossSolutionStoch, S <: Integer, T <: Real}
+
+    Random.seed!(rndseed)
+
+    nv = length(soln.variables)
+    nx = size(soln.domain,2)
+    ns = size(soln.k,2)
+    ny = nv - nx
+
+    if length(innovation_vector) > ns
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < ns
+        error("Each shock needs an innovation (even if it's zero).")
+    end
+
+    w = Array{Array{eltype(soln.domain),1},1}(undef,length(soln.variables))
+    for i = 1:nv
+        w[i] = hyperbolic_cross_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+    end
+
+    estimated_steady_state = zeros(nx)
+    for i = 1:nx
+        estimated_steady_state[i] = soln.variables[i][i]
+    end
+
+    sample = simulate(soln,estimated_steady_state,5*reps+100)
+
+    impulses_states_pos = zeros(nx,n+1)
+    impulses_jumps_pos  = zeros(ny,n)
+    impulses_states_neg = zeros(nx,n+1)
+    impulses_jumps_neg  = zeros(ny,n)
+
+    for l = 1:reps
+        simulated_states_pos = zeros(nx,n+1)
+        simulated_jumps_pos  = zeros(ny,n)
+
+        simulated_states_neg = zeros(nx,n+1)
+        simulated_jumps_neg  = zeros(ny,n)
+
+        simulated_states_base = zeros(nx,n+1)
+        simulated_jumps_base  = zeros(ny,n)
+
+        initial_state = sample[1:nx,rand(101:5*reps+100)]
+        simulated_states_pos[:,1]    = initial_state
+        simulated_states_pos[1:ns,1] += soln.k*innovation_vector
+        simulated_states_neg[:,1]    = initial_state
+        simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
+        simulated_states_base[:,1]   = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
+
+        for i = 2:n+1
+            for j = 1:nx
+                simulated_states_pos[j,i]  = hyperbolic_cross_evaluate(w[j],simulated_states_pos[:,i-1],soln.multi_index,soln.domain)
+                simulated_states_neg[j,i]  = hyperbolic_cross_evaluate(w[j],simulated_states_neg[:,i-1],soln.multi_index,soln.domain)
+                simulated_states_base[j,i] = hyperbolic_cross_evaluate(w[j],simulated_states_base[:,i-1],soln.multi_index,soln.domain)
+            end
+            simulated_states_pos[1:ns,i]  += soln.k*innovations[:,i]
+            simulated_states_neg[1:ns,i]  += soln.k*innovations[:,i]
+            simulated_states_base[1:ns,i] += soln.k*innovations[:,i]
+            for j = 1:ny
+                simulated_jumps_pos[j,i-1]  = hyperbolic_cross_evaluate(w[nx+j],simulated_states_pos[:,i-1],soln.multi_index,soln.domain)
+                simulated_jumps_neg[j,i-1]  = hyperbolic_cross_evaluate(w[nx+j],simulated_states_neg[:,i-1],soln.multi_index,soln.domain)
+                simulated_jumps_base[j,i-1] = hyperbolic_cross_evaluate(w[nx+j],simulated_states_base[:,i-1],soln.multi_index,soln.domain)
+            end
+        end
+
+        impulses_states_pos += (simulated_states_pos - simulated_states_base)
+        impulses_jumps_pos  += (simulated_jumps_pos - simulated_jumps_base)
+        impulses_states_neg += (simulated_states_neg - simulated_states_base)
+        impulses_jumps_neg  += (simulated_jumps_neg - simulated_jumps_base)
+
+    end
+
+    impulses_states_pos = impulses_states_pos/reps
+    impulses_jumps_pos  = impulses_jumps_pos/reps
+    impulses_states_neg = impulses_states_neg/reps
+    impulses_jumps_neg  = impulses_jumps_neg/reps
+
+    return [impulses_states_pos[:,1:n];impulses_jumps_pos], [impulses_states_neg[:,1:n];impulses_jumps_neg]
+
+end
+
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S;rndseed=123456) where {R <: HyperbolicCrossSolutionStoch, S <: Integer, T <: Real}
+
+    Random.seed!(rndseed)
+
+    nv = length(soln.variables)
+    nx = size(soln.domain,2)
+    ns = size(soln.k,2)
+    ny = nv - nx
+
+    if length(innovation_vector) > ns
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < ns
+        error("Each shock needs an innovation (even if it's zero).")
+    end
+
+    w = Array{Array{eltype(soln.domain),1},1}(undef,length(soln.variables))
+    for i = 1:nv
+        w[i] = hyperbolic_cross_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+    end
 
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
@@ -1112,19 +1370,21 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
         simulated_states_base[:,1]   = initial_state
 
+        innovations = randn(size(soln.k,2),n+1)
+
         for i = 2:n+1
             for j = 1:nx
-                simulated_states_pos[j,i]  = smolyak_evaluate(w[j],simulated_states_pos[:,i-1],soln.multi_index,soln.domain)
-                simulated_states_neg[j,i]  = smolyak_evaluate(w[j],simulated_states_neg[:,i-1],soln.multi_index,soln.domain)
-                simulated_states_base[j,i] = smolyak_evaluate(w[j],simulated_states_base[:,i-1],soln.multi_index,soln.domain)
+                simulated_states_pos[j,i]  = hyperbolic_cross_evaluate(w[j],simulated_states_pos[:,i-1],soln.multi_index,soln.domain)
+                simulated_states_neg[j,i]  = hyperbolic_cross_evaluate(w[j],simulated_states_neg[:,i-1],soln.multi_index,soln.domain)
+                simulated_states_base[j,i] = hyperbolic_cross_evaluate(w[j],simulated_states_base[:,i-1],soln.multi_index,soln.domain)
             end
             simulated_states_pos[1:ns,i]  += soln.k*innovations[:,i]
             simulated_states_neg[1:ns,i]  += soln.k*innovations[:,i]
             simulated_states_base[1:ns,i] += soln.k*innovations[:,i]
             for j = 1:ny
-                simulated_jumps_pos[j,i-1]  = smolyak_evaluate(w[nx+j],simulated_states_pos[:,i-1],soln.multi_index,soln.domain)
-                simulated_jumps_neg[j,i-1]  = smolyak_evaluate(w[nx+j],simulated_states_neg[:,i-1],soln.multi_index,soln.domain)
-                simulated_jumps_base[j,i-1] = smolyak_evaluate(w[nx+j],simulated_states_base[:,i-1],soln.multi_index,soln.domain)
+                simulated_jumps_pos[j,i-1]  = hyperbolic_cross_evaluate(w[nx+j],simulated_states_pos[:,i-1],soln.multi_index,soln.domain)
+                simulated_jumps_neg[j,i-1]  = hyperbolic_cross_evaluate(w[nx+j],simulated_states_neg[:,i-1],soln.multi_index,soln.domain)
+                simulated_jumps_base[j,i-1] = hyperbolic_cross_evaluate(w[nx+j],simulated_states_base[:,i-1],soln.multi_index,soln.domain)
             end
         end
 
@@ -1162,7 +1422,6 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
     estimated_steady_state = vec((soln.domain[1,:] + soln.domain[2,:]))/2
 
     sample = simulate(soln,estimated_steady_state,5*reps+100)
-    innovations = randn(size(soln.k,2),n+1)
 
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
@@ -1185,6 +1444,8 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S;rndseed=123
         simulated_states_neg[:,1]    = initial_state
         simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
         simulated_states_base[:,1]   = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
 
         for i = 2:n+1
             for j = 1:nx
@@ -1233,8 +1494,6 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         error("Each shock needs an innovation (even if it's zero).")
     end
 
-    innovations = randn(size(soln.k,2),n+1)
-
     impulses_states_pos = zeros(nx,n+1)
     impulses_jumps_pos  = zeros(ny,n)
     impulses_states_neg = zeros(nx,n+1)
@@ -1255,6 +1514,8 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         simulated_states_neg[:,1]    = initial_state
         simulated_states_neg[1:ns,1] -= soln.k*innovation_vector
         simulated_states_base[:,1]   = initial_state
+
+        innovations = randn(size(soln.k,2),n+1)
 
         for i = 2:n+1
             for j = 1:nx
@@ -1503,6 +1764,11 @@ function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},seed::S = 1234
                 for i = 1:n
                     vars[j][k,i] = smolyak_evaluate(w,state[:,i],soln.multi_index,domain)
                 end
+            elseif typeof(soln) <: Union{HyperbolicCrossSolutionDet{T,S},HyperbolicCrossSolutionStoch{T,S}}
+                w = hyperbolic_cross_weights(soln.variables[nx+k],soln.grid,soln.multi_index,soln.domain)
+                for i = 1:n
+                    vars[j][k,i] = hyperbolic_cross_evaluate(w,state[:,i],soln.multi_index,domain)
+                end
             elseif typeof(soln) <: Union{PiecewiseLinearSolutionDet{T,S},PiecewiseLinearSolutionStoch{T,S}}
                 for i = 1:n
                     vars[j][k,i] = piecewise_linear_evaluate(soln.variables[nx+k],soln.nodes,state[:,i])
@@ -1700,6 +1966,39 @@ function decision_rule(soln::R) where {R <: Union{SmolyakSolutionDet,SmolyakSolu
         
         for i = 1:ny
             y[i] = smolyak_evaluate(weights[i],state,soln.multi_index,soln.domain)
+        end
+
+        return y
+    
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R <: Union{HyperbolicCrossSolutionDet,HyperbolicCrossSolutionStoch}}
+
+    nx = size(soln.grid,2)
+    nv = length(soln.variables)
+    ny = nv - nx
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,ny)
+    for i = 1:ny
+        weights[i] = hyperbolic_cross_weights(soln.variables[nx+i],soln.grid,soln.multi_index,soln.domain)
+    end
+
+    function create_decision_rule(state::Array{T,1}) where {T <: AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+
+        y = zeros(ny)
+        
+        for i = 1:ny
+            y[i] = hyperbolic_cross_evaluate(weights[i],state,soln.multi_index,soln.domain)
         end
 
         return y
@@ -2027,6 +2326,73 @@ function state_transition(soln::R) where {R <: SmolyakSolutionStoch}
 
 end
 
+function state_transition(soln::R) where {R <: HyperbolicCrossSolutionDet}
+
+    nx = size(soln.grid,2)
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,nx)
+    for i = 1:nx
+        weights[i] = hyperbolic_cross_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+    end
+
+    function create_state_transition(state::Array{T,1}) where {T <: AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+
+        x_update = zeros(nx)
+        
+        for i = 1:nx
+            x_update[i] = hyperbolic_cross_evaluate(weights[i],state,soln.multi_index,soln.domain)
+        end
+
+        return x_update
+    
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R <: HyperbolicCrossSolutionStoch}
+
+    nx = size(soln.grid,2)
+    ns = size(soln.k,2)
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,nx)
+    for i = 1:nx
+        weights[i] = hyperbolic_cross_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+    end
+
+    function create_state_transition(state::Array{T,1},shocks::Array{T,1}) where {T <: AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+        if length(shocks) != size(soln.k,2)
+            error("shocks vector has incorrect size")
+        end
+
+        x_update = zeros(nx)
+        
+        for i = 1:nx
+            x_update[i] = hyperbolic_cross_evaluate(weights[i],state,soln.multi_index,soln.domain) 
+        end
+        x_update[1:ns] += soln.k*shocks
+
+        return x_update
+    
+    end
+
+    return create_state_transition
+
+end
+
 function state_transition(soln::R) where {R <: PiecewiseLinearSolutionDet}
 
     nx = length(soln.nodes) 
@@ -2129,8 +2495,18 @@ function expected_jumps(soln::R) where {R <: ChebyshevSolutionStoch}
 
     weights        = Array{Array{T,nx},1}(undef,ny)
     scaled_weights = Array{Array{T,nx},1}(undef,ny)
-    for i = 1:ny
-        weights[i] = chebyshev_weights(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+    if soln.node_generator == chebyshev_nodes
+        for i = 1:ny
+            weights[i] = chebyshev_weights(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extrema
+        for i = 1:ny
+            weights[i] = chebyshev_weights_extrema(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extended
+        for i = 1:ny
+            weights[i] = chebyshev_weights_extended(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
     end
 
     if typeof(soln.integrals) == Array{T,ns}
@@ -2190,6 +2566,40 @@ function expected_jumps(soln::R) where {R <: SmolyakSolutionStoch}
         for i = 1:ny
 
             y[i] = smolyak_evaluate(weights[i],state_trans(state,zeros(ns)),soln.multi_index,soln.domain)
+
+        end
+
+        return y
+    
+    end
+
+    return create_expected_jumps
+
+end
+
+function expected_jumps(soln::R) where {R <: HyperbolicCrossSolutionStoch}
+
+    nx = size(soln.grid,2)
+    nv = length(soln.variables)
+    ny = nv - nx
+    ns = size(soln.k,2) 
+
+    state_trans = state_transition(soln)
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,ny)
+    for i = 1:ny
+        weights[i] = hyperbolic_cross_weights(soln.variables[nx+i],soln.grid,soln.multi_index,soln.domain).*soln.scale_factor
+    end
+
+    function create_expected_jumps(state::Array{T,1}) where {T <: AbstractFloat}
+
+        y = zeros(ny)
+
+        for i = 1:ny
+
+            y[i] = hyperbolic_cross_evaluate(weights[i],state_trans(state,zeros(ns)),soln.multi_index,soln.domain)
 
         end
 

@@ -71,12 +71,26 @@ abstract type ProjectionScheme <: SolutionScheme end
 abstract type ChebyshevScheme <: ProjectionScheme end
 abstract type SmolyakScheme <: ProjectionScheme end
 abstract type PiecewiseLinearScheme <: ProjectionScheme end
+abstract type HyperbolicCrossScheme <: ProjectionScheme end
 
 struct PerturbationScheme{T <: Real, Q <: AbstractString} <: SolutionScheme
 
     steady_state::Array{T,1}
     cutoff::T
     order::Q
+
+end
+
+struct ChebyshevSchemeDet{T <: Real, S <: Integer} <: ChebyshevScheme
+
+    initial_guess::Union{T,Array{T,1}}
+    node_generator::Function
+    node_number::Union{S,Array{S,1}}
+    order::Union{S,Array{S,1}}
+    domain::Union{Array{T,1},Array{T,2}}
+    tol_fix_point_solver::T
+    tol_variables::T
+    maxiters::S
 
 end
 
@@ -94,12 +108,11 @@ struct ChebyshevSchemeStoch{T <: Real, S <: Integer} <: ChebyshevScheme
 
 end
 
-struct ChebyshevSchemeDet{T <: Real, S <: Integer} <: ChebyshevScheme
+struct SmolyakSchemeDet{T <: Real, S <: Integer} <: SmolyakScheme
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
-    node_number::Union{S,Array{S,1}}
-    order::Union{S,Array{S,1}}
+    layer::Union{S,Array{S,1}}
     domain::Union{Array{T,1},Array{T,2}}
     tol_fix_point_solver::T
     tol_variables::T
@@ -120,11 +133,37 @@ struct SmolyakSchemeStoch{T <: Real, S <: Integer} <: SmolyakScheme
 
 end
 
-struct SmolyakSchemeDet{T <: Real, S <: Integer} <: SmolyakScheme
+struct HyperbolicCrossSchemeDet{T <: Real, S <: Integer} <: HyperbolicCrossScheme
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
     layer::Union{S,Array{S,1}}
+    n::S
+    domain::Union{Array{T,1},Array{T,2}}
+    tol_fix_point_solver::T
+    tol_variables::T
+    maxiters::S
+
+end
+
+struct HyperbolicCrossSchemeStoch{T <: Real, S <: Integer} <: HyperbolicCrossScheme
+
+    initial_guess::Union{T,Array{T,1}}
+    node_generator::Function
+    num_quad_nodes::S
+    layer::Union{S,Array{S,1}}
+    n::S
+    domain::Union{Array{T,1},Array{T,2}}
+    tol_fix_point_solver::T
+    tol_variables::T
+    maxiters::S
+
+end
+
+struct PiecewiseLinearSchemeDet{T <: Real, S <: Integer} <: PiecewiseLinearScheme
+
+    initial_guess::Union{T,Array{T,1}}
+    node_number::Union{S,Array{S,1}}
     domain::Union{Array{T,1},Array{T,2}}
     tol_fix_point_solver::T
     tol_variables::T
@@ -144,17 +183,6 @@ struct PiecewiseLinearSchemeStoch{T <: Real, S <: Integer} <: PiecewiseLinearSch
 
 end
 
-struct PiecewiseLinearSchemeDet{T <: Real, S <: Integer} <: PiecewiseLinearScheme
-
-    initial_guess::Union{T,Array{T,1}}
-    node_number::Union{S,Array{S,1}}
-    domain::Union{Array{T,1},Array{T,2}}
-    tol_fix_point_solver::T
-    tol_variables::T
-    maxiters::S
-
-end
-
 ##################### Introduce the solution structures ########################
 
 abstract type ModelSolution end
@@ -166,6 +194,20 @@ abstract type PerturbationSolutionStoch <: PerturbationSolution end
 abstract type ProjectionSolution <: ModelSolution end
 abstract type ProjectionSolutionDet <: ProjectionSolution end
 abstract type ProjectionSolutionStoch <: ProjectionSolution end
+
+struct FirstOrderSolutionDet{T <: Real,S <: Integer} <: PerturbationSolutionDet
+
+    # x(t+1) = hx*x(t)
+    #   y(t) = gx*x(t)
+
+    hbar::Union{T,Array{T,1}}           # steady state values for predetermined variables
+    hx::Union{Array{T,2},Array{T,1}}    # Transition matrix for predetermined variables
+    gbar::Union{T,Array{T,1}}           # steady state values for nonpredetermined variables
+    gx::Union{Array{T,2},Array{T,1}}    # Decision rule matrix linking nonpredetermined variables to predetermined variables
+    grc::S                              # Number of eigenvalues greater than cutoff
+    soln_type::String                   # "determinate", "indeterminate", or "explosive"
+
+end
 
 struct FirstOrderSolutionStoch{T <: Real,S <: Integer} <: PerturbationSolutionStoch
 
@@ -183,15 +225,17 @@ struct FirstOrderSolutionStoch{T <: Real,S <: Integer} <: PerturbationSolutionSt
 
 end
 
-struct FirstOrderSolutionDet{T <: Real,S <: Integer} <: PerturbationSolutionDet
+struct SecondOrderSolutionDet{T <: Real,S <: Integer} <: PerturbationSolutionDet
 
-    # x(t+1) = hx*x(t)
-    #   y(t) = gx*x(t)
+    # x(t+1) = hx*x(t) + (1/2)*[kron(I,x(t))]'hxx*[kron(I,x(t))]
+    #   y(t) = gx*x(t) + (1/2)*[kron(I,x(t))]'gxx*[kron(I,x(t))]
 
     hbar::Union{T,Array{T,1}}           # steady state values for predetermined variables
-    hx::Union{Array{T,2},Array{T,1}}    # Transition matrix for predetermined variables
+    hx::Union{Array{T,2},Array{T,1}}    # Linear component in predetermined block
+    hxx::Array{T,2}                     # Quadratic component in predetermined block
     gbar::Union{T,Array{T,1}}           # steady state values for nonpredetermined variables
-    gx::Union{Array{T,2},Array{T,1}}    # Decision rule matrix linking nonpredetermined variables to predetermined variables
+    gx::Union{Array{T,2},Array{T,1}}    # Linear component in non-predetermined block
+    gxx::Array{T,2}                     # Quadratic component in non-predetermined block
     grc::S                              # Number of eigenvalues greater than cutoff
     soln_type::String                   # "determinate", "indeterminate", or "explosive"
 
@@ -217,19 +261,22 @@ struct SecondOrderSolutionStoch{T <: Real,S <: Integer} <: PerturbationSolutionS
 
 end
 
-struct SecondOrderSolutionDet{T <: Real,S <: Integer} <: PerturbationSolutionDet
+struct ThirdOrderSolutionDet{T <: Real, S <: Integer} <: PerturbationSolutionDet
 
-    # x(t+1) = hx*x(t) + (1/2)*[kron(I,x(t))]'hxx*[kron(I,x(t))]
-    #   y(t) = gx*x(t) + (1/2)*[kron(I,x(t))]'gxx*[kron(I,x(t))]
+    # x(t+1) = hx*x(t) + (1/2)*hxx*[kron(x(t),x(t)] + (1/6)*hxxx*[kron(x(t),x(t),x(t))]
 
-    hbar::Union{T,Array{T,1}}           # steady state values for predetermined variables
-    hx::Union{Array{T,2},Array{T,1}}    # Linear component in predetermined block
-    hxx::Array{T,2}                     # Quadratic component in predetermined block
-    gbar::Union{T,Array{T,1}}           # steady state values for nonpredetermined variables
-    gx::Union{Array{T,2},Array{T,1}}    # Linear component in non-predetermined block
-    gxx::Array{T,2}                     # Quadratic component in non-predetermined block
-    grc::S                              # Number of eigenvalues greater than cutoff
-    soln_type::String                   # "determinate", "indeterminate", or "explosive"
+    #   y(t) = gx*x(t) + (1/2)*gxx*[kron(x(t),x(t)] + (1/6)*gxxx*[kron(x(t),x(t),x(t))]
+
+    hbar::Union{T,Array{T,1}}              # steady state values for predetermined variables
+    hx::Union{Array{T,2},Array{T,1}}       # Linear component in predetermined block
+    hxx::Array{T,2}                        # Quadratic component in predetermined block
+    hxxx::Array{T,2}                       # Third-order component in predetermined block
+    gbar::Union{T,Array{T,1}}              # steady state values for nonpredetermined variables
+    gx::Union{Array{T,2},Array{T,1}}       # Linear component in non-predetermined block
+    gxx::Array{T,2}                        # Quadratic component in non-predetermined block
+    gxxx::Array{T,2}                       # Third-order component in non-predetermined block
+    grc::S                                 # Number of eigenvalues greater than cutoff
+    soln_type::String                      # "determinate", "indeterminate", or "explosive"
 
 end
 
@@ -264,22 +311,15 @@ struct ThirdOrderSolutionStoch{T <: Real, S <: Integer} <: PerturbationSolutionS
 
 end
 
-struct ThirdOrderSolutionDet{T <: Real, S <: Integer} <: PerturbationSolutionDet
+struct ChebyshevSolutionDet{T <: Real, S <: Integer, N} <: ProjectionSolutionDet
 
-    # x(t+1) = hx*x(t) + (1/2)*hxx*[kron(x(t),x(t)] + (1/6)*hxxx*[kron(x(t),x(t),x(t))]
-
-    #   y(t) = gx*x(t) + (1/2)*gxx*[kron(x(t),x(t)] + (1/6)*gxxx*[kron(x(t),x(t),x(t))]
-
-    hbar::Union{T,Array{T,1}}              # steady state values for predetermined variables
-    hx::Union{Array{T,2},Array{T,1}}       # Linear component in predetermined block
-    hxx::Array{T,2}                        # Quadratic component in predetermined block
-    hxxx::Array{T,2}                       # Third-order component in predetermined block
-    gbar::Union{T,Array{T,1}}              # steady state values for nonpredetermined variables
-    gx::Union{Array{T,2},Array{T,1}}       # Linear component in non-predetermined block
-    gxx::Array{T,2}                        # Quadratic component in non-predetermined block
-    gxxx::Array{T,2}                       # Third-order component in non-predetermined block
-    grc::S                                 # Number of eigenvalues greater than cutoff
-    soln_type::String                      # "determinate", "indeterminate", or "explosive"
+    variables::Array{Array{T,N},1}       # Variables
+    weights::Array{Array{T,N},1}         # Chebyshev polynomials
+    nodes::Array{Array{T,1},1}           # Chebyshev nodes
+    order::Union{S,Array{S,1}}           # Complete polynomial / tensor-product
+    domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
+    iteration_count::S                   # Number of iterations needed for convergence
+    node_generator::Function             # Function to generate the nodes
 
 end
 
@@ -297,12 +337,13 @@ struct ChebyshevSolutionStoch{T <: Real, S <: Integer, N} <: ProjectionSolutionS
 
 end
 
-struct ChebyshevSolutionDet{T <: Real, S <: Integer, N} <: ProjectionSolutionDet
+struct SmolyakSolutionDet{T <: Real, S <: Integer} <: ProjectionSolutionDet
 
-    variables::Array{Array{T,N},1}       # Variables
-    weights::Array{Array{T,N},1}         # Chebyshev polynomials
-    nodes::Array{Array{T,1},1}           # Chebyshev nodes
-    order::Union{S,Array{S,1}}           # Complete polynomial / tensor-product
+    variables::Array{Array{T,1},1}       # Variables
+    weights::Array{Array{T,1},1}         # Smolyak weights
+    grid::Union{Array{T,2},Array{T,1}}   # Smolyak grid
+    multi_index::Array{S,2}              # Smolyak multi index
+    layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     iteration_count::S                   # Number of iterations needed for convergence
     node_generator::Function             # Function to generate the nodes
@@ -324,16 +365,40 @@ struct SmolyakSolutionStoch{T <: Real, S <: Integer} <: ProjectionSolutionStoch
 
 end
 
-struct SmolyakSolutionDet{T <: Real, S <: Integer} <: ProjectionSolutionDet
+struct HyperbolicCrossSolutionDet{T <: Real, S <: Integer} <: ProjectionSolutionDet
 
     variables::Array{Array{T,1},1}       # Variables
-    weights::Array{Array{T,1},1}         # Smolyak polynominals
-    grid::Union{Array{T,2},Array{T,1}}   # Smolyak grid
-    multi_index::Array{S,2}              # Smolyak multi index
+    weights::Array{Array{T,1},1}         # Hyperbolic cross weights
+    grid::Union{Array{T,2},Array{T,1}}   # Hyperbolic cross grid
+    multi_index::Array{S,2}              # Hyperbolic cross multi index
     layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     iteration_count::S                   # Number of iterations needed for convergence
     node_generator::Function             # Function to generate the nodes
+
+end
+
+struct HyperbolicCrossSolutionStoch{T <: Real, S <: Integer} <: ProjectionSolutionStoch
+
+    variables::Array{Array{T,1},1}       # Variables
+    weights::Array{Array{T,1},1}         # Hyperbolic cross weights
+    scale_factor::Array{T,1}             # Scale factor for computing scaled weights
+    grid::Union{Array{T,2},Array{T,1}}   # Hyperbolic cross grid
+    multi_index::Array{S,2}              # Hyperbolic cross multi index
+    layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
+    domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
+    k::Union{Array{T,2},Array{T,1}}      # Innovation loading matrix
+    iteration_count::S                   # Number of iterations needed for convergence
+    node_generator::Function             # Function to generate the nodes
+
+end
+
+struct PiecewiseLinearSolutionDet{T <: Real, S <: Integer, N} <: ProjectionSolutionDet
+
+    variables::Array{Array{T,N},1}       # Variables
+    nodes::Array{Array{T,1},1}           # Nodes
+    domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
+    iteration_count::S                   # Number of iterations needed for convergence
 
 end
 
@@ -343,15 +408,6 @@ struct PiecewiseLinearSolutionStoch{T <: Real, S <: Integer, N} <: ProjectionSol
     nodes::Array{Array{T,1},1}           # Nodes
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     k::Union{Array{T,2},Array{T,1}}      # Innovation loading matrix
-    iteration_count::S                   # Number of iterations needed for convergence
-
-end
-
-struct PiecewiseLinearSolutionDet{T <: Real, S <: Integer, N} <: ProjectionSolutionDet
-
-    variables::Array{Array{T,N},1}       # Variables
-    nodes::Array{Array{T,1},1}           # Nodes
-    domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     iteration_count::S                   # Number of iterations needed for convergence
 
 end
