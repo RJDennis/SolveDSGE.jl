@@ -1266,9 +1266,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
     k    = soln.k[1:ns,:]
 
-    RHO = soln.hx[1:ns,1:ns]
-    if !isdiag(RHO.>sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+    if typeof(soln) <: PerturbationSolution
+        RHO = soln.hx[1:ns,1:ns]
+    elseif typeof(soln) <: ProjectionSolution
+        d = compute_linearization(model,initial_guess)
+        k = -d[1:ns,2*nv+1:end]
+        RHO = -d[1:ns,1:ns]
     end
 
     T = typeof(scheme.tol_fix_point_solver)
