@@ -377,7 +377,6 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Pro
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
-    ns = size(soln.k,2)
     ny = nv - nx
 
     if length(initial_state) != nx
