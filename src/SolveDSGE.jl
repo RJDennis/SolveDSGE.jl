@@ -40,6 +40,8 @@ export PerturbationScheme,
        SmolyakSolutionStoch,
        PiecewiseLinearSolutionStoch,
        PiecewiseLinearSolutionDet,
+       HyperbolicCrossSchemeStoch,
+       HyperbolicCrossSchemeDet,
        StateSpaceEqm
 
 export process_model,
