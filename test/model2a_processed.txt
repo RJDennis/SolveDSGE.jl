@@ -10,44 +10,46 @@ ne = 4
  
 jumps_to_approximate = [2] 
  
+eqns_to_approximate = [3] 
+ 
 variables = ["z", "k", "c", "muc"] 
  
-function nlsolve_static_equations(f::Array{T,1},x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} 
+function nlsolve_static_equations(f::Array{T,1},x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
  
   f[1] = x[1] - (0.8*x[1] + 0.01*0.0)
-  f[2] = x[3]^(-1.1) - (p[1]*x[4]*(1.0 - 0.025 + 0.30*exp(x[1])*x[2]^(0.30 - 1.0)))
-  f[3] = x[4] - (x[3]^(-1.1))
-  f[4] = x[2] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+  f[2] = x[2] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+  f[3] = x[3]^(-1.1) - (p[1]*x[4]*(1.0 - 0.025 + 0.30*exp(x[1])*x[2]^(0.30 - 1.0)))
+  f[4] = x[4] - (x[3]^(-1.1))
 
 end 
  
-function static_equations(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} 
+function static_equations(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
  
   f = Array{T,1}(undef,length(x)) 
  
   f[1] = x[1] - (0.8*x[1] + 0.01*0.0)
-  f[2] = x[3]^(-1.1) - (p[1]*x[4]*(1.0 - 0.025 + 0.30*exp(x[1])*x[2]^(0.30 - 1.0)))
-  f[3] = x[4] - (x[3]^(-1.1))
-  f[4] = x[2] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+  f[2] = x[2] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+  f[3] = x[3]^(-1.1) - (p[1]*x[4]*(1.0 - 0.025 + 0.30*exp(x[1])*x[2]^(0.30 - 1.0)))
+  f[4] = x[4] - (x[3]^(-1.1))
 
   return f 
  
 end 
  
-function dynamic_equations(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} 
+function dynamic_equations(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
  
   f = Array{T,1}(undef,4) 
  
   f[1] = x[5] - (0.8*x[1] + 0.01*x[9])
-  f[2] = x[3]^(-1.1) - (p[1]*x[8]*(1.0 - 0.025 + 0.30*exp(x[5])*x[6]^(0.30 - 1.0)))
-  f[3] = x[4] - (x[3]^(-1.1))
-  f[4] = x[6] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+  f[2] = x[6] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+  f[3] = x[3]^(-1.1) - (p[1]*x[8]*(1.0 - 0.025 + 0.30*exp(x[5])*x[6]^(0.30 - 1.0)))
+  f[4] = x[4] - (x[3]^(-1.1))
 
   return f 
  
 end 
 
-function dynamic_eqn_1(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} 
+function dynamic_eqn_1(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
  
   f = x[5] - (0.8*x[1] + 0.01*x[9])
 
@@ -55,7 +57,15 @@ function dynamic_eqn_1(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real}
  
 end 
 
-function dynamic_eqn_2(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} 
+function dynamic_eqn_2(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
+ 
+  f = x[6] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+
+  return f 
+ 
+end 
+
+function dynamic_eqn_3(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
  
   f = x[3]^(-1.1) - (p[1]*x[8]*(1.0 - 0.025 + 0.30*exp(x[5])*x[6]^(0.30 - 1.0)))
 
@@ -63,17 +73,9 @@ function dynamic_eqn_2(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real}
  
 end 
 
-function dynamic_eqn_3(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} 
+function dynamic_eqn_4(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
  
   f = x[4] - (x[3]^(-1.1))
-
-  return f 
- 
-end 
-
-function dynamic_eqn_4(x::Array{T,1},p::Array{T1,1}) where {T<:Number, T1<:Real} 
- 
-  f = x[6] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
 
   return f 
  
@@ -94,9 +96,9 @@ function closure_projection_equations(state,scaled_weights,order,domain,approxim
     #f = Array{T,1}(undef,4) 
  
     f[1] = x[3] - (0.8*state[1] + 0.01*0.0)
-    f[2] = x[1]^(-1.1) - (p[1]*approx2*(1.0 - 0.025 + 0.30*exp(x[3])*x[4]^(0.30 - 1.0)))
-    f[3] = x[2] - (x[1]^(-1.1))
-    f[4] = x[4] - ((1.0 - 0.025)*state[2] + exp(state[1])*state[2]^0.30 - x[1])
+    f[2] = x[4] - ((1.0 - 0.025)*state[2] + exp(state[1])*state[2]^0.30 - x[1])
+    f[3] = x[1]^(-1.1) - (p[1]*approx2*(1.0 - 0.025 + 0.30*exp(x[3])*x[4]^(0.30 - 1.0)))
+    f[4] = x[2] - (x[1]^(-1.1))
 
     #return f 
  
@@ -115,9 +117,9 @@ function closure_projection_equations_pl(variables,grid,state,integrals,approxim
     #f = Array{T,1}(undef,4) 
  
     f[1] = x[3] - (0.8*state[1] + 0.01*0.0)
-    f[2] = x[1]^(-1.1) - (p[1]*approx2*(1.0 - 0.025 + 0.30*exp(x[3])*x[4]^(0.30 - 1.0)))
-    f[3] = x[2] - (x[1]^(-1.1))
-    f[4] = x[4] - ((1.0 - 0.025)*state[2] + exp(state[1])*state[2]^0.30 - x[1])
+    f[2] = x[4] - ((1.0 - 0.025)*state[2] + exp(state[1])*state[2]^0.30 - x[1])
+    f[3] = x[1]^(-1.1) - (p[1]*approx2*(1.0 - 0.025 + 0.30*exp(x[3])*x[4]^(0.30 - 1.0)))
+    f[4] = x[2] - (x[1]^(-1.1))
 
     #return f 
  

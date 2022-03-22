@@ -52,6 +52,16 @@ soln_nlm = solve_model(dsge,soln_nlf,MM)
 soln_nln = solve_model(dsge,soln_nlj,MM)
 soln_nlo = solve_model(dsge,soln_nln,MM,2)
 
+H = HyperbolicCrossSchemeStoch(ss,chebyshev_nodes,11,5,9,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
+HH = HyperbolicCrossSchemeStoch(ss,chebyshev_nodes,11,6,11,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
+HHH = HyperbolicCrossSchemeStoch(ss,chebyshev_nodes,11,12,17,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters)
+
+soln_nlz = solve_model(dsge,H)
+soln_nly = solve_model(dsge,HH,2)
+soln_nlx = solve_model(dsge,soln_to,HHH,2)
+soln_nlw = solve_model(dsge,soln_nla,H,2)
+soln_nlv = solve_model(dsge,soln_nlh,HHH,2)
+
 simulated_data1 = simulate(soln_nlf,ss[1:2],100000)
 pos_imps, neg_imps = impulses(soln_nlf,50,[1],10000)
 
