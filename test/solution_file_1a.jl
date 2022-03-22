@@ -12,13 +12,15 @@ maxiters = 1000
 ss_obj = compute_steady_state(dsge,x,tol,maxiters)
 ss = ss_obj.zero
 
-N   = PerturbationScheme(ss,1.0,"first")
-NN  = PerturbationScheme(ss,1.0,"second")
-NNN = PerturbationScheme(ss,1.0,"third")
+N    = PerturbationScheme(ss,1.0,"first")
+NN   = PerturbationScheme(ss,1.0,"second")
+NNN  = PerturbationScheme(ss,1.0,"third")
+NNNN = PerturbationScheme(ss,1.0,"fourth")
 
-soln_fo = solve_model(dsge,N)
-soln_so = solve_model(dsge,NN)
-soln_to = solve_model(dsge,NNN)
+soln_fo  = solve_model(dsge,N)
+soln_so  = solve_model(dsge,NN)
+soln_to  = solve_model(dsge,NNN)
+soln_foo = solve_model(dsge,NNNN)
 
 P = ChebyshevSchemeStoch(ss,chebyshev_nodes,[21,21],9,3,[0.0960769 26.0; -0.0960769 18.0],tol,1e-6,maxiters)
 PP = ChebyshevSchemeStoch(ss,chebyshev_extrema,[21,21],9,4,[0.0960769 26.0; -0.0960769 18.0],tol,1e-6,maxiters)
