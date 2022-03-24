@@ -1,5 +1,6 @@
 module SolveDSGE
 
+using Random
 using LinearAlgebra
 using ForwardDiff
 using NLsolve
@@ -7,10 +8,9 @@ using GaussQuadrature
 using ChebyshevApprox
 using SmolyakApprox
 using PiecewiseLinearApprox
-using Random
+using HyperbolicCrossApprox
 using ThreadPools
 using ThreadsX
-using HyperbolicCrossApprox
 
 include("structures.jl")
 include("parser_functions.jl")
@@ -25,6 +25,8 @@ export PerturbationScheme,
        SmolyakSchemeDet,
        PiecewiseLinearSchemeStoch,
        PiecewiseLinearSchemeDet,
+       HyperbolicCrossSchemeStoch,
+       HyperbolicCrossSchemeDet,
        FirstOrderSolutionStoch,
        FirstOrderSolutionDet,
        SecondOrderSolutionStoch,
@@ -37,11 +39,10 @@ export PerturbationScheme,
        ChebyshevSolutionDet,
        SmolyakSolutionStoch,
        SmolyakSolutionDet,
-       SmolyakSolutionStoch,
        PiecewiseLinearSolutionStoch,
        PiecewiseLinearSolutionDet,
-       HyperbolicCrossSchemeStoch,
-       HyperbolicCrossSchemeDet,
+       HyperbolicCrossSolutionStoch,
+       HyperbolicCrossSolutionDet,
        StateSpaceEqm
 
 export process_model,
@@ -60,7 +61,8 @@ export process_model,
        approximate_distribution,
        compare_solutions,
        state_space_eqm,
-       euler_errors
+       euler_errors,
+       den_haan_marcet
 
 export chebyshev_nodes,
        chebyshev_extrema,

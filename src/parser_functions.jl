@@ -429,8 +429,14 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractStri
     (parameters, parametervalues, unassigned_parameters) = get_parameters_and_values(model_array,"parameters:")
 
     for i in [variables; parameters]
-        if sum(occursin.(i,equations)) == false
-            println("Warning: $i is not in any equation.")
+        if i in variables
+            if sum(occursin.(i,equations)) == false
+                println("Warning: variable $i is not in any equation.")
+            end
+        else
+            if sum(occursin.(i,equations)) + sum(occursin.(i,parametervalues)) == 0
+                println("Warning: parameter $i is not in any equation.")
+            end
         end
     end
 
@@ -482,16 +488,16 @@ function repackage_equations(model::ModelPrimatives)
        This is to guard them during variables and parameter substitution. =#
 
     for i = 1:length(repackaged_equations)
-        if occursin(equations[i],"exp") == true
+        if occursin("exp",equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],"exp" => ":")
-        elseif occursin(repackaged_equations[i],"log") == true
+        elseif occursin("log",repackaged_equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],"log" => ";")
         end
     end
 
     #= Now we go through every equation and replace future variables, variables, and
-      shocks with a numbered element of a vector, "x".  We also replace parameter
-      names with parameter values. =#
+      shocks with a numbered element of a vector, "x".  We also make a first pass to 
+      replace parameter names with parameter values. =#
 
     for j in sorted_combined_names
         if j in variables
@@ -513,12 +519,36 @@ function repackage_equations(model::ModelPrimatives)
         end
     end
 
+    #= Now we take care of the fact that some model parameters may be functions of deeper
+      behavioral parameters =#
+
+    loops = 0 # Counts the number of loops over the parameters
+    while true
+        count = 0 # counts whether paramter values are still being assigned
+        for j in parameters
+            parameter_index = findfirst(isequal(j),parameters)
+            for i = 1:length(repackaged_equations)
+                if occursin(j,repackaged_equations[i]) == true
+                    repackaged_equations[i] = replace(repackaged_equations[i],j => parametervalues[parameter_index])
+                    count += 1
+                end
+            end
+        end
+        loops += 1
+        if count == 0
+            break
+        end
+        if loops > length(parameters)-1
+            error("There is a circularity in the parameter definitions")
+        end
+    end
+
     #= Finally, go back through every equation and restore exp and log where necessary =#
 
     for i = 1:length(repackaged_equations)
-        if occursin(equations[i],":") == true
+        if occursin(":",repackaged_equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],":" => "exp")
-        elseif occursin(repackaged_equations[i],";") == true
+        elseif occursin(";",repackaged_equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],";" => "log")
         end
     end
@@ -571,6 +601,30 @@ function create_steady_state_equations(model::ModelPrimatives)
             for i = 1:length(equations)
                 steady_state_equations[i] = replace(steady_state_equations[i],j => 0.0)
             end
+        end
+    end
+
+        #= Now we take care of the fact that some model parameters may be functions of deeper
+      behavioral parameters =#
+
+    loops = 0 # Counts the number of loops over the parameters
+    while true
+        count = 0 # counts whether paramter values are still being assigned
+        for j in parameters
+            parameter_index = findfirst(isequal(j),parameters)
+            for i = 1:length(steady_state_equations)
+                if occursin(j,steady_state_equations[i]) == true
+                    steady_state_equations[i] = replace(steady_state_equations[i],j => parametervalues[parameter_index])
+                    count += 1
+                end
+            end
+        end
+        loops += 1
+        if count == 0
+            break
+        end
+        if loops > length(parameters)-1
+            error("There is a circularity in the parameter definitions")
         end
     end
 
