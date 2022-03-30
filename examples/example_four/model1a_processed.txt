@@ -1,0 +1,176 @@
+nx = 2 
+ 
+ny = 2 
+ 
+ns = 1 
+ 
+nv = 4 
+ 
+ne = 4 
+ 
+jumps_to_approximate = [2] 
+ 
+eqns_to_approximate = [3] 
+ 
+variables = ["z", "k", "c", "muc"] 
+ 
+function nlsolve_static_equations(f::Array{T,1},x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
+ 
+  f[1] = x[1] - (0.8*x[1] + 0.01*0.0)
+  f[2] = x[2] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+  f[3] = x[3]^(-1.1) - (p[1]*x[4]*(1.0 - 0.025 + 0.30*exp(x[1])*x[2]^(0.30 - 1.0)))
+  f[4] = x[4] - (x[3]^(-1.1))
+
+end 
+ 
+function static_equations(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
+ 
+  f = Array{T,1}(undef,length(x)) 
+ 
+  f[1] = x[1] - (0.8*x[1] + 0.01*0.0)
+  f[2] = x[2] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+  f[3] = x[3]^(-1.1) - (p[1]*x[4]*(1.0 - 0.025 + 0.30*exp(x[1])*x[2]^(0.30 - 1.0)))
+  f[4] = x[4] - (x[3]^(-1.1))
+
+  return f 
+ 
+end 
+ 
+function dynamic_equations(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
+ 
+  f = Array{T,1}(undef,4) 
+ 
+  f[1] = x[5] - (0.8*x[1] + 0.01*x[9])
+  f[2] = x[6] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+  f[3] = x[3]^(-1.1) - (p[1]*x[8]*(1.0 - 0.025 + 0.30*exp(x[5])*x[6]^(0.30 - 1.0)))
+  f[4] = x[4] - (x[3]^(-1.1))
+
+  return f 
+ 
+end 
+
+function dynamic_eqn_1(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
+ 
+  f = x[5] - (0.8*x[1] + 0.01*x[9])
+
+  return f 
+ 
+end 
+
+function dynamic_eqn_2(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
+ 
+  f = x[6] - ((1.0 - 0.025)*x[2] + exp(x[1])*x[2]^0.30 - x[3])
+
+  return f 
+ 
+end 
+
+function dynamic_eqn_3(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
+ 
+  f = x[3]^(-1.1) - (p[1]*x[8]*(1.0 - 0.025 + 0.30*exp(x[5])*x[6]^(0.30 - 1.0)))
+
+  return f 
+ 
+end 
+
+function dynamic_eqn_4(x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
+ 
+  f = x[4] - (x[3]^(-1.1))
+
+  return f 
+ 
+end 
+
+individual_equations = Array{Function}(undef,4) 
+individual_equations[1] = dynamic_eqn_1
+individual_equations[2] = dynamic_eqn_2
+individual_equations[3] = dynamic_eqn_3
+individual_equations[4] = dynamic_eqn_4
+
+function closure_chebyshev_equations(state,scaled_weights,order,domain,p) 
+ 
+  function chebyshev_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} 
+ 
+    approx2 = chebyshev_evaluate(scaled_weights[1],x[2+1:end],order,domain)
+
+    #f = Array{T,1}(undef,4) 
+ 
+    f[1] = x[3] - (0.8*state[1] + 0.01*0.0)
+    f[2] = x[4] - ((1.0 - 0.025)*state[2] + exp(state[1])*state[2]^0.30 - x[1])
+    f[3] = x[1]^(-1.1) - (p[1]*approx2*(1.0 - 0.025 + 0.30*exp(x[3])*x[4]^(0.30 - 1.0)))
+    f[4] = x[2] - (x[1]^(-1.1))
+
+    #return f 
+ 
+  end 
+ 
+  return chebyshev_equations 
+ 
+end 
+
+function closure_smolyak_equations(state,scaled_weights,order,domain,p) 
+ 
+  function smolyak_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} 
+ 
+    poly = smolyak_polynomial(x[2+1:end],order,domain) 
+    approx2 = smolyak_evaluate(scaled_weights[1],poly)
+
+    #f = Array{T,1}(undef,4) 
+ 
+    f[1] = x[3] - (0.8*state[1] + 0.01*0.0)
+    f[2] = x[4] - ((1.0 - 0.025)*state[2] + exp(state[1])*state[2]^0.30 - x[1])
+    f[3] = x[1]^(-1.1) - (p[1]*approx2*(1.0 - 0.025 + 0.30*exp(x[3])*x[4]^(0.30 - 1.0)))
+    f[4] = x[2] - (x[1]^(-1.1))
+
+    #return f 
+ 
+  end 
+ 
+  return smolyak_equations 
+ 
+end 
+
+function closure_hcross_equations(state,scaled_weights,order,domain,p) 
+ 
+  function hcross_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} 
+ 
+    poly = hyperbolic_cross_polynomial(x[2+1:end],order,domain) 
+    approx2 = approximate(scaled_weights[1],poly)
+
+    #f = Array{T,1}(undef,4) 
+ 
+    f[1] = x[3] - (0.8*state[1] + 0.01*0.0)
+    f[2] = x[4] - ((1.0 - 0.025)*state[2] + exp(state[1])*state[2]^0.30 - x[1])
+    f[3] = x[1]^(-1.1) - (p[1]*approx2*(1.0 - 0.025 + 0.30*exp(x[3])*x[4]^(0.30 - 1.0)))
+    f[4] = x[2] - (x[1]^(-1.1))
+
+    #return f 
+ 
+  end 
+ 
+  return hcross_equations 
+ 
+end 
+
+function closure_piecewise_equations(variables,grid,state,integrals,p) 
+ 
+  function piecewise_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} 
+ 
+    approx2 = piecewise_linear_evaluate(variables[2],grid,x[2+1:end],integrals)
+
+    #f = Array{T,1}(undef,4) 
+ 
+    f[1] = x[3] - (0.8*state[1] + 0.01*0.0)
+    f[2] = x[4] - ((1.0 - 0.025)*state[2] + exp(state[1])*state[2]^0.30 - x[1])
+    f[3] = x[1]^(-1.1) - (p[1]*approx2*(1.0 - 0.025 + 0.30*exp(x[3])*x[4]^(0.30 - 1.0)))
+    f[4] = x[2] - (x[1]^(-1.1))
+
+    #return f 
+ 
+  end 
+ 
+  return piecewise_equations 
+ 
+end 
+
+unassigned_parameters = ["β"]

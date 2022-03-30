@@ -190,10 +190,6 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     cutoff = scheme.cutoff
     T = eltype(steady_state)
 
-    # Calculate the first derivatives at the steady state
-
-    d = compute_linearization(model,steady_state)
-
     # Calculate the Hessian at the steady state for each equation and stack the
     # Hessians vertically.
 
@@ -212,6 +208,10 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     soln_type = first_order_soln.soln_type
 
     # Compute the second-order solution
+
+    # Calculate the first derivatives at the steady state
+
+    d = compute_linearization(model,steady_state)
 
     # Construct partitioned first derivative matrices
 
@@ -243,8 +243,8 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     D .= A\D
 
     z = dsylvester(B,C,-D)
-    hxx = z[1:nx*nx,:]
-    gxx = z[nx^2+1:end,:]
+    hxx = Matrix(reshape(z[1:nx*nx,:]',nx*nx,nx)')
+    gxx = Matrix(reshape(z[nx^2+1:end,:]',nx*nx,ny)')
 
     soln = SecondOrderSolutionDet(steady_state[1:nx],hx,hxx,steady_state[nx+1:nv],gx,gxx,grc,soln_type)
     return soln
@@ -262,10 +262,6 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
     steady_state = scheme.steady_state
     cutoff = scheme.cutoff
     T = eltype(steady_state)
-
-    # Calculate the first derivatives at the steady state
-
-    d = compute_linearization(model,steady_state)
 
     # Calculate the Hessian at the steady state for each equation and stack the
     # Hessians vertically.
@@ -286,6 +282,10 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
 
     # Compute the second-order Solution
 
+    # Calculate the first derivatives at the steady state
+
+    d = compute_linearization(model,steady_state)
+
     # Construct partitioned first derivative matrices
 
     @views fx  = d[:,1:nx]
@@ -304,8 +304,7 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
     c1 = kron(eye(T,ny),hx') #eye(T,ny) ⊗ hx'
     c2 = kron(gx,eye(T,nx)) #gx ⊗ eye(T,nx)
 
-    # Use a Sylvester equation solver to compute the second order terms on the
-    # states.
+    # Use a Sylvester equation solver to compute the second order terms on the states.
 
     A = [b1 + b2*c2 b4]
     B = [zeros(size(b2,1),nx*nx) b2*c1]
@@ -330,6 +329,9 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
     ss = -qq\q
     hss = ss[1:nx]
     gss = ss[nx+1:nv]
+
+    hxx = Matrix(reshape(z[1:nx*nx,:]',nx*nx,nx)')
+    gxx = Matrix(reshape(z[nx^2+1:end,:]',nx*nx,ny)')
 
     soln = SecondOrderSolutionStoch(steady_state[1:nx],hx,hss,hxx,k,steady_state[nx+1:nv],gx,gss,gxx,sigma,grc,soln_type)
     return soln
@@ -925,7 +927,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(state,weights,order,domain,chebyshev_evaluate)
+            projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -1025,7 +1027,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet,threads::S) w
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(state,weights,order,domain,chebyshev_evaluate)
+                projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -1141,7 +1143,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(state,scaled_weights,order,domain,chebyshev_evaluate)
+            projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -1377,7 +1379,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(state,weights,order,domain,chebyshev_evaluate)
+            projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -1496,7 +1498,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(state,weights,order,domain,chebyshev_evaluate)
+                projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -1643,7 +1645,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(state,scaled_weights,order,domain,chebyshev_evaluate)
+            projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -1797,7 +1799,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(state,scaled_weights,order,domain,chebyshev_evaluate)
+                projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -1852,7 +1854,8 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    weights  = [zeros(N) for _ in 1:length(jumps_approximated)]
+    smol_iim = smolyak_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -1863,7 +1866,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
         end
 
         for i = 1:N
@@ -1872,7 +1875,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(grid[i,:],weights,multi_ind,domain,smolyak_evaluate)
+            projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -1925,7 +1928,8 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) whe
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    weights  = [zeros(N) for _ in 1:length(jumps_approximated)]
+    smol_iim = smolyak_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -1934,7 +1938,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) whe
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
         end
 
         @sync @qthreads for t = 1:threads
@@ -1945,7 +1949,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) whe
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(grid[i,:],weights,multi_ind,domain,smolyak_evaluate)
+                projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -2017,6 +2021,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    smol_iim = smolyak_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -2027,7 +2032,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
@@ -2037,7 +2042,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(grid[i,:],scaled_weights,multi_ind,domain,smolyak_evaluate)
+            projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -2108,6 +2113,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    smol_iim = smolyak_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -2116,7 +2122,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix 
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
@@ -2128,7 +2134,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(grid[i,:],scaled_weights,multi_ind,domain,smolyak_evaluate)
+                projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -2195,7 +2201,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
 
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    weights  = [zeros(N) for _ in 1:length(jumps_approximated)]
+    smol_iim = smolyak_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -2206,7 +2213,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
         end
 
         for i = 1:N
@@ -2215,7 +2222,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(grid[i,:],weights,multi_ind,domain,smolyak_evaluate)
+            projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -2285,6 +2292,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
     end
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    smol_iim = smolyak_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -2293,7 +2301,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
         end
 
         @sync @qthreads for t = 1:threads
@@ -2304,7 +2312,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(grid[i,:],weights,multi_ind,domain,smolyak_evaluate)
+                projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -2406,6 +2414,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    smol_iim = smolyak_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -2416,7 +2425,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
@@ -2426,7 +2435,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(grid[i,:],scaled_weights,multi_ind,domain,smolyak_evaluate)
+            projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -2529,6 +2538,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    smol_iim = smolyak_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -2537,7 +2547,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= smolyak_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
@@ -2549,7 +2559,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(grid[i,:],scaled_weights,multi_ind,domain,smolyak_evaluate)
+                projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -2629,7 +2639,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet)
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function_piecewise(variables,grid,state,piecewise_linear_evaluate)
+            projection_equations = model.closure_function_piecewise(variables,grid,state)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -2707,7 +2717,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet,threads
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function_piecewise(variables,grid,state,piecewise_linear_evaluate)
+                projection_equations = model.closure_function_piecewise(variables,grid,state)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -2802,7 +2812,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function_piecewise(variables,grid,state,integrals,piecewise_linear_evaluate)
+            projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -2895,7 +2905,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch,threa
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function_piecewise(variables,grid,state,integrals,piecewise_linear_evaluate)
+                projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -2990,7 +3000,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function_piecewise(variables,grid,state,piecewise_linear_evaluate)
+            projection_equations = model.closure_function_piecewise(variables,grid,state)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -3087,7 +3097,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function_piecewise(variables,grid,state,piecewise_linear_evaluate)
+                projection_equations = model.closure_function_piecewise(variables,grid,state)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -3219,7 +3229,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function_piecewise(variables,grid,state,integrals,piecewise_linear_evaluate)
+            projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -3353,7 +3363,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function_piecewise(variables,grid,state,integrals,piecewise_linear_evaluate)
+                projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -3409,6 +3419,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet)
     end
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -3419,7 +3430,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet)
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
         end
 
         for i = 1:N
@@ -3428,7 +3439,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet)
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(grid[i,:],weights,multi_ind,domain,hyperbolic_cross_evaluate)
+            projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -3483,6 +3494,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet,threads
     end
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -3491,7 +3503,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet,threads
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
         end
 
         @sync @qthreads for t = 1:threads
@@ -3502,7 +3514,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet,threads
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(grid[i,:],weights,multi_ind,domain,hyperbolic_cross_evaluate)
+                projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -3575,6 +3587,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch)
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -3585,7 +3598,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch)
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
@@ -3595,7 +3608,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch)
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(grid[i,:],scaled_weights,multi_ind,domain,hyperbolic_cross_evaluate)
+            projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -3667,6 +3680,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch,threa
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -3675,7 +3689,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch,threa
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
@@ -3687,7 +3701,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch,threa
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(grid[i,:],scaled_weights,multi_ind,domain,hyperbolic_cross_evaluate)
+                projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -3756,6 +3770,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
     end
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -3766,7 +3781,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
         end
 
         for i = 1:N
@@ -3775,7 +3790,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(grid[i,:],weights,multi_ind,domain,hyperbolic_cross_evaluate)
+            projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -3846,6 +3861,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
     end
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -3854,7 +3870,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
         end
 
         @sync @qthreads for t = 1:threads
@@ -3865,7 +3881,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(grid[i,:],weights,multi_ind,domain,hyperbolic_cross_evaluate)
+                projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
@@ -3968,6 +3984,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -3978,7 +3995,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
@@ -3988,7 +4005,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
                 init[j] = variables[j][i]
             end
 
-            projection_equations = model.closure_function(grid[i,:],scaled_weights,multi_ind,domain,hyperbolic_cross_evaluate)
+            projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
             nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
@@ -4092,6 +4109,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
 
     weights = [zeros(N) for _ in 1:length(jumps_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
 
@@ -4100,7 +4118,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
     while len > scheme.tol_variables && iters <= scheme.maxiters
 
         for i = 1:length(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights_threaded(variables[jumps_approximated[i]],grid,multi_ind,domain)
+            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
@@ -4112,7 +4130,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(grid[i,:],scaled_weights,multi_ind,domain,hyperbolic_cross_evaluate)
+                projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]

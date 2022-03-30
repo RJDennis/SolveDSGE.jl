@@ -796,47 +796,89 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q<:A
 
     # Fourth, add the model's dynamic information for projection solvers
 
-    # For Chebyshev, Smolyak, and Hyperbolic-cross
+    # For Chebyshev
 
     if length(model.unassigned_parameters) != 0
-        closure_string = "function closure_projection_equations(state,scaled_weights,order,domain,approximate,p) \n \n"
+        closure_cheb_string = "function closure_chebyshev_equations(state,scaled_weights,order,domain,p) \n \n"
     else
-        closure_string = "function closure_projection_equations(state,scaled_weights,order,domain,approximate) \n \n"
+        closure_cheb_string = "function closure_chebyshev_equations(state,scaled_weights,order,domain) \n \n"
     end
-    closure_string = string(closure_string,"  function projection_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n")
+    closure_cheb_string = string(closure_cheb_string,"  function chebyshev_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n")
     weight_number = 1
     for i in jumps_to_be_approximated
-        closure_string = string(closure_string,"    approx$i = approximate(scaled_weights[$weight_number],x[$number_jumps+1:end],order,domain)","\n")
+        closure_cheb_string = string(closure_cheb_string,"    approx$i = chebyshev_evaluate(scaled_weights[$weight_number],x[$number_jumps+1:end],order,domain)","\n")
         weight_number += 1
     end
-    closure_string = string(closure_string,"\n","    #f = Array{T,1}(undef,$number_equations) \n \n")
+    closure_cheb_string = string(closure_cheb_string,"\n","    #f = Array{T,1}(undef,$number_equations) \n \n")
     for i = 1:length(projection_equations)
-        closure_string = string(closure_string,"    f[$i] = ",projection_equations[i],"\n")
+        closure_cheb_string = string(closure_cheb_string,"    f[$i] = ",projection_equations[i],"\n")
     end
-    closure_string = string(closure_string,"\n    #return f \n \n  end \n \n  return projection_equations \n \n","end \n")
+    closure_cheb_string = string(closure_cheb_string,"\n    #return f \n \n  end \n \n  return chebyshev_equations \n \n","end \n")
+
+    # For Smolyak
+
+    if length(model.unassigned_parameters) != 0
+        closure_smol_string = "function closure_smolyak_equations(state,scaled_weights,order,domain,p) \n \n"
+    else
+        closure_smol_string = "function closure_smolyak_equations(state,scaled_weights,order,domain) \n \n"
+    end
+    closure_smol_string = string(closure_smol_string,"  function smolyak_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n")
+    closure_smol_string = string(closure_smol_string,"    poly = smolyak_polynomial(x[$number_jumps+1:end],order,domain) \n")
+
+    weight_number = 1
+    for i in jumps_to_be_approximated
+        closure_smol_string = string(closure_smol_string,"    approx$i = smolyak_evaluate(scaled_weights[$weight_number],poly)","\n")
+        weight_number += 1
+    end
+    closure_smol_string = string(closure_smol_string,"\n","    #f = Array{T,1}(undef,$number_equations) \n \n")
+    for i = 1:length(projection_equations)
+        closure_smol_string = string(closure_smol_string,"    f[$i] = ",projection_equations[i],"\n")
+    end
+    closure_smol_string = string(closure_smol_string,"\n    #return f \n \n  end \n \n  return smolyak_equations \n \n","end \n")
+
+    # For Hyperbolic-cross
+
+    if length(model.unassigned_parameters) != 0
+        closure_hcross_string = "function closure_hcross_equations(state,scaled_weights,order,domain,p) \n \n"
+    else
+        closure_hcross_string = "function closure_hcross_equations(state,scaled_weights,order,domain) \n \n"
+    end
+    closure_hcross_string = string(closure_hcross_string,"  function hcross_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n")
+    closure_hcross_string = string(closure_hcross_string,"    poly = hyperbolic_cross_polynomial(x[$number_jumps+1:end],order,domain) \n")
+
+    weight_number = 1
+    for i in jumps_to_be_approximated
+        closure_hcross_string = string(closure_hcross_string,"    approx$i = hyperbolic_cross_evaluate(scaled_weights[$weight_number],poly)","\n")
+        weight_number += 1
+    end
+    closure_hcross_string = string(closure_hcross_string,"\n","    #f = Array{T,1}(undef,$number_equations) \n \n")
+    for i = 1:length(projection_equations)
+        closure_hcross_string = string(closure_hcross_string,"    f[$i] = ",projection_equations[i],"\n")
+    end
+    closure_hcross_string = string(closure_hcross_string,"\n    #return f \n \n  end \n \n  return hcross_equations \n \n","end \n")
 
     # For piecewise linear
 
     if length(model.unassigned_parameters) != 0
         if number_shocks == 0  # We need to separate the function generated for the stochastic and deterministic cases
-            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,approximate,p) \n \n"
+            closure_pl_string = "function closure_piecewise_equations(variables,grid,state,p) \n \n"
         else
-            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,integrals,approximate,p) \n \n"
+            closure_pl_string = "function closure_piecewise_equations(variables,grid,state,integrals,p) \n \n"
         end
     else
         if number_shocks == 0  # We need to separate the function generated for the stochastic and deterministic cases
-            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,approximate) \n \n"
+            closure_pl_string = "function closure_piecewise_equations(variables,grid,state) \n \n"
         else
-            closure_pl_string = "function closure_projection_equations_pl(variables,grid,state,integrals,approximate) \n \n"
+            closure_pl_string = "function closure_piecewise_equations(variables,grid,state,integrals) \n \n"
         end
     end
 
-    closure_pl_string = string(closure_pl_string,"  function projection_equations_pl(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n")
+    closure_pl_string = string(closure_pl_string,"  function piecewise_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n")
     for i in jumps_to_be_approximated
         if number_shocks == 0
-            closure_pl_string = string(closure_pl_string,"    approx$i = approximate(variables[$i],grid,x[$number_jumps+1:end])","\n")
+            closure_pl_string = string(closure_pl_string,"    approx$i = piecewise_linear_evaluate(variables[$i],grid,x[$number_jumps+1:end])","\n")
         else
-            closure_pl_string = string(closure_pl_string,"    approx$i = approximate(variables[$i],grid,x[$number_jumps+1:end],integrals)","\n")
+            closure_pl_string = string(closure_pl_string,"    approx$i = piecewise_linear_evaluate(variables[$i],grid,x[$number_jumps+1:end],integrals)","\n")
         end
     end
 
@@ -845,9 +887,11 @@ function create_processed_model_file(model::ModelPrimatives,path::Q) where {Q<:A
         closure_pl_string = string(closure_pl_string,"    f[$i] = ",projection_equations[i],"\n")
     end
 
-    closure_pl_string = string(closure_pl_string,"\n    #return f \n \n  end \n \n  return projection_equations_pl \n \n","end \n")
+    closure_pl_string = string(closure_pl_string,"\n    #return f \n \n  end \n \n  return piecewise_equations \n \n","end \n")
 
-    model_string = string(model_string,"\n",closure_string)
+    model_string = string(model_string,"\n",closure_cheb_string)
+    model_string = string(model_string,"\n",closure_smol_string)
+    model_string = string(model_string,"\n",closure_hcross_string)
     model_string = string(model_string,"\n",closure_pl_string)
     model_string = string(model_string,"\n","unassigned_parameters = $(model.unassigned_parameters)")
 
@@ -893,12 +937,12 @@ function retrieve_processed_model(path::Q) where {Q<:AbstractString}
         path = replace(path,".txt" => "_processed.txt")
     end
 
-    include(path) # The information included is placed in the global scope
+    include(path) # The information included is placed in the global scope, but then put in a struct
 
     if length(unassigned_parameters) != 0
-        dsge_model = REModelPartial(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_projection_equations,closure_projection_equations_pl,unassigned_parameters)
+        dsge_model = REModelPartial(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,unassigned_parameters)
     else
-        dsge_model = REModel(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_projection_equations,closure_projection_equations_pl)
+        dsge_model = REModel(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations)
     end
 
     return dsge_model
@@ -926,15 +970,17 @@ function assign_parameters(model,param::Array{T,1}) where {T<:Number}
         ief[i] = ffie
     end
 
-    cf(state,scaled_weights,order,domain,approximate) = model.closure_function(state,scaled_weights,order,domain,approximate,param)
-    cfpl_stoch(variables,grid,state,integrals,approximate) = model.closure_function_piecewise(variables,grid,state,integrals,approximate,param)
-    cfpl_det(variables,grid,state,approximate) = model.closure_function_piecewise(variables,grid,state,approximate,param)
+    cf_cheb(state,scaled_weights,order,domain) = model.closure_function_chebyshev(state,scaled_weights,order,domain,param)
+    cf_smol(state,scaled_weights,order,domain) = model.closure_function_smolyak(state,scaled_weights,order,domain,param)
+    cf_hcross(state,scaled_weights,order,domain) = model.closure_function_hcross(state,scaled_weights,order,domain,param)
+    cfpl_stoch(variables,grid,state,integrals) = model.closure_function_piecewise(variables,grid,state,integrals,param)
+    cfpl_det(variables,grid,state) = model.closure_function_piecewise(variables,grid,state,param)
 
     if ns != 0
-        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,vars,nlsse,sf,df,ief,cf,cfpl_stoch)
+        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,vars,nlsse,sf,df,ief,cf_cheb,cf_smol,cf_hcross,cfpl_stoch)
         return newmod
     else
-        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,vars,nlsse,sf,df,ief,cf,cfpl_det)
+        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,vars,nlsse,sf,df,ief,cf_cheb,cf_smol,cf_hcross,cfpl_det)
         return newmod
     end
 

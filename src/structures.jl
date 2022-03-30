@@ -36,7 +36,9 @@ struct REModel{S<:Integer,Q<:AbstractString} <: DSGEModel
     static_function::Function
     dynamic_function::Function
     each_eqn_function::Array{Function,1}
-    closure_function::Function
+    closure_function_chebyshev::Function
+    closure_function_smolyak::Function
+    closure_function_hcross::Function
     closure_function_piecewise::Function
 
 end
@@ -58,7 +60,9 @@ struct REModelPartial{S<:Integer,Q<:AbstractString} <: DSGEModel
     static_function::Function
     dynamic_function::Function
     each_eqn_function::Array{Function,1}
-    closure_function::Function
+    closure_function_chebyshev::Function
+    closure_function_smolyak::Function
+    closure_function_hcross::Function
     closure_function_piecewise::Function
     unassigned_parameters::Array{Q,1}
 

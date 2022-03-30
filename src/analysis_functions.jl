@@ -11,8 +11,6 @@ function compute_mean(soln::R) where {R<:PerturbationSolution}
 
         nx = length(soln.hbar)
         ny = length(soln.gbar)
-        hxx = Matrix(reshape(soln.hxx',nx*nx,nx)')
-        gxx = Matrix(reshape(soln.gxx',nx*nx,ny)')
 
         mean_states = (I-soln.hx)\((1/2)*soln.hss + (1/2)*hxx*((I-kron(soln.hx,soln.hx))\vec(soln.k*soln.sigma*soln.k')))
         mean_jumps  = soln.gx*mean_states + (1/2)*soln.gss + (1/2)*gxx*((I-kron(soln.hx,soln.hx))\vec(soln.k*soln.sigma*soln.k'))
@@ -103,8 +101,8 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Sec
         error("The number of inital values for the states must equal the number of states")
     end
 
-    hxx = (1/2)*Matrix(reshape(soln.hxx',nx*nx,nx)')
-    gxx = (1/2)*Matrix(reshape(soln.gxx',nx*nx,ny)')
+    hxx = (1/2)*soln.hxx
+    gxx = (1/2)*soln.gxx
 
     simulated_states_f = Array{T,2}(undef,nx,sim_length + 1)
     simulated_jumps_f = Array{T,2}(undef,ny,sim_length)
@@ -142,8 +140,8 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S; rndseed = 123
 
     hss = (1/2)*soln.hss
     gss = (1/2)*soln.gss
-    hxx = (1/2)*Matrix(reshape(soln.hxx',nx*nx,nx)')
-    gxx = (1/2)*Matrix(reshape(soln.gxx',nx*nx,ny)')
+    hxx = (1/2)*soln.hxx
+    gxx = (1/2)*soln.gxx
 
     simulated_states_f = Array{T,2}(undef,nx,sim_length + 1)
     simulated_jumps_f = Array{T,2}(undef,ny,sim_length)
@@ -497,8 +495,8 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
 
-    hxx = (1/2)*Matrix(reshape(soln.hxx',nx*nx,nx)')
-    gxx = (1/2)*Matrix(reshape(soln.gxx',nx*nx,ny)')
+    hxx = (1/2)*soln.hxx
+    gxx = (1/2)*soln.gxx
     hss = (1/2)*soln.hss
     gss = (1/2)*soln.gss
 
@@ -578,8 +576,8 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
     nx = length(soln.hbar)
     ny = length(soln.gbar)
 
-    hxx = (1/2)*Matrix(reshape(soln.hxx',nx*nx,nx)')
-    gxx = (1/2)*Matrix(reshape(soln.gxx',nx*nx,ny)')
+    hxx = (1/2)*soln.hxx
+    gxx = (1/2)*soln.gxx
     hss = (1/2)*soln.hss
     gss = (1/2)*soln.gss
 
@@ -1267,8 +1265,10 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
     end
 
     w = Array{Array{eltype(soln.domain),1},1}(undef,length(soln.variables))
+    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
     for i = 1:nv
-        w[i] = smolyak_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+        w[i] = smolyak_weights(soln.variables[i],smol_iim)
     end
 
     estimated_steady_state = zeros(nx)
@@ -1353,8 +1353,10 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
     end
 
     w = Array{Array{eltype(soln.domain),1},1}(undef,length(soln.variables))
+    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+    
     for i = 1:nv
-        w[i] = smolyak_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+        w[i] = smolyak_weights(soln.variables[i],soln.grid,smol_iim)
     end
 
     impulses_states_pos = zeros(nx,n + 1)
@@ -1431,8 +1433,10 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
     end
 
     w = Array{Array{eltype(soln.domain),1},1}(undef,length(soln.variables))
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
     for i = 1:nv
-        w[i] = hyperbolic_cross_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+        w[i] = hyperbolic_cross_weights(soln.variables[i],hcross_iim)
     end
 
     estimated_steady_state = zeros(nx)
@@ -1517,8 +1521,10 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
     end
 
     w = Array{Array{eltype(soln.domain),1},1}(undef,length(soln.variables))
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
     for i = 1:nv
-        w[i] = hyperbolic_cross_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+        w[i] = hyperbolic_cross_weights(soln.variables[i],hcross_iim)
     end
 
     impulses_states_pos = zeros(nx,n + 1)
@@ -1939,7 +1945,7 @@ function decision_rule(soln::R) where {R<:SecondOrderSolutionDet}
         y = zeros(ny)
 
         for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]) .* kron((state - soln.hbar),(state - soln.hbar)))
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
         end
 
         return y
@@ -1963,7 +1969,7 @@ function decision_rule(soln::R) where {R<:SecondOrderSolutionStoch}
         y = zeros(ny)
 
         for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*sum(vec(soln.gxx[(i-1)*nx+1:i*nx,:]) .* kron((state - soln.hbar),(state - soln.hbar)))
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
         end
 
         return y
@@ -1987,7 +1993,7 @@ function decision_rule(soln::R) where {R<:ThirdOrderSolutionDet}
         y = zeros(ny)
 
         for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*((soln.gxx[i:i,:])*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
         end
 
         return y
@@ -2011,7 +2017,7 @@ function decision_rule(soln::R) where {R<:ThirdOrderSolutionStoch}
         y = zeros(ny)
 
         for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*((soln.gxx[i:i,:])*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*soln.gsss[i] + (3/6)*(soln.gssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*soln.gsss[i] + (3/6)*(soln.gssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
         end
 
         return y
@@ -2035,7 +2041,7 @@ function decision_rule(soln::R) where {R<:FourthOrderSolutionDet}
         y = zeros(ny)
 
         for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*((soln.gxx[i:i,:])*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*(soln.gxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1]
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.gxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*(soln.gxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1]
         end
 
         return y
@@ -2059,7 +2065,7 @@ function decision_rule(soln::R) where {R<:FourthOrderSolutionStoch}
         y = zeros(ny)
 
         for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*((soln.gxx[i:i,:])*kron((state-soln.hbar),(state-soln.hbar)))[1] + (3/6)*(soln.gssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (6/24)*(soln.gssxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/24)*(soln.gxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*soln.gssss[i]
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*(soln.gxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (3/6)*(soln.gssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (6/24)*(soln.gssxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/24)*(soln.gxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*soln.gssss[i]
         end
 
         return y
@@ -2122,8 +2128,10 @@ function decision_rule(soln::R) where {R<:Union{SmolyakSolutionDet,SmolyakSoluti
     T = eltype(soln.variables[1])
 
     weights = Array{Array{T,1},1}(undef,ny)
+    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
     for i = 1:ny
-        weights[i] = smolyak_weights(soln.variables[nx+i],soln.grid,soln.multi_index,soln.domain)
+        weights[i] = smolyak_weights(soln.variables[nx+i],smol_iim)
     end
 
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
@@ -2154,9 +2162,10 @@ function decision_rule(soln::R) where {R<:Union{HyperbolicCrossSolutionDet,Hyper
 
     T = eltype(soln.variables[1])
 
-    weights = Array{Array{T,1},1}(undef,ny)
+    weights    = Array{Array{T,1},1}(undef,ny)
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
     for i = 1:ny
-        weights[i] = hyperbolic_cross_weights(soln.variables[nx+i],soln.grid,soln.multi_index,soln.domain)
+        weights[i] = hyperbolic_cross_weights(soln.variables[nx+i],hcross_iim)
     end
 
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
@@ -2257,7 +2266,7 @@ function state_transition(soln::R) where {R<:SecondOrderSolutionDet}
         x_update = zeros(nx)
 
         for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]) .* kron((state - soln.hbar),(state - soln.hbar)))
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
         end
 
         return x_update
@@ -2283,7 +2292,7 @@ function state_transition(soln::R) where {R<:SecondOrderSolutionStoch}
         x_update = zeros(nx)
 
         for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*sum(vec(soln.hxx[(i-1)*nx+1:i*nx,:]) .* kron((state - soln.hbar),(state - soln.hbar)))
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
         end
 
         return x_update
@@ -2306,7 +2315,7 @@ function state_transition(soln::R) where {R<:ThirdOrderSolutionDet}
         x_update = zeros(nx)
 
         for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*((soln.hxx[i:i,:])*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
         end
 
         return x_update
@@ -2332,7 +2341,7 @@ function state_transition(soln::R) where {R<:ThirdOrderSolutionStoch}
         x_update = zeros(nx)
 
         for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*((soln.hxx[i:i,:])*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*soln.hsss[i] + (3/6)*(soln.hssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*soln.hsss[i] + (3/6)*(soln.hssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
         end
 
         return x_update
@@ -2355,7 +2364,7 @@ function state_transition(soln::R) where {R<:FourthOrderSolutionDet}
         x_update = zeros(nx)
 
         for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*((soln.hxx[i:i,:])*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*(soln.hxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1]
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.hxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*(soln.hxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1]
         end
 
         return x_update
@@ -2381,7 +2390,7 @@ function state_transition(soln::R) where {R<:FourthOrderSolutionStoch}
         x_update = zeros(nx)
 
         for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*((soln.hxx[i:i,:])*kron((state-soln.hbar),(state-soln.hbar)))[1] + (3/6)*(soln.hssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (6/24)*(soln.hssxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/24)*(soln.hxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*soln.hssss[i]
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*(soln.hxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (3/6)*(soln.hssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (6/24)*(soln.hssxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/24)*(soln.hxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*soln.hssss[i]
         end
 
         return x_update
@@ -2486,8 +2495,10 @@ function state_transition(soln::R) where {R<:SmolyakSolutionDet}
     T = eltype(soln.variables[1])
 
     weights = Array{Array{T,1},1}(undef,nx)
+    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
     for i = 1:nx
-        weights[i] = smolyak_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+        weights[i] = smolyak_weights(soln.variables[i],smol_iim)
     end
 
     function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
@@ -2519,8 +2530,10 @@ function state_transition(soln::R) where {R<:SmolyakSolutionStoch}
     T = eltype(soln.variables[1])
 
     weights = Array{Array{T,1},1}(undef,nx)
+    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
     for i = 1:nx
-        weights[i] = smolyak_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+        weights[i] = smolyak_weights(soln.variables[i],smol_iim)
     end
 
     function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
@@ -2555,8 +2568,10 @@ function state_transition(soln::R) where {R<:HyperbolicCrossSolutionDet}
     T = eltype(soln.variables[1])
 
     weights = Array{Array{T,1},1}(undef,nx)
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
     for i = 1:nx
-        weights[i] = hyperbolic_cross_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+        weights[i] = hyperbolic_cross_weights(soln.variables[i],hcross_iim)
     end
 
     function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
@@ -2588,8 +2603,10 @@ function state_transition(soln::R) where {R<:HyperbolicCrossSolutionStoch}
     T = eltype(soln.variables[1])
 
     weights = Array{Array{T,1},1}(undef,nx)
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
     for i = 1:nx
-        weights[i] = hyperbolic_cross_weights(soln.variables[i],soln.grid,soln.multi_index,soln.domain)
+        weights[i] = hyperbolic_cross_weights(soln.variables[i],hcross_iim)
     end
 
     function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
