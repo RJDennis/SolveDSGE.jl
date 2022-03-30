@@ -1260,7 +1260,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
                     init[j] = variables[j][i]
                 end
 
-                projection_equations = model.closure_function(state,scaled_weights,order,domain,chebyshev_evaluate)
+                projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain,chebyshev_evaluate)
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
 
                 for j = 1:nv

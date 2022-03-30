@@ -486,3 +486,12 @@ struct StateSpaceEqm # Augmented to help compute Euler-equation errors
     gh::Function   # Forecast eqns for future jumps
 
 end
+
+struct DenHaanMarcetStatistic{T<:Real,S<:Integer}
+
+    one_percent::T
+    five_percent::T
+    ten_percent::T
+    degrees_of_freedom::S
+
+end

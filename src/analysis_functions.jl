@@ -3017,6 +3017,10 @@ function den_haan_marcet(model::REModel,soln::R,steady_state::Array{T,1},seed::S
         dhm_statistics[i] = (errors'/weights)*errors
     end
 
-    return sort(dhm_statistics,rev=true)
+    sort!(dhm_statistics,rev=true)
+
+    dhm_stat = DenHaanMarcetStatistic(dhm_statistics[11],dhm_statistics[51],dhm_statistics[101],num_approx_eqns)
+
+    return dhm_stat
 
 end
