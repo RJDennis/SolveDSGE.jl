@@ -93,3 +93,6 @@ compare_solutions(soln_foo,soln_nla,soln_nla.domain,100_000,123456)
 compare_solutions(soln_nla,soln_nlg,soln_nla.domain,100_000,123456)
 compare_solutions(soln_nla,soln_nlk,soln_nla.domain,100_000,123456)
 compare_solutions(soln_nla,soln_nlz,soln_nla.domain,100_000,123456)
+
+z = maximum(simulated_data1,dims=2)
+tt = check_taylor_convergence(dsge,ss,z[:],4)
