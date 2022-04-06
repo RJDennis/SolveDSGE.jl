@@ -16,6 +16,7 @@ struct REModelPrimatives{Q<:AbstractString} <: ModelPrimatives
     parametervalues::Array{Q,1}
     equations::Array{Q,1}
     unassigned_parameters::Array{Q,1}
+    solvers::Q
 
 end
 
@@ -40,6 +41,7 @@ struct REModel{S<:Integer,Q<:AbstractString} <: DSGEModel
     closure_function_smolyak::Function
     closure_function_hcross::Function
     closure_function_piecewise::Function
+    solvers::Q
 
 end
 
@@ -65,6 +67,7 @@ struct REModelPartial{S<:Integer,Q<:AbstractString} <: DSGEModel
     closure_function_hcross::Function
     closure_function_piecewise::Function
     unassigned_parameters::Array{Q,1}
+    solvers::Q
 
 end
 

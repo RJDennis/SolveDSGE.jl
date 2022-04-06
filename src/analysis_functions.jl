@@ -1,5 +1,974 @@
 ##################### Analysis functions #########################
 
+function decision_rule(soln::R) where {R<:Union{FirstOrderSolutionDet,FirstOrderSolutionStoch}}
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+
+        y = soln.gbar + soln.gx*(state - soln.hbar)
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R<:SecondOrderSolutionDet}
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+        ny = length(soln.gbar)
+
+        y = zeros(ny)
+
+        for i = 1:ny
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
+        end
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R<:SecondOrderSolutionStoch}
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+        ny = length(soln.gbar)
+
+        y = zeros(ny)
+
+        for i = 1:ny
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
+        end
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R<:ThirdOrderSolutionDet}
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+        ny = length(soln.gbar)
+
+        y = zeros(ny)
+
+        for i = 1:ny
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
+        end
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R<:ThirdOrderSolutionStoch}
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+        ny = length(soln.gbar)
+
+        y = zeros(ny)
+
+        for i = 1:ny
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*soln.gsss[i] + (3/6)*(soln.gssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
+        end
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R<:FourthOrderSolutionDet}
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+        ny = length(soln.gbar)
+
+        y = zeros(ny)
+
+        for i = 1:ny
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.gxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*(soln.gxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1]
+        end
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R<:FourthOrderSolutionStoch}
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+        ny = length(soln.gbar)
+
+        y = zeros(ny)
+
+        for i = 1:ny
+            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*(soln.gxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (3/6)*(soln.gssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (6/24)*(soln.gssxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/24)*(soln.gxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*soln.gssss[i]
+        end
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R<:Union{ChebyshevSolutionDet,ChebyshevSolutionStoch}}
+
+    nx = length(soln.nodes)
+    nv = length(soln.variables)
+    ny = nv - nx
+
+    T = eltype(soln.variables[1])
+
+    w = Array{Array{T,nx},1}(undef,ny)
+    if soln.node_generator == chebyshev_nodes
+        for i = 1:ny
+            w[i] = chebyshev_weights(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extrema
+        for i = 1:ny
+            w[i] = chebyshev_weights_extrema(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extended
+        for i = 1:ny
+            w[i] = chebyshev_weights_extended(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
+    end
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+
+        y = zeros(ny)
+
+        for i = 1:ny
+            y[i] = chebyshev_evaluate(w[i],state,soln.order,soln.domain)
+        end
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R<:Union{SmolyakSolutionDet,SmolyakSolutionStoch}}
+
+    nx = size(soln.grid,2)
+    nv = length(soln.variables)
+    ny = nv - nx
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,ny)
+    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
+    for i = 1:ny
+        weights[i] = smolyak_weights(soln.variables[nx+i],smol_iim)
+    end
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+
+        y    = zeros(ny)
+        poly = smolyak_polynomial(state,soln.multi_index,soln.domain)
+        for i = 1:ny
+            y[i] = smolyak_evaluate(weights[i],poly)
+        end
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R<:Union{HyperbolicCrossSolutionDet,HyperbolicCrossSolutionStoch}}
+
+    nx = size(soln.grid,2)
+    nv = length(soln.variables)
+    ny = nv - nx
+
+    T = eltype(soln.variables[1])
+
+    weights    = Array{Array{T,1},1}(undef,ny)
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+    for i = 1:ny
+        weights[i] = hyperbolic_cross_weights(soln.variables[nx+i],hcross_iim)
+    end
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+
+        y    = zeros(ny)
+        poly = hyperbolic_cross_polynomial(state,soln.multi_index,soln.domain)
+
+        for i = 1:ny
+            y[i] = hyperbolic_cross_evaluate(weights[i],poly)
+        end
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function decision_rule(soln::R) where {R<:Union{PiecewiseLinearSolutionDet,PiecewiseLinearSolutionStoch}}
+
+    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.nodes)
+            error("state vector has incorrect size")
+        end
+        nx = length(soln.nodes)
+        nv = length(soln.variables)
+        ny = nv - nx
+
+        y = zeros(ny)
+
+        for i = 1:ny
+            y[i] = piecewise_linear_evaluate(soln.variables[nx+i],soln.nodes,state)
+        end
+
+        return y
+
+    end
+
+    return create_decision_rule
+
+end
+
+function state_transition(soln::R) where {R<:FirstOrderSolutionDet}
+
+    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+
+        x_update = soln.hbar + soln.hx*(state - soln.hbar)
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:FirstOrderSolutionStoch}
+
+    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+
+        if length(shocks) != size(soln.k,2)
+            error("shocks vector has incorrect size")
+        end
+
+        x_update = soln.hbar + soln.hx*(state - soln.hbar) + soln.k*shocks
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:SecondOrderSolutionDet}
+
+    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+
+        x_update = zeros(nx)
+
+        for i = 1:nx
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
+        end
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:SecondOrderSolutionStoch}
+
+    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        if length(shocks) != size(soln.k,2)
+            error("shocks vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+
+        x_update = zeros(nx)
+
+        for i = 1:nx
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
+        end
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:ThirdOrderSolutionDet}
+
+    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+
+        x_update = zeros(nx)
+
+        for i = 1:nx
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
+        end
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:ThirdOrderSolutionStoch}
+
+    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        if length(shocks) != size(soln.k,2)
+            error("shocks vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+
+        x_update = zeros(nx)
+
+        for i = 1:nx
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*soln.hsss[i] + (3/6)*(soln.hssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
+        end
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:FourthOrderSolutionDet}
+
+    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+
+        x_update = zeros(nx)
+
+        for i = 1:nx
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.hxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*(soln.hxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1]
+        end
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:FourthOrderSolutionStoch}
+
+    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != length(soln.hbar)
+            error("state vector has incorrect size")
+        end
+        if length(shocks) != size(soln.k,2)
+            error("shocks vector has incorrect size")
+        end
+        nx = length(soln.hbar)
+
+        x_update = zeros(nx)
+
+        for i = 1:nx
+            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*(soln.hxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (3/6)*(soln.hssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (6/24)*(soln.hssxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/24)*(soln.hxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*soln.hssss[i]
+        end
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:ChebyshevSolutionDet}
+
+    nx = length(soln.nodes)
+
+    T = eltype(soln.variables[1])
+
+    w = Array{Array{T,nx},1}(undef,nx)
+    if soln.node_generator == chebyshev_nodes
+        for i = 1:nx
+            w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extrema
+        for i = 1:nx
+            w[i] = chebyshev_weights_extrema(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extended
+        for i = 1:nx
+            w[i] = chebyshev_weights_extended(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    end
+
+    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+
+        x_update = zeros(nx)
+
+        for i = 1:nx
+            x_update[i] = chebyshev_evaluate(w[i],state,soln.order,soln.domain)
+        end
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:ChebyshevSolutionStoch}
+
+    nx = length(soln.nodes)
+    ns = size(soln.k,2)
+
+    T = eltype(soln.variables[1])
+
+    w = Array{Array{T,nx},1}(undef,nx)
+    if soln.node_generator == chebyshev_nodes
+        for i = 1:nx
+            w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extrema
+        for i = 1:nx
+            w[i] = chebyshev_weights_extrema(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extended
+        for i = 1:nx
+            w[i] = chebyshev_weights_extended(soln.variables[i],soln.nodes,soln.order,soln.domain)
+        end
+    end
+
+    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+        if length(shocks) != size(soln.k,2)
+            error("shocks vector has incorrect size")
+        end
+
+        x_update = zeros(nx)
+
+        for i = 1:nx
+            x_update[i] = chebyshev_evaluate(w[i],state,soln.order,soln.domain)
+        end
+        x_update[1:ns] .+= soln.k*shocks
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:SmolyakSolutionDet}
+
+    nx = size(soln.grid,2)
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,nx)
+    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
+    for i = 1:nx
+        weights[i] = smolyak_weights(soln.variables[i],smol_iim)
+    end
+
+    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+
+        x_update = zeros(nx)
+        poly     = smolyak_polynomial(state,soln.multi_index,soln.domain)
+
+        for i = 1:nx
+            x_update[i] = smolyak_evaluate(weights[i],poly)
+        end
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:SmolyakSolutionStoch}
+
+    nx = size(soln.grid,2)
+    ns = size(soln.k,2)
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,nx)
+    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
+    for i = 1:nx
+        weights[i] = smolyak_weights(soln.variables[i],smol_iim)
+    end
+
+    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+        if length(shocks) != size(soln.k,2)
+            error("shocks vector has incorrect size")
+        end
+
+        x_update = zeros(nx)
+        poly     = smolyak_polynomial(state,soln.multi_index,soln.domain)
+
+        for i = 1:nx
+            x_update[i] = smolyak_evaluate(weights[i],poly)
+        end
+        x_update[1:ns] .+= soln.k*shocks
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:HyperbolicCrossSolutionDet}
+
+    nx = size(soln.grid,2)
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,nx)
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
+    for i = 1:nx
+        weights[i] = hyperbolic_cross_weights(soln.variables[i],hcross_iim)
+    end
+
+    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+
+        x_update = zeros(nx)
+        poly = hyperbolic_cross_polynomial(state,soln.multi_index,soln.domain)
+
+        for i = 1:nx
+            x_update[i] = hyperbolic_cross_evaluate(weights[i],poly)
+        end
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:HyperbolicCrossSolutionStoch}
+
+    nx = size(soln.grid,2)
+    ns = size(soln.k,2)
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,nx)
+    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
+
+    for i = 1:nx
+        weights[i] = hyperbolic_cross_weights(soln.variables[i],hcross_iim)
+    end
+
+    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+        if length(shocks) != size(soln.k,2)
+            error("shocks vector has incorrect size")
+        end
+
+        x_update = zeros(nx)
+        poly = hyperbolic_cross_polynomial(state,soln.multi_index,soln.domain)
+
+        for i = 1:nx
+            x_update[i] = hyperbolic_cross_evaluate(weights[i],poly)
+        end
+        x_update[1:ns] .+= soln.k*shocks
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:PiecewiseLinearSolutionDet}
+
+    nx = length(soln.nodes)
+
+    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+
+        x_update = zeros(nx)
+
+        for i = 1:nx
+            x_update[i] = piecewise_linear_evaluate(soln.variables[i],soln.nodes,state)
+        end
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function state_transition(soln::R) where {R<:PiecewiseLinearSolutionStoch}
+
+    nx = length(soln.nodes)
+    ns = size(soln.k,2)
+
+    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        if length(state) != nx
+            error("state vector has incorrect size")
+        end
+        if length(shocks) != size(soln.k,2)
+            error("shocks vector has incorrect size")
+        end
+
+        x_update = zeros(nx)
+
+        for i = 1:nx
+            x_update[i] = piecewise_linear_evaluate(soln.variables[i],soln.nodes,state)
+        end
+        x_update[1:ns] .+= soln.k*shocks
+
+        return x_update
+
+    end
+
+    return create_state_transition
+
+end
+
+function expected_jumps(soln::R) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
+
+    dec_rules = decision_rule(soln)
+    state_trans = state_transition(soln)
+
+    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        y = dec_rules(state_trans(state))
+
+        return y
+
+    end
+
+    return create_expected_jumps
+
+end
+
+function expected_jumps(soln::R) where {R<:PerturbationSolutionStoch}
+
+    dec_rules = decision_rule(soln)
+    state_trans = state_transition(soln)
+
+    ns = size(soln.k,2)
+
+    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        y = dec_rules(state_trans(state,zeros(ns)))
+
+        return y
+
+    end
+
+    return create_expected_jumps
+
+end
+
+function expected_jumps(soln::R) where {R<:ChebyshevSolutionStoch}
+
+    nx = length(soln.nodes)
+    nv = length(soln.variables)
+    ny = nv - nx
+    ns = size(soln.k,2)
+
+    state_trans = state_transition(soln)
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,nx},1}(undef,ny)
+    scaled_weights = Array{Array{T,nx},1}(undef,ny)
+    if soln.node_generator == chebyshev_nodes
+        for i = 1:ny
+            weights[i] = chebyshev_weights(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extrema
+        for i = 1:ny
+            weights[i] = chebyshev_weights_extrema(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
+    elseif soln.node_generator == chebyshev_extended
+        for i = 1:ny
+            weights[i] = chebyshev_weights_extended(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
+        end
+    end
+
+    if typeof(soln.integrals) == Array{T,ns}
+        for i = 1:ny
+            for j = 1:ns
+                scaled_weights[i] = soln.integrals .* weights[i]
+            end
+        end
+    else
+        for i = 1:ny
+            for j = 1:ns
+                index = [1:ndims(weights[i]);]
+                index[1],index[j] = index[j],index[1]
+                scaled_weights[i] = permutedims(soln.integrals[j] .* permutedims(weights[i],index),index)
+            end
+        end
+    end
+
+    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        y = zeros(ny)
+
+        for i = 1:ny
+
+            y[i] = chebyshev_evaluate(scaled_weights[i],state_trans(state,zeros(ns)),soln.order,soln.domain)
+
+        end
+
+        return y
+
+    end
+
+    return create_expected_jumps
+
+end
+
+function expected_jumps(soln::R) where {R<:SmolyakSolutionStoch}
+
+    nx = size(soln.grid,2)
+    nv = length(soln.variables)
+    ny = nv - nx
+    ns = size(soln.k,2)
+
+    state_trans = state_transition(soln)
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,ny)
+    for i = 1:ny
+        weights[i] = smolyak_weights(soln.variables[nx+i],soln.grid,soln.multi_index,soln.domain) .* soln.scale_factor
+    end
+
+    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        y = zeros(ny)
+
+        for i = 1:ny
+
+            y[i] = smolyak_evaluate(weights[i],state_trans(state,zeros(ns)),soln.multi_index,soln.domain)
+
+        end
+
+        return y
+
+    end
+
+    return create_expected_jumps
+
+end
+
+function expected_jumps(soln::R) where {R<:HyperbolicCrossSolutionStoch}
+
+    nx = size(soln.grid,2)
+    nv = length(soln.variables)
+    ny = nv - nx
+    ns = size(soln.k,2)
+
+    state_trans = state_transition(soln)
+
+    T = eltype(soln.variables[1])
+
+    weights = Array{Array{T,1},1}(undef,ny)
+    for i = 1:ny
+        weights[i] = hyperbolic_cross_weights(soln.variables[nx+i],soln.grid,soln.multi_index,soln.domain) .* soln.scale_factor
+    end
+
+    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        y = zeros(ny)
+
+        for i = 1:ny
+
+            y[i] = hyperbolic_cross_evaluate(weights[i],state_trans(state,zeros(ns)),soln.multi_index,soln.domain)
+
+        end
+
+        return y
+
+    end
+
+    return create_expected_jumps
+
+end
+
+function expected_jumps(soln::R) where {R<:PiecewiseLinearSolutionStoch}
+
+    dec_rules = decision_rule(soln)
+    state_trans = state_transition(soln)
+
+    ns = size(soln.k,2)
+
+    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
+
+        y = dec_rules(state_trans(state,zeros(ns)))
+
+        return y
+
+    end
+
+    return create_expected_jumps
+
+end
+
+function state_space_eqm(soln::R) where {R<:ModelSolution}
+
+    dec_rules = decision_rule(soln)
+    transition_eqn = state_transition(soln)
+    forecast_eqn = expected_jumps(soln)
+
+    eqm_dynamics = StateSpaceEqm(dec_rules,transition_eqn,forecast_eqn)
+
+    return eqm_dynamics
+
+end
+
 function compute_mean(soln::R) where {R<:PerturbationSolution}
 
     if typeof(soln) <: FirstOrderSolutionStoch
@@ -1912,977 +2881,6 @@ function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},n::S,seed::S =
 
 end
 
-############################################################################
-
-function decision_rule(soln::R) where {R<:Union{FirstOrderSolutionDet,FirstOrderSolutionStoch}}
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-
-        y = soln.gbar + soln.gx*(state - soln.hbar)
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function decision_rule(soln::R) where {R<:SecondOrderSolutionDet}
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-        ny = length(soln.gbar)
-
-        y = zeros(ny)
-
-        for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
-        end
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function decision_rule(soln::R) where {R<:SecondOrderSolutionStoch}
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-        ny = length(soln.gbar)
-
-        y = zeros(ny)
-
-        for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
-        end
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function decision_rule(soln::R) where {R<:ThirdOrderSolutionDet}
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-        ny = length(soln.gbar)
-
-        y = zeros(ny)
-
-        for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
-        end
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function decision_rule(soln::R) where {R<:ThirdOrderSolutionStoch}
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-        ny = length(soln.gbar)
-
-        y = zeros(ny)
-
-        for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*(soln.gxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*soln.gsss[i] + (3/6)*(soln.gssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
-        end
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function decision_rule(soln::R) where {R<:FourthOrderSolutionDet}
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-        ny = length(soln.gbar)
-
-        y = zeros(ny)
-
-        for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.gxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*(soln.gxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1]
-        end
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function decision_rule(soln::R) where {R<:FourthOrderSolutionStoch}
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-        ny = length(soln.gbar)
-
-        y = zeros(ny)
-
-        for i = 1:ny
-            y[i] = soln.gbar[i] + (soln.gx[i:i,:]*(state-soln.hbar))[1] + (1/2)*soln.gss[i] + (1/2)*(soln.gxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (3/6)*(soln.gssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.gxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (6/24)*(soln.gssxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/24)*(soln.gxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*soln.gssss[i]
-        end
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function decision_rule(soln::R) where {R<:Union{ChebyshevSolutionDet,ChebyshevSolutionStoch}}
-
-    nx = length(soln.nodes)
-    nv = length(soln.variables)
-    ny = nv - nx
-
-    T = eltype(soln.variables[1])
-
-    w = Array{Array{T,nx},1}(undef,ny)
-    if soln.node_generator == chebyshev_nodes
-        for i = 1:ny
-            w[i] = chebyshev_weights(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
-        end
-    elseif soln.node_generator == chebyshev_extrema
-        for i = 1:ny
-            w[i] = chebyshev_weights_extrema(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
-        end
-    elseif soln.node_generator == chebyshev_extended
-        for i = 1:ny
-            w[i] = chebyshev_weights_extended(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
-        end
-    end
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-
-        y = zeros(ny)
-
-        for i = 1:ny
-            y[i] = chebyshev_evaluate(w[i],state,soln.order,soln.domain)
-        end
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function decision_rule(soln::R) where {R<:Union{SmolyakSolutionDet,SmolyakSolutionStoch}}
-
-    nx = size(soln.grid,2)
-    nv = length(soln.variables)
-    ny = nv - nx
-
-    T = eltype(soln.variables[1])
-
-    weights = Array{Array{T,1},1}(undef,ny)
-    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
-
-    for i = 1:ny
-        weights[i] = smolyak_weights(soln.variables[nx+i],smol_iim)
-    end
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-
-        y    = zeros(ny)
-        poly = smolyak_polynomial(state,soln.multi_index,soln.domain)
-        for i = 1:ny
-            y[i] = smolyak_evaluate(weights[i],poly)
-        end
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function decision_rule(soln::R) where {R<:Union{HyperbolicCrossSolutionDet,HyperbolicCrossSolutionStoch}}
-
-    nx = size(soln.grid,2)
-    nv = length(soln.variables)
-    ny = nv - nx
-
-    T = eltype(soln.variables[1])
-
-    weights    = Array{Array{T,1},1}(undef,ny)
-    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
-    for i = 1:ny
-        weights[i] = hyperbolic_cross_weights(soln.variables[nx+i],hcross_iim)
-    end
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-
-        y    = zeros(ny)
-        poly = hyperbolic_cross_polynomial(state,soln.multi_index,soln.domain)
-
-        for i = 1:ny
-            y[i] = hyperbolic_cross_evaluate(weights[i],poly)
-        end
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function decision_rule(soln::R) where {R<:Union{PiecewiseLinearSolutionDet,PiecewiseLinearSolutionStoch}}
-
-    function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.nodes)
-            error("state vector has incorrect size")
-        end
-        nx = length(soln.nodes)
-        nv = length(soln.variables)
-        ny = nv - nx
-
-        y = zeros(ny)
-
-        for i = 1:ny
-            y[i] = piecewise_linear_evaluate(soln.variables[nx+i],soln.nodes,state)
-        end
-
-        return y
-
-    end
-
-    return create_decision_rule
-
-end
-
-function state_transition(soln::R) where {R<:FirstOrderSolutionDet}
-
-    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-
-        x_update = soln.hbar + soln.hx*(state - soln.hbar)
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:FirstOrderSolutionStoch}
-
-    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-
-        if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
-        end
-
-        x_update = soln.hbar + soln.hx*(state - soln.hbar) + soln.k*shocks
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:SecondOrderSolutionDet}
-
-    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-
-        x_update = zeros(nx)
-
-        for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
-        end
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:SecondOrderSolutionStoch}
-
-    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-
-        x_update = zeros(nx)
-
-        for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1]
-        end
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:ThirdOrderSolutionDet}
-
-    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-
-        x_update = zeros(nx)
-
-        for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
-        end
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:ThirdOrderSolutionStoch}
-
-    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-
-        x_update = zeros(nx)
-
-        for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*(soln.hxx[i:i,:]*kron((state - soln.hbar),(state - soln.hbar)))[1] + (1/6)*soln.hsss[i] + (3/6)*(soln.hssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state - soln.hbar),(state - soln.hbar)),(state - soln.hbar)))[1]
-        end
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:FourthOrderSolutionDet}
-
-    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-
-        x_update = zeros(nx)
-
-        for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (1/2)*(soln.hxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*(soln.hxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1]
-        end
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:FourthOrderSolutionStoch}
-
-    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
-        end
-        if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
-        end
-        nx = length(soln.hbar)
-
-        x_update = zeros(nx)
-
-        for i = 1:nx
-            x_update[i] = soln.hbar[i] + (soln.hx[i:i,:]*(state-soln.hbar))[1] + (soln.k[i:i,:]*shocks)[1] + (1/2)*soln.hss[i] + (1/2)*(soln.hxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (3/6)*(soln.hssx[i:i,:]*(state-soln.hbar))[1] + (1/6)*(soln.hxxx[i:i,:]*kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)))[1] + (6/24)*(soln.hssxx[i:i,:]*kron((state-soln.hbar),(state-soln.hbar)))[1] + (1/24)*(soln.hxxxx[i:i,:]*kron(kron(kron((state-soln.hbar),(state-soln.hbar)),(state-soln.hbar)),(state-soln.hbar)))[1] + (1/24)*soln.hssss[i]
-        end
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:ChebyshevSolutionDet}
-
-    nx = length(soln.nodes)
-
-    T = eltype(soln.variables[1])
-
-    w = Array{Array{T,nx},1}(undef,nx)
-    if soln.node_generator == chebyshev_nodes
-        for i = 1:nx
-            w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
-        end
-    elseif soln.node_generator == chebyshev_extrema
-        for i = 1:nx
-            w[i] = chebyshev_weights_extrema(soln.variables[i],soln.nodes,soln.order,soln.domain)
-        end
-    elseif soln.node_generator == chebyshev_extended
-        for i = 1:nx
-            w[i] = chebyshev_weights_extended(soln.variables[i],soln.nodes,soln.order,soln.domain)
-        end
-    end
-
-    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-
-        x_update = zeros(nx)
-
-        for i = 1:nx
-            x_update[i] = chebyshev_evaluate(w[i],state,soln.order,soln.domain)
-        end
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:ChebyshevSolutionStoch}
-
-    nx = length(soln.nodes)
-    ns = size(soln.k,2)
-
-    T = eltype(soln.variables[1])
-
-    w = Array{Array{T,nx},1}(undef,nx)
-    if soln.node_generator == chebyshev_nodes
-        for i = 1:nx
-            w[i] = chebyshev_weights(soln.variables[i],soln.nodes,soln.order,soln.domain)
-        end
-    elseif soln.node_generator == chebyshev_extrema
-        for i = 1:nx
-            w[i] = chebyshev_weights_extrema(soln.variables[i],soln.nodes,soln.order,soln.domain)
-        end
-    elseif soln.node_generator == chebyshev_extended
-        for i = 1:nx
-            w[i] = chebyshev_weights_extended(soln.variables[i],soln.nodes,soln.order,soln.domain)
-        end
-    end
-
-    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-        if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
-        end
-
-        x_update = zeros(nx)
-
-        for i = 1:nx
-            x_update[i] = chebyshev_evaluate(w[i],state,soln.order,soln.domain)
-        end
-        x_update[1:ns] .+= soln.k*shocks
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:SmolyakSolutionDet}
-
-    nx = size(soln.grid,2)
-
-    T = eltype(soln.variables[1])
-
-    weights = Array{Array{T,1},1}(undef,nx)
-    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
-
-    for i = 1:nx
-        weights[i] = smolyak_weights(soln.variables[i],smol_iim)
-    end
-
-    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-
-        x_update = zeros(nx)
-        poly     = smolyak_polynomial(state,soln.multi_index,soln.domain)
-
-        for i = 1:nx
-            x_update[i] = smolyak_evaluate(weights[i],poly)
-        end
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:SmolyakSolutionStoch}
-
-    nx = size(soln.grid,2)
-    ns = size(soln.k,2)
-
-    T = eltype(soln.variables[1])
-
-    weights = Array{Array{T,1},1}(undef,nx)
-    smol_iim = smolyak_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
-
-    for i = 1:nx
-        weights[i] = smolyak_weights(soln.variables[i],smol_iim)
-    end
-
-    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-        if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
-        end
-
-        x_update = zeros(nx)
-        poly     = smolyak_polynomial(state,soln.multi_index,soln.domain)
-
-        for i = 1:nx
-            x_update[i] = smolyak_evaluate(weights[i],poly)
-        end
-        x_update[1:ns] .+= soln.k*shocks
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:HyperbolicCrossSolutionDet}
-
-    nx = size(soln.grid,2)
-
-    T = eltype(soln.variables[1])
-
-    weights = Array{Array{T,1},1}(undef,nx)
-    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
-
-    for i = 1:nx
-        weights[i] = hyperbolic_cross_weights(soln.variables[i],hcross_iim)
-    end
-
-    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-
-        x_update = zeros(nx)
-        poly = hyperbolic_cross_polynomial(state,soln.multi_index,soln.domain)
-
-        for i = 1:nx
-            x_update[i] = hyperbolic_cross_evaluate(weights[i],poly)
-        end
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:HyperbolicCrossSolutionStoch}
-
-    nx = size(soln.grid,2)
-    ns = size(soln.k,2)
-
-    T = eltype(soln.variables[1])
-
-    weights = Array{Array{T,1},1}(undef,nx)
-    hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(soln.grid,soln.multi_index,soln.domain)
-
-    for i = 1:nx
-        weights[i] = hyperbolic_cross_weights(soln.variables[i],hcross_iim)
-    end
-
-    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-        if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
-        end
-
-        x_update = zeros(nx)
-        poly = hyperbolic_cross_polynomial(state,soln.multi_index,soln.domain)
-
-        for i = 1:nx
-            x_update[i] = hyperbolic_cross_evaluate(weights[i],poly)
-        end
-        x_update[1:ns] .+= soln.k*shocks
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:PiecewiseLinearSolutionDet}
-
-    nx = length(soln.nodes)
-
-    function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-
-        x_update = zeros(nx)
-
-        for i = 1:nx
-            x_update[i] = piecewise_linear_evaluate(soln.variables[i],soln.nodes,state)
-        end
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function state_transition(soln::R) where {R<:PiecewiseLinearSolutionStoch}
-
-    nx = length(soln.nodes)
-    ns = size(soln.k,2)
-
-    function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        if length(state) != nx
-            error("state vector has incorrect size")
-        end
-        if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
-        end
-
-        x_update = zeros(nx)
-
-        for i = 1:nx
-            x_update[i] = piecewise_linear_evaluate(soln.variables[i],soln.nodes,state)
-        end
-        x_update[1:ns] .+= soln.k*shocks
-
-        return x_update
-
-    end
-
-    return create_state_transition
-
-end
-
-function expected_jumps(soln::R) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
-
-    dec_rules = decision_rule(soln)
-    state_trans = state_transition(soln)
-
-    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        y = dec_rules(state_trans(state))
-
-        return y
-
-    end
-
-    return create_expected_jumps
-
-end
-
-function expected_jumps(soln::R) where {R<:PerturbationSolutionStoch}
-
-    dec_rules = decision_rule(soln)
-    state_trans = state_transition(soln)
-
-    ns = size(soln.k,2)
-
-    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        y = dec_rules(state_trans(state,zeros(ns)))
-
-        return y
-
-    end
-
-    return create_expected_jumps
-
-end
-
-function expected_jumps(soln::R) where {R<:ChebyshevSolutionStoch}
-
-    nx = length(soln.nodes)
-    nv = length(soln.variables)
-    ny = nv - nx
-    ns = size(soln.k,2)
-
-    state_trans = state_transition(soln)
-
-    T = eltype(soln.variables[1])
-
-    weights = Array{Array{T,nx},1}(undef,ny)
-    scaled_weights = Array{Array{T,nx},1}(undef,ny)
-    if soln.node_generator == chebyshev_nodes
-        for i = 1:ny
-            weights[i] = chebyshev_weights(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
-        end
-    elseif soln.node_generator == chebyshev_extrema
-        for i = 1:ny
-            weights[i] = chebyshev_weights_extrema(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
-        end
-    elseif soln.node_generator == chebyshev_extended
-        for i = 1:ny
-            weights[i] = chebyshev_weights_extended(soln.variables[nx+i],soln.nodes,soln.order,soln.domain)
-        end
-    end
-
-    if typeof(soln.integrals) == Array{T,ns}
-        for i = 1:ny
-            for j = 1:ns
-                scaled_weights[i] = soln.integrals .* weights[i]
-            end
-        end
-    else
-        for i = 1:ny
-            for j = 1:ns
-                index = [1:ndims(weights[i]);]
-                index[1],index[j] = index[j],index[1]
-                scaled_weights[i] = permutedims(soln.integrals[j] .* permutedims(weights[i],index),index)
-            end
-        end
-    end
-
-    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        y = zeros(ny)
-
-        for i = 1:ny
-
-            y[i] = chebyshev_evaluate(scaled_weights[i],state_trans(state,zeros(ns)),soln.order,soln.domain)
-
-        end
-
-        return y
-
-    end
-
-    return create_expected_jumps
-
-end
-
-function expected_jumps(soln::R) where {R<:SmolyakSolutionStoch}
-
-    nx = size(soln.grid,2)
-    nv = length(soln.variables)
-    ny = nv - nx
-    ns = size(soln.k,2)
-
-    state_trans = state_transition(soln)
-
-    T = eltype(soln.variables[1])
-
-    weights = Array{Array{T,1},1}(undef,ny)
-    for i = 1:ny
-        weights[i] = smolyak_weights(soln.variables[nx+i],soln.grid,soln.multi_index,soln.domain) .* soln.scale_factor
-    end
-
-    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        y = zeros(ny)
-
-        for i = 1:ny
-
-            y[i] = smolyak_evaluate(weights[i],state_trans(state,zeros(ns)),soln.multi_index,soln.domain)
-
-        end
-
-        return y
-
-    end
-
-    return create_expected_jumps
-
-end
-
-function expected_jumps(soln::R) where {R<:HyperbolicCrossSolutionStoch}
-
-    nx = size(soln.grid,2)
-    nv = length(soln.variables)
-    ny = nv - nx
-    ns = size(soln.k,2)
-
-    state_trans = state_transition(soln)
-
-    T = eltype(soln.variables[1])
-
-    weights = Array{Array{T,1},1}(undef,ny)
-    for i = 1:ny
-        weights[i] = hyperbolic_cross_weights(soln.variables[nx+i],soln.grid,soln.multi_index,soln.domain) .* soln.scale_factor
-    end
-
-    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        y = zeros(ny)
-
-        for i = 1:ny
-
-            y[i] = hyperbolic_cross_evaluate(weights[i],state_trans(state,zeros(ns)),soln.multi_index,soln.domain)
-
-        end
-
-        return y
-
-    end
-
-    return create_expected_jumps
-
-end
-
-function expected_jumps(soln::R) where {R<:PiecewiseLinearSolutionStoch}
-
-    dec_rules = decision_rule(soln)
-    state_trans = state_transition(soln)
-
-    ns = size(soln.k,2)
-
-    function create_expected_jumps(state::AbstractArray{T,1}) where {T<:AbstractFloat}
-
-        y = dec_rules(state_trans(state,zeros(ns)))
-
-        return y
-
-    end
-
-    return create_expected_jumps
-
-end
-
-function state_space_eqm(soln::R) where {R<:ModelSolution}
-
-    dec_rules = decision_rule(soln)
-    transition_eqn = state_transition(soln)
-    forecast_eqn = expected_jumps(soln)
-
-    eqm_dynamics = StateSpaceEqm(dec_rules,transition_eqn,forecast_eqn)
-
-    return eqm_dynamics
-
-end
-
 function euler_errors(model::REModel,soln::R,domain::Union{Array{T,2},Array{T,1}},npoints::S,seed::S = 123456) where {S<:Integer,T<:AbstractFloat,R<:PerturbationSolutionDet}
 
     nx = length(soln.hbar)
@@ -3023,4 +3021,126 @@ function den_haan_marcet(model::REModel,soln::R,steady_state::Array{T,1},seed::S
 
     return dhm_stat
 
+end
+
+function check_taylor_convergence(model::REModel,ss::Array{T,1},z::Array{T,1},degree::S) where {T<:Real,S<:Integer}
+
+    if degree > 7
+        error("The degree is too large (too many derivatives)")
+    end
+    if degree < 0
+        error("The degree cannot be negative")
+    end
+
+    ne = model.number_equations
+    nv = model.number_variables
+    ns = model.number_shocks
+
+    model_equations = model.each_eqn_function
+    
+    ss    = [ss;ss]
+    z     = [z;z]
+    point = [ss;zeros(ns)]
+
+    taylor_terms = zeros(ne-ns,degree+1)
+
+    taylor_terms[:,1] = model.dynamic_function(point)[ns+1:end]
+    if degree == 0
+        return taylor_terms
+    else
+        println("Skipping the shock processes.")
+        @sync @qthreads for i = 1:ne-ns
+            println("Working on equation ", ns+i)
+            kprod = 1.0
+
+            d(x) = ForwardDiff.gradient(model_equations[ns+i],x,ForwardDiff.GradientConfig(model_equations[ns+i],x,ForwardDiff.Chunk{2}()))[1:2*nv]
+            dd(x) = ForwardDiff.jacobian(d,x,ForwardDiff.JacobianConfig(d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+            ddd(x) = ForwardDiff.jacobian(dd,x,ForwardDiff.JacobianConfig(dd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+            dddd(x) = ForwardDiff.jacobian(ddd,x,ForwardDiff.JacobianConfig(ddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+            ddddd(x) = ForwardDiff.jacobian(dddd,x,ForwardDiff.JacobianConfig(dddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+            dddddd(x) = ForwardDiff.jacobian(ddddd,x,ForwardDiff.JacobianConfig(ddddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+            ddddddd(x) = ForwardDiff.jacobian(dddddd,x,ForwardDiff.JacobianConfig(dddddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+
+            for j = 1:degree
+                kprod = kron(kprod,(ss - z))
+                if j == 1
+                    taylor_terms[i,j+1] = d(point)'kprod
+                elseif j == 2
+                    taylor_terms[i,j+1] = vec(dd(point))'kprod/factorial(j)
+                elseif j == 3
+                    taylor_terms[i,j+1] = vec(ddd(point))'kprod/factorial(j)
+                elseif j == 4
+                    taylor_terms[i,j+1] = vec(dddd(point))'kprod/factorial(j)
+                elseif j == 5
+                    taylor_terms[i,j+1] = vec(ddddd(point))'kprod/factorial(j)
+                elseif j ==6
+                    taylor_terms[i,j+1] = vec(dddddd(point))'kprod/factorial(j)
+                else
+                    taylor_terms[i,j+1] = vec(ddddddd(point))'kprod/factorial(j)
+                end
+            end
+        end
+        return taylor_terms
+    end
+end
+
+function check_taylor_convergence(model::REModel,ss::Array{T,1},z::Array{T,1},degree::S,eqns::Array{S,1}) where {T<:Real,S<:Integer}
+
+    if degree > 7
+        error("The degree is too large (too many derivatives)")
+    end
+    if degree < 0
+        error("The degree cannot be negative")
+    end
+
+    ne = model.number_equations
+    nv = model.number_variables
+    ns = model.number_shocks
+
+    model_equations = model.each_eqn_function
+    
+    ss    = [ss;ss]
+    z     = [z;z]
+    point = [ss;zeros(ns)]
+
+    taylor_terms = zeros(length(eqns),degree+1)
+
+    taylor_terms[:,1] = model.dynamic_function(point)[eqns]
+    if degree == 0
+        return taylor_terms
+    else
+        println("Skipping the shock processes.")
+        @sync @qthreads for i = 1:length(eqns)
+            println("Working on equation ", eqns[i])
+            kprod = 1.0
+
+            d(x) = ForwardDiff.gradient(model_equations[eqns[i]],x,ForwardDiff.GradientConfig(model_equations[eqns[i]],x,ForwardDiff.Chunk{2}()))[1:2*nv]
+            dd(x) = ForwardDiff.jacobian(d,x,ForwardDiff.JacobianConfig(d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+            ddd(x) = ForwardDiff.jacobian(dd,x,ForwardDiff.JacobianConfig(dd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+            dddd(x) = ForwardDiff.jacobian(ddd,x,ForwardDiff.JacobianConfig(ddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+            ddddd(x) = ForwardDiff.jacobian(dddd,x,ForwardDiff.JacobianConfig(dddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+            dddddd(x) = ForwardDiff.jacobian(ddddd,x,ForwardDiff.JacobianConfig(ddddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+            ddddddd(x) = ForwardDiff.jacobian(dddddd,x,ForwardDiff.JacobianConfig(dddddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+
+            for j = 1:degree
+                kprod = kron(kprod,(ss - z))
+                if j == 1
+                    taylor_terms[i,j+1] = d(point)'kprod
+                elseif j == 2
+                    taylor_terms[i,j+1] = vec(dd(point))'kprod/factorial(j)
+                elseif j == 3
+                    taylor_terms[i,j+1] = vec(ddd(point))'kprod/factorial(j)
+                elseif j == 4
+                    taylor_terms[i,j+1] = vec(dddd(point))'kprod/factorial(j)
+                elseif j == 5
+                    taylor_terms[i,j+1] = vec(ddddd(point))'kprod/factorial(j)
+                elseif j ==6
+                    taylor_terms[i,j+1] = vec(dddddd(point))'kprod/factorial(j)
+                else
+                    taylor_terms[i,j+1] = vec(ddddddd(point))'kprod/factorial(j)
+                end
+            end
+        end
+        return taylor_terms
+    end
 end

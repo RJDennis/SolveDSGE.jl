@@ -25,7 +25,7 @@ function compute_linearization(model::REModel,steady_state::Array{T,1}) where {T
     equations = model.dynamic_function
     ns = model.number_shocks
 
-    x = [steady_state; steady_state; zeros(ns)]
+    x = [steady_state; steady_state; zeros(ns)]    
     d = ForwardDiff.jacobian(equations,x)
 
     return d
@@ -196,7 +196,7 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     point = [steady_state; steady_state]
     deriv2 = zeros(ne*2*nv,2*nv)
     for i = 1:nv
-        deriv2[(i-1)*2*nv+1:i*2*nv,:] = ForwardDiff.hessian(model.each_eqn_function[i],point,ForwardDiff.HessianConfig(model.each_eqn_function[i],point,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
+        deriv2[(i-1)*2*nv+1:i*2*nv,:] = ForwardDiff.hessian(model.each_eqn_function[i],point,ForwardDiff.HessianConfig(model.each_eqn_function[i],point,ForwardDiff.Chunk{2}()))[1:2*nv,1:2*nv]
     end
 
     # Compute the first-order solution
@@ -269,7 +269,7 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
     point = [steady_state; steady_state; zeros(ns)]
     deriv2 = zeros(ne*2*nv,2*nv)
     for i = 1:nv
-        deriv2[(i-1)*2*nv+1:i*2*nv,:] = ForwardDiff.hessian(model.each_eqn_function[i],point,ForwardDiff.HessianConfig(model.each_eqn_function[i],point,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
+        deriv2[(i-1)*2*nv+1:i*2*nv,:] = ForwardDiff.hessian(model.each_eqn_function[i],point,ForwardDiff.HessianConfig(model.each_eqn_function[i],point,ForwardDiff.Chunk{2}()))[1:2*nv,1:2*nv]
     end
 
     # Compute the first-order solution 
@@ -376,14 +376,14 @@ function solve_third_order_det(model::REModel,scheme::PerturbationScheme) # Foll
 
     for i = 1:ne
 
-        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv]
+        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv]
         first_derivs[i,:] .= first_d(point)
 
-        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
+        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
         #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
         second_derivs[i,:] .= vec(second_d(point))
 
-        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
+        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
         third_derivs[i,:] .= vec(third_d(point))
 
     end
@@ -460,14 +460,14 @@ function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewn
 
     for i = 1:ne
 
-        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv]
+        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv]
         first_derivs[i,:] .= first_d(point)
 
-        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
+        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv,1:2*nv]
         #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
         second_derivs[i,:] .= vec(second_d(point))
 
-        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
+        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
         third_derivs[i,:] .= vec(third_d(point))
 
     end
@@ -609,17 +609,17 @@ function solve_fourth_order_det(model::REModel,scheme::PerturbationScheme)
 
     for i = 1:ne
 
-        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv]
+        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv]
         first_derivs[i,:] .= first_d(point)
 
-        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
+        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
         #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*n,1:2*n]
         second_derivs[i,:] .= vec(second_d(point))
 
-        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
+        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
         third_derivs[i,:] .= vec(third_d(point))
 
-        fourth_d(x) = ForwardDiff.jacobian(third_d,x,ForwardDiff.JacobianConfig(third_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
+        fourth_d(x) = ForwardDiff.jacobian(third_d,x,ForwardDiff.JacobianConfig(third_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
         fourth_derivs[i,:] .= vec(fourth_d(point))
 
     end
@@ -714,17 +714,17 @@ function solve_fourth_order_stoch(model::REModel,scheme::PerturbationScheme)
 
     for i = 1:ne
 
-        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv]
+        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv]
         first_derivs[i,:] .= vec(first_d(point))
 
-        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
+        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv,1:2*nv]
         #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
         second_derivs[i,:] .= vec(vec(second_d(point)))
 
-        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
+        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
         third_derivs[i,:] .= vec(vec(third_d(point)))
 
-        fourth_d(x) = ForwardDiff.jacobian(third_d,x,ForwardDiff.JacobianConfig(third_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
+        fourth_d(x) = ForwardDiff.jacobian(third_d,x,ForwardDiff.JacobianConfig(third_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
         fourth_derivs[i,:] .= vec(vec(fourth_d(point)))
 
     end
@@ -4159,34 +4159,38 @@ end
 
 function solve_model(model::REModel,scheme::PerturbationScheme)
 
-    if scheme.order == "first"
-        soln = solve_first_order(model,scheme)
+    if scheme.order == "first" && (model.solvers in ("Any", "Linear", "Perturbation"))
+        soln = solve_first_order(model, scheme)
         return soln
-    elseif scheme.order == "second"
-        soln = solve_second_order(model,scheme)
+    elseif scheme.order == "second" && (model.solvers in ("Any", "Perturbation"))
+        soln = solve_second_order(model, scheme)
         return soln
-    elseif scheme.order == "third"
-        soln = solve_third_order(model,scheme)
+    elseif scheme.order == "third" && (model.solvers in ("Any", "Perturbation"))
+        soln = solve_third_order(model, scheme)
         return soln
-    elseif scheme.order == "fourth"
-        soln = solve_fourth_order(model,scheme)
+    elseif scheme.order == "fourth" && (model.solvers in ("Any", "Perturbation"))
+        soln = solve_fourth_order(model, scheme)
         return soln
     else
-        error("The chosen order has not been implemented")
+        error("The chosen order has not been implemented or the solution scheme conflicts with the solvers specified in the model file")
     end
 
 end
 
 function solve_model(model::REModel,scheme::P) where {P<:ProjectionScheme}
 
-    if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
-        error("Stochastic model but deterministic SolutionScheme")
-    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
-        error("Deterministic model but stochastic SolutionScheme")
-    end
+    if model.solvers in ("Any", "Projection")
+        if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
+            error("Stochastic model but deterministic SolutionScheme")
+        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
+            error("Deterministic model but stochastic SolutionScheme")
+        end
 
-    soln = solve_nonlinear(model,scheme)
-    return soln
+        soln = solve_nonlinear(model,scheme)
+        return soln
+    else
+        error("The solution scheme conflicts with the solvers specified in the model file")
+    end
 
 end
 
