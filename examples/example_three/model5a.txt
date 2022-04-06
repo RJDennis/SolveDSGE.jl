@@ -28,6 +28,8 @@ sd_2   = 0.025
 sd_3   = 0.003
 end
 
+solvers: Any
+
 equations:
 z(+1) = ρ1*z + sd_1*η1
 ϵ(+1) = ρ2*ϵ + sd_2*η2

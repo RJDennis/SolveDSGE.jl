@@ -19,6 +19,8 @@ parameters:
 ρ = 0.8
 end
 
+solvers: Any
+
 equations:
 k(+1) = (1.0 - δ)*k + exp(z)*k^α - c
 c^(-σ) = β*muc(+1)*(1.0 - δ + α*exp(z(+1))*k(+1)^(α - 1.0))

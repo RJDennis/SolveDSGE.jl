@@ -20,6 +20,8 @@ parameters:
 ρ = 0.8
 end
 
+solvers: Any
+
 equations:
 exp(k(+1)) = (1.0 - δ)*exp(k) + exp(z)*exp(k)^α - exp(c)
 (exp(c) - γ*exp(c(-1)))^(-σ) = β*muc(+1)*(1.0 - δ + α*exp(z(+1))*exp(k(+1))^(α - 1.0))
