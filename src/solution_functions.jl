@@ -4196,53 +4196,65 @@ end
 
 function solve_model(model::REModel,scheme::P,threads::S) where {P<:ProjectionScheme,S<:Integer}
 
-    if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
-        error("Stochastic model but deterministic SolutionScheme")
-    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
-        error("Deterministic model but stochastic SolutionScheme")
-    end
+    if model.solvers in ("Any", "Projection")
+        if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
+            error("Stochastic model but deterministic SolutionScheme")
+        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
+            error("Deterministic model but stochastic SolutionScheme")
+        end
 
-    if threads < 0
-        error("Number of threads cannot be negative")
-    elseif threads == 0
-        soln = solve_nonlinear(model,scheme)
-        return soln
+        if threads < 0
+            error("Number of threads cannot be negative")
+        elseif threads == 0
+            soln = solve_nonlinear(model,scheme)
+            return soln
+        else
+            soln = solve_nonlinear(model,scheme,threads)
+            return soln
+        end
     else
-        soln = solve_nonlinear(model,scheme,threads)
-        return soln
+        error("The solution scheme conflicts with the solvers specified in the model file")
     end
 
 end
 
 function solve_model(model::REModel,soln::ModelSolution,scheme::P) where {P<:ProjectionScheme}
 
-    if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
-        error("Stochastic model but deterministic SolutionScheme")
-    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
-        error("Deterministic model but stochastic SolutionScheme")
-    end
+    if model.solvers in ("Any", "Projection")
+        if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
+            error("Stochastic model but deterministic SolutionScheme")
+        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
+            error("Deterministic model but stochastic SolutionScheme")
+        end
 
-    soln = solve_nonlinear(model,soln,scheme)
-    return soln
+        soln = solve_nonlinear(model,soln,scheme)
+        return soln
+    else
+        error("The solution scheme conflicts with the solvers specified in the model file")
+    end
 
 end
 
 function solve_model(model::REModel,soln::ModelSolution,scheme::P,threads::S) where {P<:ProjectionScheme,S<:Integer}
 
-    if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
-        error("Stochastic model but deterministic SolutionScheme")
-    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
-        error("Deterministic model but stochastic SolutionScheme")
-    end
+    if model.solvers in ("Any", "Projection")
+        if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
+            error("Stochastic model but deterministic SolutionScheme")
+        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
+            error("Deterministic model but stochastic SolutionScheme")
+        end
 
-    if threads < 0
-        error("Number of threads cannot be negative")
-    elseif threads == 0
-        soln = solve_nonlinear(model,soln,scheme)
-        return soln
+        if threads < 0
+            error("Number of threads cannot be negative")
+        elseif threads == 0
+            soln = solve_nonlinear(model,soln,scheme)
+            return soln
+        else
+            soln = solve_nonlinear(model,soln,scheme,threads)
+            return soln
+        end
     else
-        soln = solve_nonlinear(model,soln,scheme,threads)
-        return soln
+        error("The solution scheme conflicts with the solvers specified in the model file")
     end
 
 end
