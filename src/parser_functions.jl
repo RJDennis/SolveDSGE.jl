@@ -920,7 +920,7 @@ function create_processed_model_file(model::ModelPrimatives, path::Q) where {Q<:
     model_string = string(model_string, "\n", closure_hcross_string)
     model_string = string(model_string, "\n", closure_pl_string)
     model_string = string(model_string, "\n", "unassigned_parameters = $(model.unassigned_parameters) \n")
-    model_string = string(model_string, "\n", "solvers = string($(model.solvers))")
+    model_string = string(model_string, "\n", """solvers = "$(model.solvers)" """)
 
     model_path = replace(path, ".txt" => "_processed.txt")
     open(model_path, "w") do io

@@ -1421,6 +1421,36 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},rndseed = 123456) w
 
 end
 
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},rndseed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
+
+    if length(innovation_vector) > size(soln.k,2)
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < size(soln.k,2)
+        error("Each shock needs an innovation (even if it's zero).")
+    end
+
+    nx = length(soln.hbar)
+    ny = length(soln.gbar)
+
+    simulated_states_pos_f = zeros(nx,n + 1)
+    simulated_jumps_pos_f = zeros(ny,n)
+    simulated_states_pos_f[:,1] .= initial_state - soln.hbar + soln.k*innovation_vector
+
+    simulated_states_neg_f = zeros(nx,n + 1)
+    simulated_jumps_neg_f = zeros(ny,n)
+    simulated_states_neg_f[:,1] .= initial_state - soln.hbar - soln.k*innovation_vector
+
+    @views for i = 2:n+1
+        simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1]
+        simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
+        simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1]
+        simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
+    end
+
+    return [simulated_states_pos_f[:,1:n]+soln.hbar; simulated_jumps_pos_f+soln.gbar],[simulated_states_neg_f[:,1:n]+soln.hbar; simulated_jumps_neg_f+soln.gbar]
+
+end
+
 function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
@@ -1439,6 +1469,36 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
     simulated_states_neg_f = zeros(nx,n + 1)
     simulated_jumps_neg_f = zeros(ny,n)
     simulated_states_neg_f[:,1] .= -soln.k*innovation_vector
+
+    @views for i = 2:n+1
+        simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1]
+        simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
+        simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1]
+        simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
+    end
+
+    return [simulated_states_pos_f[:,1:n]; simulated_jumps_pos_f],[simulated_states_neg_f[:,1:n]; simulated_jumps_neg_f]
+
+end
+
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
+
+    if length(innovation_vector) > size(soln.k,2)
+        error("There are more innovations than shocks.")
+    elseif length(innovation_vector) < size(soln.k,2)
+        error("Each shock needs an innovation (even if it's zero).")
+    end
+
+    nx = length(soln.hbar)
+    ny = length(soln.gbar)
+
+    simulated_states_pos_f = zeros(nx,n + 1)
+    simulated_jumps_pos_f = zeros(ny,n)
+    simulated_states_pos_f[:,1] .= initial_state - soln.hbar + soln.k*innovation_vector
+
+    simulated_states_neg_f = zeros(nx,n + 1)
+    simulated_jumps_neg_f = zeros(ny,n)
+    simulated_states_neg_f[:,1] .= initial_state - soln.hbar - soln.k*innovation_vector
 
     @views for i = 2:n+1
         simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1]
@@ -1478,21 +1538,21 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
     for j = 1:reps
         simulated_states_pos_f = zeros(nx,n + 1)
-        simulated_jumps_pos_f = zeros(ny,n)
+        simulated_jumps_pos_f  = zeros(ny,n)
         simulated_states_pos_s = zeros(nx,n + 1)
-        simulated_jumps_pos_s = zeros(ny,n)
+        simulated_jumps_pos_s  = zeros(ny,n)
 
         simulated_states_neg_f = zeros(nx,n + 1)
-        simulated_jumps_neg_f = zeros(ny,n)
+        simulated_jumps_neg_f  = zeros(ny,n)
         simulated_states_neg_s = zeros(nx,n + 1)
-        simulated_jumps_neg_s = zeros(ny,n)
+        simulated_jumps_neg_s  = zeros(ny,n)
 
         simulated_states_base_f = zeros(nx,n + 1)
-        simulated_jumps_base_f = zeros(ny,n)
+        simulated_jumps_base_f  = zeros(ny,n)
         simulated_states_base_s = zeros(nx,n + 1)
-        simulated_jumps_base_s = zeros(ny,n)
+        simulated_jumps_base_s  = zeros(ny,n)
 
-        initial_state = sample[1:nx,rand(101:5*reps+100)]
+        initial_state = sample[1:nx,rand(101:5*reps+100)] - soln.hbar
         simulated_states_pos_f[:,1]  .= initial_state + soln.k*innovation_vector
         simulated_states_neg_f[:,1]  .= initial_state - soln.k*innovation_vector
         simulated_states_base_f[:,1] .= initial_state
@@ -1500,26 +1560,26 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
         innovations = randn(size(soln.k,2),n + 1)
 
         @views for i = 2:n+1
-            simulated_states_pos_f[:,i] = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
-            simulated_states_pos_s[:,i] = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
+            simulated_states_pos_s[:,i]  = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
             simulated_jumps_pos_s[:,i-1] = soln.gx*simulated_states_pos_s[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
 
-            simulated_states_neg_f[:,i] = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
-            simulated_states_neg_s[:,i] = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
+            simulated_states_neg_s[:,i]  = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
             simulated_jumps_neg_s[:,i-1] = soln.gx*simulated_states_neg_s[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
 
-            simulated_states_base_f[:,i] = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_base_f[:,i]  = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_base_f[:,i-1] = soln.gx*simulated_states_base_f[:,i-1]
-            simulated_states_base_s[:,i] = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
+            simulated_states_base_s[:,i]  = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
             simulated_jumps_base_s[:,i-1] = soln.gx*simulated_states_base_s[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
         end
 
         impulses_states_pos .+= (simulated_states_pos_f + simulated_states_pos_s - simulated_states_base_f - simulated_states_base_s)
-        impulses_jumps_pos .+= (simulated_jumps_pos_f + simulated_jumps_pos_s - simulated_jumps_base_f - simulated_jumps_base_s)
+        impulses_jumps_pos  .+= (simulated_jumps_pos_f + simulated_jumps_pos_s - simulated_jumps_base_f - simulated_jumps_base_s)
         impulses_states_neg .+= (simulated_states_neg_f + simulated_states_neg_s - simulated_states_base_f - simulated_states_base_s)
-        impulses_jumps_neg .+= (simulated_jumps_neg_f + simulated_jumps_neg_s - simulated_jumps_base_f - simulated_jumps_base_s)
+        impulses_jumps_neg  .+= (simulated_jumps_neg_f + simulated_jumps_neg_s - simulated_jumps_base_f - simulated_jumps_base_s)
 
     end
 
@@ -1557,47 +1617,47 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
     for j = 1:reps
         simulated_states_pos_f = zeros(nx,n + 1)
-        simulated_jumps_pos_f = zeros(ny,n)
+        simulated_jumps_pos_f  = zeros(ny,n)
         simulated_states_pos_s = zeros(nx,n + 1)
-        simulated_jumps_pos_s = zeros(ny,n)
+        simulated_jumps_pos_s  = zeros(ny,n)
 
         simulated_states_neg_f = zeros(nx,n + 1)
-        simulated_jumps_neg_f = zeros(ny,n)
+        simulated_jumps_neg_f  = zeros(ny,n)
         simulated_states_neg_s = zeros(nx,n + 1)
-        simulated_jumps_neg_s = zeros(ny,n)
+        simulated_jumps_neg_s  = zeros(ny,n)
 
         simulated_states_base_f = zeros(nx,n + 1)
-        simulated_jumps_base_f = zeros(ny,n)
+        simulated_jumps_base_f  = zeros(ny,n)
         simulated_states_base_s = zeros(nx,n + 1)
-        simulated_jumps_base_s = zeros(ny,n)
+        simulated_jumps_base_s  = zeros(ny,n)
 
-        simulated_states_pos_f[:,1]  .= initial_state + soln.k*innovation_vector
-        simulated_states_neg_f[:,1]  .= initial_state - soln.k*innovation_vector
-        simulated_states_base_f[:,1] .= initial_state
+        simulated_states_pos_f[:,1]  .= initial_state - soln.hbar + soln.k*innovation_vector
+        simulated_states_neg_f[:,1]  .= initial_state - soln.hbar - soln.k*innovation_vector
+        simulated_states_base_f[:,1] .= initial_state - soln.hbar
 
         innovations = randn(size(soln.k,2),n + 1)
 
         @views for i = 2:n+1
-            simulated_states_pos_f[:,i] = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
-            simulated_states_pos_s[:,i] = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
+            simulated_states_pos_s[:,i]  = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
             simulated_jumps_pos_s[:,i-1] = soln.gx*simulated_states_pos_s[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
 
-            simulated_states_neg_f[:,i] = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
-            simulated_states_neg_s[:,i] = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
+            simulated_states_neg_s[:,i]  = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
             simulated_jumps_neg_s[:,i-1] = soln.gx*simulated_states_neg_s[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
 
-            simulated_states_base_f[:,i] = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_base_f[:,i]  = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_base_f[:,i-1] = soln.gx*simulated_states_base_f[:,i-1]
-            simulated_states_base_s[:,i] = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
+            simulated_states_base_s[:,i]  = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
             simulated_jumps_base_s[:,i-1] = soln.gx*simulated_states_base_s[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
         end
 
         impulses_states_pos .+= (simulated_states_pos_f + simulated_states_pos_s - simulated_states_base_f - simulated_states_base_s)
-        impulses_jumps_pos .+= (simulated_jumps_pos_f + simulated_jumps_pos_s - simulated_jumps_base_f - simulated_jumps_base_s)
+        impulses_jumps_pos  .+= (simulated_jumps_pos_f + simulated_jumps_pos_s - simulated_jumps_base_f - simulated_jumps_base_s)
         impulses_states_neg .+= (simulated_states_neg_f + simulated_states_neg_s - simulated_states_base_f - simulated_states_base_s)
-        impulses_jumps_neg .+= (simulated_jumps_neg_f + simulated_jumps_neg_s - simulated_jumps_base_f - simulated_jumps_base_s)
+        impulses_jumps_neg  .+= (simulated_jumps_neg_f + simulated_jumps_neg_s - simulated_jumps_base_f - simulated_jumps_base_s)
 
     end
 
@@ -1637,33 +1697,33 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
     sample = simulate(soln,soln.hss,5*reps + 100)
 
     impulses_states_pos = zeros(nx,n + 1)
-    impulses_jumps_pos = zeros(ny,n)
+    impulses_jumps_pos  = zeros(ny,n)
     impulses_states_neg = zeros(nx,n + 1)
-    impulses_jumps_neg = zeros(ny,n)
+    impulses_jumps_neg  = zeros(ny,n)
 
     for j = 1:reps
         simulated_states_pos_f = zeros(nx,n + 1)
-        simulated_jumps_pos_f = zeros(ny,n)
+        simulated_jumps_pos_f  = zeros(ny,n)
         simulated_states_pos_s = zeros(nx,n + 1)
-        simulated_jumps_pos_s = zeros(ny,n)
+        simulated_jumps_pos_s  = zeros(ny,n)
         simulated_states_pos_t = zeros(nx,n + 1)
-        simulated_jumps_pos_t = zeros(ny,n)
+        simulated_jumps_pos_t  = zeros(ny,n)
 
         simulated_states_neg_f = zeros(nx,n + 1)
-        simulated_jumps_neg_f = zeros(ny,n)
+        simulated_jumps_neg_f  = zeros(ny,n)
         simulated_states_neg_s = zeros(nx,n + 1)
-        simulated_jumps_neg_s = zeros(ny,n)
+        simulated_jumps_neg_s  = zeros(ny,n)
         simulated_states_neg_t = zeros(nx,n + 1)
-        simulated_jumps_neg_t = zeros(ny,n)
+        simulated_jumps_neg_t  = zeros(ny,n)
 
         simulated_states_base_f = zeros(nx,n + 1)
-        simulated_jumps_base_f = zeros(ny,n)
+        simulated_jumps_base_f  = zeros(ny,n)
         simulated_states_base_s = zeros(nx,n + 1)
-        simulated_jumps_base_s = zeros(ny,n)
+        simulated_jumps_base_s  = zeros(ny,n)
         simulated_states_base_t = zeros(nx,n + 1)
-        simulated_jumps_base_t = zeros(ny,n)
+        simulated_jumps_base_t  = zeros(ny,n)
 
-        initial_state = sample[1:nx,rand(101:5*reps+100)]
+        initial_state = sample[1:nx,rand(101:5*reps+100)] - soln.hbar
         simulated_states_pos_f[:,1]  .= initial_state + soln.k*innovation_vector
         simulated_states_neg_f[:,1]  .= initial_state - soln.k*innovation_vector
         simulated_states_base_f[:,1] .= initial_state
@@ -1671,25 +1731,25 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
         innovations = randn(size(soln.k,2),n + 1)
 
         @views for i = 2:n+1
-            simulated_states_pos_f[:,i] = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
-            simulated_states_pos_s[:,i] = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
+            simulated_states_pos_s[:,i]  = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
             simulated_jumps_pos_s[:,i-1] = soln.gx*simulated_states_pos_s[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
-            simulated_states_pos_t[:,i] = soln.hx*simulated_states_pos_t[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hsss
+            simulated_states_pos_t[:,i]  = soln.hx*simulated_states_pos_t[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hsss
             simulated_jumps_pos_t[:,i-1] = soln.gx*simulated_states_pos_t[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + gxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssx*simulated_states_pos_f[:,i-1] + gsss
 
-            simulated_states_neg_f[:,i] = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
-            simulated_states_neg_s[:,i] = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
+            simulated_states_neg_s[:,i]  = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
             simulated_jumps_neg_s[:,i-1] = soln.gx*simulated_states_neg_s[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
-            simulated_states_neg_t[:,i] = soln.hx*simulated_states_neg_t[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hsss
+            simulated_states_neg_t[:,i]  = soln.hx*simulated_states_neg_t[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hsss
             simulated_jumps_neg_t[:,i-1] = soln.gx*simulated_states_neg_t[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + gxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + gssx*simulated_states_neg_f[:,i-1] + gsss
 
-            simulated_states_base_f[:,i] = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_base_f[:,i]  = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_base_f[:,i-1] = soln.gx*simulated_states_base_f[:,i-1]
-            simulated_states_base_s[:,i] = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
+            simulated_states_base_s[:,i]  = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
             simulated_jumps_base_s[:,i-1] = soln.gx*simulated_states_base_s[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
-            simulated_states_base_t[:,i] = soln.hx*simulated_states_base_t[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hsss
+            simulated_states_base_t[:,i]  = soln.hx*simulated_states_base_t[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hsss
             simulated_jumps_base_t[:,i-1] = soln.gx*simulated_states_base_t[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_pos_s[:,i-1]) + gxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssx*simulated_states_base_f[:,i-1] + gsss
         end
 
@@ -1701,9 +1761,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
     end
 
     impulses_states_pos = impulses_states_pos/reps
-    impulses_jumps_pos = impulses_jumps_pos/reps
+    impulses_jumps_pos  = impulses_jumps_pos/reps
     impulses_states_neg = impulses_states_neg/reps
-    impulses_jumps_neg = impulses_jumps_neg/reps
+    impulses_jumps_neg  = impulses_jumps_neg/reps
 
     return [impulses_states_pos[:,1:n]; impulses_jumps_pos],[impulses_states_neg[:,1:n]; impulses_jumps_neg]
 
@@ -1734,58 +1794,58 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
     gsss = (1/6)*soln.gsss
 
     impulses_states_pos = zeros(nx,n + 1)
-    impulses_jumps_pos = zeros(ny,n)
+    impulses_jumps_pos  = zeros(ny,n)
     impulses_states_neg = zeros(nx,n + 1)
-    impulses_jumps_neg = zeros(ny,n)
+    impulses_jumps_neg  = zeros(ny,n)
 
     for j = 1:reps
         simulated_states_pos_f = zeros(nx,n + 1)
-        simulated_jumps_pos_f = zeros(ny,n)
+        simulated_jumps_pos_f  = zeros(ny,n)
         simulated_states_pos_s = zeros(nx,n + 1)
-        simulated_jumps_pos_s = zeros(ny,n)
+        simulated_jumps_pos_s  = zeros(ny,n)
         simulated_states_pos_t = zeros(nx,n + 1)
-        simulated_jumps_pos_t = zeros(ny,n)
+        simulated_jumps_pos_t  = zeros(ny,n)
 
         simulated_states_neg_f = zeros(nx,n + 1)
-        simulated_jumps_neg_f = zeros(ny,n)
+        simulated_jumps_neg_f  = zeros(ny,n)
         simulated_states_neg_s = zeros(nx,n + 1)
-        simulated_jumps_neg_s = zeros(ny,n)
+        simulated_jumps_neg_s  = zeros(ny,n)
         simulated_states_neg_t = zeros(nx,n + 1)
-        simulated_jumps_neg_t = zeros(ny,n)
+        simulated_jumps_neg_t  = zeros(ny,n)
 
         simulated_states_base_f = zeros(nx,n + 1)
-        simulated_jumps_base_f = zeros(ny,n)
+        simulated_jumps_base_f  = zeros(ny,n)
         simulated_states_base_s = zeros(nx,n + 1)
-        simulated_jumps_base_s = zeros(ny,n)
+        simulated_jumps_base_s  = zeros(ny,n)
         simulated_states_base_t = zeros(nx,n + 1)
-        simulated_jumps_base_t = zeros(ny,n)
+        simulated_jumps_base_t  = zeros(ny,n)
 
-        simulated_states_pos_f[:,1]  .= initial_state + soln.k*innovation_vector
-        simulated_states_neg_f[:,1]  .= initial_state - soln.k*innovation_vector
-        simulated_states_base_f[:,1] .= initial_state
+        simulated_states_pos_f[:,1]  .= initial_state - soln.hbar + soln.k*innovation_vector
+        simulated_states_neg_f[:,1]  .= initial_state - soln.hbar - soln.k*innovation_vector
+        simulated_states_base_f[:,1] .= initial_state - soln.hbar
 
         innovations = randn(size(soln.k,2),n + 1)
 
         @views for i = 2:n+1
-            simulated_states_pos_f[:,i] = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
-            simulated_states_pos_s[:,i] = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
+            simulated_states_pos_s[:,i]  = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
             simulated_jumps_pos_s[:,i-1] = soln.gx*simulated_states_pos_s[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
-            simulated_states_pos_t[:,i] = soln.hx*simulated_states_pos_t[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hsss
+            simulated_states_pos_t[:,i]  = soln.hx*simulated_states_pos_t[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hsss
             simulated_jumps_pos_t[:,i-1] = soln.gx*simulated_states_pos_t[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + gxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssx*simulated_states_pos_f[:,i-1] + gsss
 
-            simulated_states_neg_f[:,i] = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
-            simulated_states_neg_s[:,i] = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
+            simulated_states_neg_s[:,i]  = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
             simulated_jumps_neg_s[:,i-1] = soln.gx*simulated_states_neg_s[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
-            simulated_states_neg_t[:,i] = soln.hx*simulated_states_neg_t[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hsss
+            simulated_states_neg_t[:,i]  = soln.hx*simulated_states_neg_t[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hsss
             simulated_jumps_neg_t[:,i-1] = soln.gx*simulated_states_neg_t[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + gxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + gssx*simulated_states_neg_f[:,i-1] + gsss
 
-            simulated_states_base_f[:,i] = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_base_f[:,i]  = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
             simulated_jumps_base_f[:,i-1] = soln.gx*simulated_states_base_f[:,i-1]
-            simulated_states_base_s[:,i] = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
+            simulated_states_base_s[:,i]  = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
             simulated_jumps_base_s[:,i-1] = soln.gx*simulated_states_base_s[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
-            simulated_states_base_t[:,i] = soln.hx*simulated_states_base_t[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hsss
+            simulated_states_base_t[:,i]  = soln.hx*simulated_states_base_t[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hsss
             simulated_jumps_base_t[:,i-1] = soln.gx*simulated_states_base_t[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_pos_s[:,i-1]) + gxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssx*simulated_states_base_f[:,i-1] + gsss
         end
 
@@ -1868,7 +1928,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
         simulated_states_base_fo = zeros(nx,n+1)
         simulated_jumps_base_fo  = zeros(ny,n)
 
-        initial_state = sample[1:nx,rand(101:5*reps+100)]
+        initial_state = sample[1:nx,rand(101:5*reps+100)] - soln.hbar
         simulated_states_pos_f[:,1]  .= initial_state + soln.k*innovation_vector
         simulated_states_neg_f[:,1]  .= initial_state - soln.k*innovation_vector
         simulated_states_base_f[:,1] .= initial_state
@@ -1983,9 +2043,9 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         simulated_states_base_fo = zeros(nx,n+1)
         simulated_jumps_base_fo  = zeros(ny,n)
 
-        simulated_states_pos_f[:,1]  .= initial_state + soln.k*innovation_vector
-        simulated_states_neg_f[:,1]  .= initial_state - soln.k*innovation_vector
-        simulated_states_base_f[:,1] .= initial_state
+        simulated_states_pos_f[:,1]  .= initial_state - soln.hbar + soln.k*innovation_vector
+        simulated_states_neg_f[:,1]  .= initial_state - soln.hbar - soln.k*innovation_vector
+        simulated_states_base_f[:,1] .= initial_state - soln.hbar
 
         innovations = randn(size(soln.k,2),n+1)
 
