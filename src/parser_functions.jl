@@ -262,40 +262,57 @@ function get_solvers(model_array::Array{Q,1}, term::Q) where {Q<:AbstractString}
     end
 end
 
-function reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1}) where {Q<:AbstractString}
+function reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
     if isempty(shocks) == false # Case for stochastic models
-        reordered_equations, reordered_states, reordered_shocks = reorder_equations_stochastic(equations,shocks,states,jumps)
+        reordered_equations, reordered_states, reordered_shocks = reorder_equations_stochastic(equations,shocks,states,jumps,parameters)
         return reordered_equations, reordered_states, reordered_shocks
     else # Case for deterministic models
-        reordered_equations, reordered_states = reorder_equations_deterministic(equations,states,jumps)
+        reordered_equations, reordered_states = reorder_equations_deterministic(equations,states,jumps,parameters)
         return reordered_equations, reordered_states, shocks
     end
 end
 
-function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1}) where {Q<:AbstractString}
+function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
 
     #= This function reorders the model's equations so that the equations
        containing the shock processes appear first. =#
 
-    reordered_equations = copy(equations)
-    reordered_states = copy(states)
-
+     reordered_equations = copy(equations)
+     reordered_states = copy(states)
+     reordered_shocks = copy(shocks)
+   
     # Construct summary information about each equation
-
+   
+    junk_equations = copy(equations)
+    states_left_in_eqns = copy(equations)
+    combined_names = [states; jumps; parameters; ["exp", "log"]]
+    sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
+   
     states_number = zeros(Int64,length(equations))
     jumps_number  = zeros(Int64,length(equations))
-    for i = 1:length(equations)
-        if length(states) != 0
-            states_number[i] = sum(occursin.(states,equations[i]))
+   
+    for i = 1:length(junk_equations)
+        for j in sorted_combined_names
+            if occursin(j,junk_equations[i]) == true
+                if j in states
+                    states_number[i] += 1
+                elseif j in jumps
+                    jumps_number[i] += 1
+                    states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
+                else
+                    states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
+                end
+                junk_equations[i] = replace(junk_equations[i],j => ":")
+            end
         end
-        jumps_number[i] = sum(occursin.(jumps,equations[i]))
     end
-    number_eqns_with_no_jumps = sum(jumps_number .== 0)
+    number_eqns_with_jumps = sum(jumps_number .!= 0)
 
     # Put the equations with no jumps in them at the top
 
     ind = sortperm(jumps_number)
     reordered_equations .= reordered_equations[ind]
+    states_left_in_eqns .= states_left_in_eqns[ind]
     states_number .= states_number[ind]
     jumps_number  .= jumps_number[ind]
 
@@ -306,7 +323,7 @@ function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1
         for j = 1:number_eqns_with_no_jumps
             if states_number[j] == k
                 for i = 1:length(states)
-                    if occursin(reordered_states[i],reordered_equations[j]) == true && j != i && (i in states_that_have_been_ordered) == false
+                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i && (i in states_that_have_been_ordered) == false
                         reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i]
                         push!(states_that_have_been_ordered,j)
                         break
@@ -320,7 +337,7 @@ function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1
 
 end
 
-function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1}) where {Q<:AbstractString}
+function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
 
     #= This function reorders the model's equations so that the equations
        containing the shock processes appear first. =#
@@ -331,15 +348,32 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
 
     # Construct summary information about each equation
 
+    junk_equations = copy(equations)
+    states_left_in_eqns = copy(equations)
+    combined_names = [states; jumps; parameters; shocks; ["exp", "log"]]
+    sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
+
     shocks_number = zeros(Int64,length(equations))
     states_number = zeros(Int64,length(equations))
     jumps_number  = zeros(Int64,length(equations))
-    for i = 1:length(equations)
-        shocks_number[i] = sum(occursin.(shocks,equations[i]))
-        if length(states) != 0
-            states_number[i] = sum(occursin.(states,equations[i]))
+
+    for i = 1:length(junk_equations)
+        for j in sorted_combined_names
+            if occursin(j,junk_equations[i]) == true
+                if j in states
+                    states_number[i] += 1
+                elseif j in jumps
+                    jumps_number[i] += 1
+                    states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
+                elseif j in shocks
+                    shocks_number[i] += 1
+                    states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
+                else
+                    states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
+                end
+                junk_equations[i] = replace(junk_equations[i],j => ":")
+            end
         end
-        jumps_number[i] = sum(occursin.(jumps,equations[i]))
     end
     number_eqns_with_shocks = sum(shocks_number .!= 0)
 
@@ -347,6 +381,7 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
 
     ind = sortperm(jumps_number)
     reordered_equations .= reordered_equations[ind]
+    states_left_in_eqns .= states_left_in_eqns[ind]
     states_number .= states_number[ind]
     jumps_number  .= jumps_number[ind]
     shocks_number .= shocks_number[ind]
@@ -355,6 +390,7 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
 
     ind = sortperm(shocks_number[1:number_eqns_with_shocks])
     reordered_equations[1:number_eqns_with_shocks] .= reordered_equations[ind]
+    states_left_in_eqns[1:number_eqns_with_shocks] .= states_left_in_eqns[ind]
     shocks_number[1:number_eqns_with_shocks] .= shocks_number[ind]
     states_number[1:number_eqns_with_shocks] .= states_number[ind]
     jumps_number[1:number_eqns_with_shocks] .= jumps_number[ind]
@@ -367,7 +403,8 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
             if shocks_number[j] == k
                 for i = 1:length(shocks)
                     if occursin(reordered_shocks[i],reordered_equations[j]) == true && j != i && (i in shocks_that_have_been_ordered) == false
-                        reordered_shocks[i], reordered_shocks[j] = reordered_shocks[j], reordered_shocks[i]
+                        reordered_shocks[i], reordered_shocks[j]       = reordered_shocks[j], reordered_shocks[i]
+                        states_left_in_eqns[i], states_left_in_eqns[j] = states_left_in_eqns[j], states_left_in_eqns[i]
                         push!(shocks_that_have_been_ordered,j)
                         break
                     end
@@ -383,7 +420,7 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
         for j = 1:number_eqns_with_shocks
             if states_number[j] == k
                 for i = 1:length(states)
-                    if occursin(reordered_states[i],reordered_equations[j]) == true && j != i && (i in states_that_have_been_ordered) == false
+                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i && (i in states_that_have_been_ordered) == false
                         reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i]
                         push!(states_that_have_been_ordered,j)
                         break
@@ -397,10 +434,12 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
 
 end
 
-function reorganize_equations(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},variables::Array{Q,1},lag_variables::Array{Q,1}) where {Q<:AbstractString}
+function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},variables::Array{Q,1}) where {Q<:AbstractString}
 
     #= This function replaces lagged variables with pseudo current variables,
        augmenting the state vector and the model's equations accordingly. =#
+
+    lag_variables = string.(variables,"(-1)")
 
     reorganized_equations = copy(equations)
     reorganized_states = copy(states)
@@ -477,10 +516,8 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractStri
         end
     end
 
-    lag_variables = string.(variables,"(-1)")
-
-    reordered_equations, states, shocks = reorder_equations(equations,shocks,states,jumps)
-    reorganized_equations, states, variables = reorganize_equations(reordered_equations,states,jumps,variables,lag_variables)
+    reordered_equations, states, shocks = reorder_equations(equations,shocks,states,jumps,parameters)
+    reorganized_equations, states, variables = deal_with_lags(reordered_equations,states,jumps,variables)
 
     re_model_primatives = REModelPrimatives(states,jumps,shocks,variables,parameters,parametervalues,reorganized_equations,unassigned_parameters,solvers)
 
