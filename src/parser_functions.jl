@@ -305,7 +305,7 @@ function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1
             end
         end
     end
-    number_eqns_with_jumps = sum(jumps_number .!= 0)
+    number_eqns_with_no_jumps = sum(jumps_number .== 0)
 
     # Put the equations with no jumps in them at the top
 
