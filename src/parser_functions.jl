@@ -279,7 +279,6 @@ function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1
 
      reordered_equations = copy(equations)
      reordered_states = copy(states)
-     reordered_shocks = copy(shocks)
    
     # Construct summary information about each equation
    
