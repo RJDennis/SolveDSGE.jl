@@ -2943,6 +2943,10 @@ end
 
 function euler_errors(model::REModel,soln::R,domain::Union{Array{T,2},Array{T,1}},npoints::S,seed::S = 123456) where {S<:Integer,T<:AbstractFloat,R<:PerturbationSolutionDet}
 
+    if model.solvers == "Perturbation"
+        error("The model hase been restricted to perturbation solvers only")
+    end
+
     nx = length(soln.hbar)
     ny = length(soln.gbar)
     f = zeros(nx+ny)
@@ -2965,6 +2969,10 @@ function euler_errors(model::REModel,soln::R,domain::Union{Array{T,2},Array{T,1}
 end
 
 function euler_errors(model::REModel,soln::R,domain::Union{Array{T,2},Array{T,1}},npoints::S,seed::S = 123456) where {S<:Integer,T<:AbstractFloat,R<:PerturbationSolutionStoch}
+
+    if model.solvers == "Perturbation"
+        error("The model hase been restricted to perturbation solvers only")
+    end
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -2992,6 +3000,10 @@ end
 
 function euler_errors(model::REModel,soln::R,npoints::S,seed::S = 123456) where {S<:Integer,R<:ProjectionSolutionDet}
 
+    if model.solvers == "Perturbation"
+        error("The model hase been restricted to perturbation solvers only")
+    end
+
     nx = size(soln.domain,2)
     nv = length(soln.variables)
     ny = nv - nx
@@ -3016,6 +3028,10 @@ function euler_errors(model::REModel,soln::R,npoints::S,seed::S = 123456) where 
 end
 
 function euler_errors(model::REModel,soln::R,npoints::S,seed::S = 123456) where {S<:Integer,R<:ProjectionSolutionStoch}
+
+    if model.solvers == "Perturbation"
+        error("The model hase been restricted to perturbation solvers only")
+    end
 
     nx = size(soln.domain,2)
     nv = length(soln.variables)
@@ -3122,21 +3138,21 @@ function check_taylor_convergence(model::REModel,ss::Array{T,1},z::Array{T,1},de
             ddddddd(x) = ForwardDiff.jacobian(dddddd,x,ForwardDiff.JacobianConfig(dddddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
 
             for j = 1:degree
-                kprod = kron(kprod,(ss - z))
+                kprod = kron(kprod,(z - ss))
                 if j == 1
-                    taylor_terms[i,j+1] = d(point)'kprod
+                    taylor_terms[i,j+1] = abs.(d(point))'kprod
                 elseif j == 2
-                    taylor_terms[i,j+1] = vec(dd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(dd(point)))'kprod/factorial(j)
                 elseif j == 3
-                    taylor_terms[i,j+1] = vec(ddd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(ddd(point)))'kprod/factorial(j)
                 elseif j == 4
-                    taylor_terms[i,j+1] = vec(dddd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(dddd(point)))'kprod/factorial(j)
                 elseif j == 5
-                    taylor_terms[i,j+1] = vec(ddddd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(ddddd(point)))'kprod/factorial(j)
                 elseif j ==6
-                    taylor_terms[i,j+1] = vec(dddddd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(dddddd(point)))'kprod/factorial(j)
                 else
-                    taylor_terms[i,j+1] = vec(ddddddd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(ddddddd(point)))'kprod/factorial(j)
                 end
             end
         end
@@ -3183,21 +3199,21 @@ function check_taylor_convergence(model::REModel,ss::Array{T,1},z::Array{T,1},de
             ddddddd(x) = ForwardDiff.jacobian(dddddd,x,ForwardDiff.JacobianConfig(dddddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
 
             for j = 1:degree
-                kprod = kron(kprod,(ss - z))
+                kprod = kron(kprod,(z - ss))
                 if j == 1
-                    taylor_terms[i,j+1] = d(point)'kprod
+                    taylor_terms[i,j+1] = abs.(d(point))'kprod
                 elseif j == 2
-                    taylor_terms[i,j+1] = vec(dd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(dd(point)))'kprod/factorial(j)
                 elseif j == 3
-                    taylor_terms[i,j+1] = vec(ddd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(ddd(point)))'kprod/factorial(j)
                 elseif j == 4
-                    taylor_terms[i,j+1] = vec(dddd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(dddd(point)))'kprod/factorial(j)
                 elseif j == 5
-                    taylor_terms[i,j+1] = vec(ddddd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(ddddd(point)))'kprod/factorial(j)
                 elseif j ==6
-                    taylor_terms[i,j+1] = vec(dddddd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(dddddd(point)))'kprod/factorial(j)
                 else
-                    taylor_terms[i,j+1] = vec(ddddddd(point))'kprod/factorial(j)
+                    taylor_terms[i,j+1] = abs.(vec(ddddddd(point)))'kprod/factorial(j)
                 end
             end
         end

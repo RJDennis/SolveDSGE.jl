@@ -5,7 +5,7 @@ abstract type ModelPrimatives end
 
 struct REModelPrimatives{Q<:AbstractString} <: ModelPrimatives
 
-    # This structure contains the critial model information extracted from a
+    # This structure contains the crucial model information extracted from a
     # model file.
 
     states::Array{Q,1}

@@ -641,6 +641,17 @@ function create_steady_state_equations(model::ModelPrimatives)
 
     sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
 
+        #= First we go through every equation and replace exp with : and log with ;.  
+       This is to guard them during variables and parameter substitution. =#
+
+       for i = 1:length(steady_state_equations)
+        if occursin("exp",equations[i]) == true
+            steady_state_equations[i] = replace(steady_state_equations[i],"exp" => ":")
+        elseif occursin("log",steady_state_equations[i]) == true
+            steady_state_equations[i] = replace(steady_state_equations[i],"log" => ";")
+        end
+    end
+
     # Now we go through every equation and replace future variables, variables, and
     # shocks with a numbered element of a vector, "x".  We also replace parameter
     # names with parameter values
@@ -687,6 +698,16 @@ function create_steady_state_equations(model::ModelPrimatives)
         end
         if loops > length(parameters)-1
             error("There is a circularity in the parameter definitions")
+        end
+    end
+
+    #= Finally, go back through every equation and restore exp and log where necessary =#
+
+    for i = 1:length(steady_state_equations)
+        if occursin(":",steady_state_equations[i]) == true
+            steady_state_equations[i] = replace(steady_state_equations[i],":" => "exp")
+        elseif occursin(";",steady_state_equations[i]) == true
+            steady_state_equations[i] = replace(steady_state_equations[i],";" => "log")
         end
     end
 
