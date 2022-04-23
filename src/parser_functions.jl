@@ -19,6 +19,14 @@ function open_model_file(path::Q) where {Q<:AbstractString}
         end
     end
 
+    # Identify lines that contain only spaces
+
+    for i in eachindex(model_array)
+        if unique(model_array[i]) == [' '] # line contains only spaces
+            model_array[i] = "" # Make it a blank line
+        end
+    end
+
     # Remove blank lines
 
     model_array = model_array[model_array.!=""]
@@ -401,10 +409,13 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
         for j = 1:number_eqns_with_shocks
             if shocks_number[j] == k
                 for i = 1:length(shocks)
-                    if occursin(reordered_shocks[i],reordered_equations[j]) == true && j != i && (i in shocks_that_have_been_ordered) == false
+                    if occursin(reordered_shocks[i],reordered_equations[j]) == true && j == i && (i in shocks_that_have_been_ordered) == false
+                        push!(shocks_that_have_been_ordered,i)
+                        break
+                    elseif occursin(reordered_shocks[i],reordered_equations[j]) == true && j != i && (i in shocks_that_have_been_ordered) == false
                         reordered_shocks[i], reordered_shocks[j]       = reordered_shocks[j], reordered_shocks[i]
                         states_left_in_eqns[i], states_left_in_eqns[j] = states_left_in_eqns[j], states_left_in_eqns[i]
-                        push!(shocks_that_have_been_ordered,j)
+                        push!(shocks_that_have_been_ordered,i)
                         break
                     end
                 end
