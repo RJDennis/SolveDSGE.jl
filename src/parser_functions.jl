@@ -546,7 +546,8 @@ function repackage_equations(model::ModelPrimatives)
     parameters = model.parameters
     parametervalues = model.parametervalues
 
-    repackaged_equations = copy(equations)
+    repackaged_equations       = copy(equations)
+    repackaged_parametervalues = copy(parametervalues)
 
     if length(shocks) != 0
         combined_names = [variables; parameters; shocks]
@@ -563,8 +564,19 @@ function repackage_equations(model::ModelPrimatives)
     for i = 1:length(repackaged_equations)
         if occursin("exp",equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],"exp" => ":")
-        elseif occursin("log",repackaged_equations[i]) == true
+        elseif occursin("log",equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],"log" => ";")
+        end
+    end
+
+    #= Next we go through every parameter expression and replace exp with : and log with ;.  
+    This is to guard them during variables and parameter substitution. =#
+
+    for i = 1:length(parametervalues)
+        if occursin("exp",parametervalues[i]) == true
+            repackaged_parametervalues[i] = replace(repackaged_parametervalues[i],"exp" => ":")
+        elseif occursin("log",parametervalues[i]) == true
+            repackaged_parametervalues[i] = replace(repackaged_parametervalues[i],"log" => ";")
         end
     end
 
@@ -573,12 +585,12 @@ function repackage_equations(model::ModelPrimatives)
 
     loops = 0 # Counts the number of loops over the parameters
     while true
-        count = 0 # counts whether paramter values are still being assigned
+        count = 0 # counts whether parameter values are still being assigned
         for j in sorted_parameters
             parameter_index = findfirst(isequal(j),parameters)
-            for i = 1:length(parametervalues)
-                if occursin(j,parametervalues[i]) == true
-                    parametervalues[i] = replace(parametervalues[i],j => string("(",parametervalues[parameter_index],")"))
+            for i = 1:length(repackaged_parametervalues)
+                if occursin(j,repackaged_parametervalues[i]) == true
+                    repackaged_parametervalues[i] = replace(repackaged_parametervalues[i],j => string("(",repackaged_parametervalues[parameter_index],")"))
                     count += 1
                 end
             end
@@ -606,7 +618,7 @@ function repackage_equations(model::ModelPrimatives)
         elseif j in parameters
             parameter_index = findfirst(isequal(j),parameters)
             for i = 1:length(repackaged_equations)
-                repackaged_equations[i] = replace(repackaged_equations[i],j => parametervalues[parameter_index])
+                repackaged_equations[i] = replace(repackaged_equations[i],j => repackaged_parametervalues[parameter_index])
             end
         elseif j in shocks # Okay even if there are no shocks
             shock_index = findfirst(isequal(j),shocks)
@@ -621,7 +633,8 @@ function repackage_equations(model::ModelPrimatives)
     for i = 1:length(repackaged_equations)
         if occursin(":",repackaged_equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],":" => "exp")
-        elseif occursin(";",repackaged_equations[i]) == true
+        end
+        if occursin(";",repackaged_equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],";" => "log")
         end
     end
@@ -642,7 +655,8 @@ function create_steady_state_equations(model::ModelPrimatives)
     parameters = model.parameters
     parametervalues = model.parametervalues
 
-    steady_state_equations = copy(equations)
+    steady_state_equations       = copy(equations)
+    steady_state_parametervalues = copy(parametervalues)
 
     if length(shocks) != 0
         combined_names = [variables; parameters; shocks]
@@ -651,15 +665,52 @@ function create_steady_state_equations(model::ModelPrimatives)
     end
 
     sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
+    sorted_parameters     = parameters[sortperm(length.(parameters),rev = true)]
 
-        #= First we go through every equation and replace exp with : and log with ;.  
-       This is to guard them during variables and parameter substitution. =#
+    #= First we go through every equation and replace exp with : and log with ;.  
+    This is to guard them during variables and parameter substitution. =#
 
-       for i = 1:length(steady_state_equations)
+    for i = 1:length(steady_state_equations)
         if occursin("exp",equations[i]) == true
             steady_state_equations[i] = replace(steady_state_equations[i],"exp" => ":")
         elseif occursin("log",steady_state_equations[i]) == true
             steady_state_equations[i] = replace(steady_state_equations[i],"log" => ";")
+        end
+    end
+
+    #= Next we go through every parameter expression and replace exp with : and log with ;.  
+    This is to guard them during variables and parameter substitution. =#
+
+    for i = 1:length(parametervalues)
+        if occursin("exp",parametervalues[i]) == true
+            steady_state_parametervalues[i] = replace(steady_state_parametervalues[i],"exp" => ":")
+        elseif occursin("log",parametervalues[i]) == true
+            steady_state_parametervalues[i] = replace(steady_state_parametervalues[i],"log" => ";")
+        end
+    end
+
+    #= Now we take care of the fact that some model parameters may be functions of deeper
+    behavioral parameters =#
+
+    loops = 0 # Counts the number of loops over the parameters
+    while true
+        count = 0 # counts whether parameter values are still being assigned
+        for j in sorted_parameters
+            parameter_index = findfirst(isequal(j),parameters)
+            for i = 1:length(steady_state_parametervalues)
+                if occursin(j,steady_state_parametervalues[i]) == true
+                    steady_state_parametervalues[i] = replace(steady_state_parametervalues[i],j => string("(",steady_state_parametervalues[parameter_index],")"))
+                    #steady_state_equations[i] = replace(steady_state_equations[i],j => steady_state_parametervalues[parameter_index])
+                    count += 1
+                end
+            end
+        end
+        loops += 1
+        if count == 0
+            break
+        end
+        if loops > length(parameters)-1
+            error("There is a circularity in the parameter definitions")
         end
     end
 
@@ -678,7 +729,7 @@ function create_steady_state_equations(model::ModelPrimatives)
         elseif j in parameters
             parameter_index = findfirst(isequal(j),parameters)
             for i = 1:length(equations)
-                steady_state_equations[i] = replace(steady_state_equations[i],j => parametervalues[parameter_index])
+                steady_state_equations[i] = replace(steady_state_equations[i],j => steady_state_parametervalues[parameter_index])
             end
         elseif j in shocks
             shock_index = findfirst(isequal(j),shocks)
@@ -688,36 +739,13 @@ function create_steady_state_equations(model::ModelPrimatives)
         end
     end
 
-        #= Now we take care of the fact that some model parameters may be functions of deeper
-      behavioral parameters =#
-
-    loops = 0 # Counts the number of loops over the parameters
-    while true
-        count = 0 # counts whether paramter values are still being assigned
-        for j in parameters
-            parameter_index = findfirst(isequal(j),parameters)
-            for i = 1:length(steady_state_equations)
-                if occursin(j,steady_state_equations[i]) == true
-                    steady_state_equations[i] = replace(steady_state_equations[i],j => parametervalues[parameter_index])
-                    count += 1
-                end
-            end
-        end
-        loops += 1
-        if count == 0
-            break
-        end
-        if loops > length(parameters)-1
-            error("There is a circularity in the parameter definitions")
-        end
-    end
-
     #= Finally, go back through every equation and restore exp and log where necessary =#
 
     for i = 1:length(steady_state_equations)
         if occursin(":",steady_state_equations[i]) == true
             steady_state_equations[i] = replace(steady_state_equations[i],":" => "exp")
-        elseif occursin(";",steady_state_equations[i]) == true
+        end
+        if occursin(";",steady_state_equations[i]) == true
             steady_state_equations[i] = replace(steady_state_equations[i],";" => "log")
         end
     end
