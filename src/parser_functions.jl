@@ -505,7 +505,7 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractStri
     for i in [variables; parameters]
         if i in variables
             if sum(occursin.(i,equations)) == false
-                println("Warning: variable $i is not in any equation.")
+                error("Variable $i is not in any equation.")
             end
         else
             if sum(occursin.(i,equations)) + sum(occursin.(i,parametervalues)) == 0

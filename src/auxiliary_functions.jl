@@ -445,12 +445,12 @@ end
 
 function kron_prod_times_vector(A::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},x::Union{Array{T,1},Array{Complex{T},1}},n::Array{S,1},p::S) where {T<:Real,S<:Integer}
 
-    # Computes y = (A[p]*A[p-1]*...*A[1] )*x
+    # Computes y = (A[p]⊗A[p-1]⊗...⊗A[1] )*x
 
     N = prod(n[1:p])
     z = copy(x)
     for i = 1:p
-        z = (A[i]*reshape(z,n[i],Int(N/n[i])))'
+        z = transpose(A[i]*reshape(z,n[i],div(N,n[i])))
     end
     y = reshape(Matrix(z),N)
 
@@ -460,14 +460,14 @@ end
 
 function kron_prod_times_matrix(A::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},x::Union{Array{T,2},Array{Complex{T},2}},n::Array{S,1},p::S) where {T<:Real,S<:Integer}
 
-    # Computes y = (A[p]*A[p-1]*...*A[1] )*x
+    # Computes y = (A[p]⊗A[p-1]⊗...⊗A[1] )*x
 
     N = prod(n[1:p])
     y = Array{Complex{T}}(undef,N,size(x,2))
     for j = 1:size(x,2)
         @views z = x[:,j]
         for i = 1:p
-            z = (A[i]*reshape(z,n[i],Int(N/n[i])))'
+            z = transpose(A[i]*reshape(z,n[i],div(N,n[i])))
         end
         y[:,j] .= reshape(Matrix(z),N)
     end

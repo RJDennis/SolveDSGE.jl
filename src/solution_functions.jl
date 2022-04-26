@@ -251,7 +251,7 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
 
 end
 
-function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # Follows Gomme and Klein (2011)
+function solve_second_order_stoch(model::REModel, scheme::PerturbationScheme) # Follows Gomme and Klein (2011)
 
     nx = model.number_states
     ny = model.number_jumps
@@ -267,14 +267,14 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
     # Hessians vertically.
 
     point = [steady_state; steady_state; zeros(ns)]
-    deriv2 = zeros(ne*2*nv,2*nv)
+    deriv2 = zeros(ne * 2 * nv, 2 * nv)
     for i = 1:nv
-        deriv2[(i-1)*2*nv+1:i*2*nv,:] = ForwardDiff.hessian(model.each_eqn_function[i],point,ForwardDiff.HessianConfig(model.each_eqn_function[i],point,ForwardDiff.Chunk{2}()))[1:2*nv,1:2*nv]
+        deriv2[(i-1)*2*nv+1:i*2*nv, :] = ForwardDiff.hessian(model.each_eqn_function[i], point, ForwardDiff.HessianConfig(model.each_eqn_function[i], point, ForwardDiff.Chunk{2}()))[1:2*nv, 1:2*nv]
     end
 
     # Compute the first-order solution 
 
-    first_order_soln = solve_first_order(model,PerturbationScheme(steady_state,cutoff,"first"))
+    first_order_soln = solve_first_order(model, PerturbationScheme(steady_state, cutoff, "first"))
     hx = first_order_soln.hx
     gx = first_order_soln.gx
     grc = first_order_soln.grc
@@ -284,56 +284,56 @@ function solve_second_order_stoch(model::REModel,scheme::PerturbationScheme) # F
 
     # Calculate the first derivatives at the steady state
 
-    d = compute_linearization(model,steady_state)
+    d = compute_linearization(model, steady_state)
 
     # Construct partitioned first derivative matrices
 
-    @views fx  = d[:,1:nx]
-    @views fy  = d[:,(nx+1):nv]
-    @views fxp = d[:,(nv+1):(nv+nx)]
-    @views fyp = d[:,(nv+nx+1):2*nv]
+    @views fx = d[:, 1:nx]
+    @views fy = d[:, (nx+1):nv]
+    @views fxp = d[:, (nv+1):(nv+nx)]
+    @views fyp = d[:, (nv+nx+1):2*nv]
 
     # Set up the Sylvester equation needed to construct the matrices on the
     # second-order states.
 
-    Mx = [I; gx; hx; gx*hx]
-    q  = kron_prod_times_matrix(eye(T,nv),Mx',deriv2*Mx) #(eye(T,nv) ⊗ m')*(deriv2*m)
-    b1 = kron(fxp,eye(T,nx)) #fxp ⊗ eye(T,nx) 
-    b2 = kron(fyp,eye(T,nx)) #fyp ⊗ eye(T,nx)
-    b4 = kron(fy,eye(T,nx)) #fy ⊗ eye(T,nx) 
-    c1 = kron(eye(T,ny),hx') #eye(T,ny) ⊗ hx'
-    c2 = kron(gx,eye(T,nx)) #gx ⊗ eye(T,nx)
+    Mx = [I; gx; hx; gx * hx]
+    q = kron_prod_times_matrix(eye(T, nv), Mx', deriv2 * Mx) #(eye(T,nv) ⊗ m')*(deriv2*m)
+    b1 = kron(fxp, eye(T, nx)) #fxp ⊗ eye(T,nx) 
+    b2 = kron(fyp, eye(T, nx)) #fyp ⊗ eye(T,nx)
+    b4 = kron(fy, eye(T, nx)) #fy ⊗ eye(T,nx) 
+    c1 = kron(eye(T, ny), hx') #eye(T,ny) ⊗ hx'
+    c2 = kron(gx, eye(T, nx)) #gx ⊗ eye(T,nx)
 
     # Use a Sylvester equation solver to compute the second order terms on the states.
 
-    A = [b1 + b2*c2 b4]
-    B = [zeros(size(b2,1),nx*nx) b2*c1]
+    A = [b1 + b2 * c2 b4]
+    B = [zeros(size(b2, 1), nx * nx) b2 * c1]
     C = hx
     D = q
 
-    B .= A\B
-    D .= A\D
+    B .= A \ B
+    D .= A \ D
 
-    z = dsylvester(B,C,-D)
-    hxx = z[1:nx*nx,:]
-    gxx = z[nx^2+1:end,:]
+    z = dsylvester(B, C, -D)
+    hxx = z[1:nx*nx, :]
+    gxx = z[nx^2+1:end, :]
 
     # Set up the LP problem needed to construct the intercepts, which contain
     # the volatility effects
 
     k = first_order_soln.k
     sigma = first_order_soln.sigma
-    qq = [fxp + fyp*gx fyp + fy]
-    nn = [zeros(nv,nx); I; gx]
-    q = fyp*tracem(kron_prod_times_matrix(eye(T,ny),k*sigma'*k',gxx)) + tracem(kron_prod_times_matrix(eye(T,nv),nn',deriv2*nn*k*sigma'*k'))
-    ss = -qq\q
+    qq = [fxp + fyp * gx fyp + fy]
+    nn = [zeros(nv, nx); I; gx]
+    q = fyp * tracem(kron_prod_times_matrix(eye(T, ny), k * sigma' * k', gxx)) + tracem(kron_prod_times_matrix(eye(T, nv), nn', deriv2 * nn * k * sigma' * k'))
+    ss = -qq \ q
     hss = ss[1:nx]
     gss = ss[nx+1:nv]
 
-    hxx = Matrix(reshape(z[1:nx*nx,:]',nx*nx,nx)')
-    gxx = Matrix(reshape(z[nx^2+1:end,:]',nx*nx,ny)')
+    hxx = Matrix(reshape(z[1:nx*nx, :]', nx * nx, nx)')
+    gxx = Matrix(reshape(z[nx^2+1:end, :]', nx * nx, ny)')
 
-    soln = SecondOrderSolutionStoch(steady_state[1:nx],hx,hss,hxx,k,steady_state[nx+1:nv],gx,gss,gxx,sigma,grc,soln_type)
+    soln = SecondOrderSolutionStoch(steady_state[1:nx], hx, hss, hxx, k, steady_state[nx+1:nv], gx, gss, gxx, sigma, grc, soln_type)
     return soln
 
 end
@@ -501,6 +501,7 @@ function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewn
     D = -matrix_times_kron_prod(second_derivs,Mx,Mx)
 
     z = martin_van_loan(A,B,hx,D,1)
+
     hxx = z[1:nx,:]
     gxx = z[nx+1:nv,:]
 
@@ -609,17 +610,17 @@ function solve_fourth_order_det(model::REModel,scheme::PerturbationScheme)
 
     for i = 1:ne
 
-        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv]
+        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv]
         first_derivs[i,:] .= first_d(point)
 
-        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
         #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*n,1:2*n]
         second_derivs[i,:] .= vec(second_d(point))
 
-        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
         third_derivs[i,:] .= vec(third_d(point))
 
-        fourth_d(x) = ForwardDiff.jacobian(third_d,x,ForwardDiff.JacobianConfig(third_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+        fourth_d(x) = ForwardDiff.jacobian(third_d,x,ForwardDiff.JacobianConfig(third_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
         fourth_derivs[i,:] .= vec(fourth_d(point))
 
     end
@@ -714,17 +715,17 @@ function solve_fourth_order_stoch(model::REModel,scheme::PerturbationScheme)
 
     for i = 1:ne
 
-        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv]
+        first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv]
         first_derivs[i,:] .= vec(first_d(point))
 
-        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv,1:2*nv]
+        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
         #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
         second_derivs[i,:] .= vec(vec(second_d(point)))
 
-        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+        third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
         third_derivs[i,:] .= vec(vec(third_d(point)))
 
-        fourth_d(x) = ForwardDiff.jacobian(third_d,x,ForwardDiff.JacobianConfig(third_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+        fourth_d(x) = ForwardDiff.jacobian(third_d,x,ForwardDiff.JacobianConfig(third_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
         fourth_derivs[i,:] .= vec(vec(fourth_d(point)))
 
     end

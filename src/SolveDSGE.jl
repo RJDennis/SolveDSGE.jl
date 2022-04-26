@@ -62,8 +62,7 @@ export process_model,
        compare_solutions,
        state_space_eqm,
        euler_errors,
-       den_haan_marcet,
-       check_taylor_convergence
+       den_haan_marcet
 
 export chebyshev_nodes,
        chebyshev_extrema,

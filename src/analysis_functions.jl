@@ -1074,22 +1074,19 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Sec
     gxx = (1/2)*soln.gxx
 
     simulated_states_f = Array{T,2}(undef,nx,sim_length + 1)
-    simulated_jumps_f = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] .= initial_state .- soln.hbar
-
     simulated_states_s = Array{T,2}(undef,nx,sim_length + 1)
-    simulated_jumps_s = Array{T,2}(undef,ny,sim_length)
+    simulated_jumps    = Array{T,2}(undef,ny,sim_length)
+
+    simulated_states_f[:,1] .= initial_state .- soln.hbar
     simulated_states_s[:,1] .= zeros(nx)
 
     @views for i = 2:sim_length+1
-        simulated_states_f[:,i] = soln.hx*simulated_states_f[:,i-1]
-        simulated_jumps_f[:,i-1] = soln.gx*simulated_states_f[:,i-1]
-        simulated_states_s[:,i] = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
-        simulated_jumps_s[:,i-1] = soln.gx*simulated_states_s[:,i-1] + gxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
+        simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1]
+        simulated_states_s[:,i]  = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
+        simulated_jumps[:,i-1]   = soln.gx*(simulated_states_f[:,i-1] + simulated_states_s[:,i-1]) + gxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
     end
 
     simulated_states = simulated_states_f + simulated_states_s
-    simulated_jumps = simulated_jumps_f + simulated_jumps_s
 
     return [simulated_states[:,1:sim_length] .+ soln.hbar; simulated_jumps[:,1:end] .+ soln.gbar]
 
@@ -1113,22 +1110,20 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S; rndseed = 123
     gxx = (1/2)*soln.gxx
 
     simulated_states_f = Array{T,2}(undef,nx,sim_length + 1)
-    simulated_jumps_f = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] .= initial_state - soln.hbar
-
     simulated_states_s = Array{T,2}(undef,nx,sim_length + 1)
-    simulated_jumps_s = Array{T,2}(undef,ny,sim_length)
+    simulated_jumps    = Array{T,2}(undef,ny,sim_length)
+
+    simulated_states_f[:,1] .= initial_state - soln.hbar
     simulated_states_s[:,1] .= zeros(nx)
 
     @views for i = 2:sim_length+1
-        simulated_states_f[:,i] = soln.hx*simulated_states_f[:,i-1] + soln.k*randn(ns)
-        simulated_jumps_f[:,i-1] = soln.gx*simulated_states_f[:,i-1]
-        simulated_states_s[:,i] = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + hss
-        simulated_jumps_s[:,i-1] = soln.gx*simulated_states_s[:,i-1] + gxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + gss
+        simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1] + soln.k*randn(ns)
+        simulated_states_s[:,i]  = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + hss
+        simulated_jumps[:,i-1]   = soln.gx*(simulated_states_f[:,i-1] + simulated_states_s[:,i-1]) + gxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + gss
+
     end
 
     simulated_states = simulated_states_f + simulated_states_s
-    simulated_jumps = simulated_jumps_f + simulated_jumps_s
 
     return [simulated_states[:,1:sim_length] .+ soln.hbar; simulated_jumps[:,1:end] .+ soln.gbar]
 
@@ -1143,34 +1138,28 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Thi
         error("The number of inital values for the states must equal the number of states")
     end
 
-    hxx = (1/2)*soln.hxx
-    gxx = (1/2)*soln.gxx
+    hxx  = (1/2)*soln.hxx
+    gxx  = (1/2)*soln.gxx
     hxxx = (1/6)*soln.hxxx
     gxxx = (1/6)*soln.gxxx
 
     simulated_states_f = Array{T,2}(undef,nx,sim_length + 1)
-    simulated_jumps_f = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] .= initial_state .- soln.hbar
-
     simulated_states_s = Array{T,2}(undef,nx,sim_length + 1)
-    simulated_jumps_s = Array{T,2}(undef,ny,sim_length)
-    simulated_states_s[:,1] .= zeros(nx)
-
     simulated_states_t = Array{T,2}(undef,nx,sim_length + 1)
-    simulated_jumps_t = Array{T,2}(undef,ny,sim_length)
+    simulated_jumps    = Array{T,2}(undef,ny,sim_length)
+    
+    simulated_states_f[:,1] .= initial_state .- soln.hbar
+    simulated_states_s[:,1] .= zeros(nx)
     simulated_states_t[:,1] .= zeros(nx)
 
     @views for i = 2:sim_length+1
-        simulated_states_f[:,i] = soln.hx*simulated_states_f[:,i-1]
-        simulated_jumps_f[:,i-1] = soln.gx*simulated_states_f[:,i-1]
-        simulated_states_s[:,i] = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
-        simulated_jumps_s[:,i-1] = soln.gx*simulated_states_s[:,i-1] + gxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
-        simulated_states_t[:,i] = soln.hx*simulated_states_t[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
-        simulated_jumps_t[:,i-1] = soln.gx*simulated_states_t[:,i-1] + gxx*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + gxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
+        simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1]
+        simulated_states_s[:,i]  = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
+        simulated_states_t[:,i]  = soln.hx*simulated_states_t[:,i-1] + hxx*2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssx*simulated_states_f[:,i-1]
+        simulated_jumps[:,i-1]   = soln.gx*(simulated_states_f[:,i-1] + simulated_states_s[:,i-1] + simulated_states_t[:,i-1]) + gxx*(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_pos_s[:,i-1])) + gxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + gssx*simulated_states_f[:,i-1]
     end
 
     simulated_states = simulated_states_f + simulated_states_s + simulated_states_t
-    simulated_jumps = simulated_jumps_f + simulated_jumps_s + simulated_jumps_t
 
     return [simulated_states[:,1:sim_length] .+ soln.hbar; simulated_jumps[:,1:end] .+ soln.gbar]
 
@@ -1200,28 +1189,22 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S; rndseed = 123
     gsss = (1/6)*soln.gsss
 
     simulated_states_f = Array{T,2}(undef,nx,sim_length + 1)
-    simulated_jumps_f = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] .= initial_state .- soln.hbar
-
     simulated_states_s = Array{T,2}(undef,nx,sim_length + 1)
-    simulated_jumps_s = Array{T,2}(undef,ny,sim_length)
-    simulated_states_s[:,1] .= zeros(nx)
-
     simulated_states_t = Array{T,2}(undef,nx,sim_length + 1)
-    simulated_jumps_t = Array{T,2}(undef,ny,sim_length)
+    simulated_jumps    = Array{T,2}(undef,ny,sim_length)
+
+    simulated_states_f[:,1] .= initial_state .- soln.hbar
+    simulated_states_s[:,1] .= zeros(nx)
     simulated_states_t[:,1] .= zeros(nx)
 
     @views for i = 2:sim_length+1
-        simulated_states_f[:,i] = soln.hx*simulated_states_f[:,i-1] + soln.k*randn(ns)
-        simulated_jumps_f[:,i-1] = soln.gx*simulated_states_f[:,i-1]
-        simulated_states_s[:,i] = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + hss
-        simulated_jumps_s[:,i-1] = soln.gx*simulated_states_s[:,i-1] + gxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + gss
-        simulated_states_t[:,i] = soln.hx*simulated_states_t[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssx*simulated_states_f[:,i-1] + hsss
-        simulated_jumps_t[:,i-1] = soln.gx*simulated_states_t[:,i-1] + gxx*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + gxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + gssx*simulated_states_f[:,i-1] + gsss
+        simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1] + soln.k*randn(ns)
+        simulated_states_s[:,i]  = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + hss
+        simulated_states_t[:,i]  = soln.hx*simulated_states_t[:,i-1] + hxx*2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssx*simulated_states_f[:,i-1] + hsss
+        simulated_jumps[:,i-1]   = soln.gx*(simulated_states_f[:,i-1] + simulated_states_s[:,i-1] + simulated_states_t[:,i-1]) + gxx*(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1])) + gxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + gssx*simulated_states_f[:,i-1] + gss + gsss
     end
 
     simulated_states = simulated_states_f + simulated_states_s + simulated_states_t
-    simulated_jumps = simulated_jumps_f + simulated_jumps_s + simulated_jumps_t
 
     return [simulated_states[:,1:sim_length] .+ soln.hbar; simulated_jumps[:,1:end] .+ soln.gbar]
 
@@ -1243,31 +1226,23 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Fou
     hxxxx = (1/24)*soln.hxxxx
     gxxxx = (1/24)*soln.gxxxx
 
-    simulated_states_f = Array{T,2}(undef,nx,sim_length+1)
-    simulated_jumps_f  = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] .= initial_state .- soln.hbar
-
-    simulated_states_s = Array{T,2}(undef,nx,sim_length+1)
-    simulated_jumps_s  = Array{T,2}(undef,ny,sim_length)
-    simulated_states_s[:,1] .= zeros(nx)
-
-    simulated_states_t = Array{T,2}(undef,nx,sim_length+1)
-    simulated_jumps_t  = Array{T,2}(undef,ny,sim_length)
-    simulated_states_t[:,1] .= zeros(nx)
-
+    simulated_states_f  = Array{T,2}(undef,nx,sim_length+1)
+    simulated_states_s  = Array{T,2}(undef,nx,sim_length+1)
+    simulated_states_t  = Array{T,2}(undef,nx,sim_length+1)
     simulated_states_fo = Array{T,2}(undef,nx,sim_length+1)
-    simulated_jumps_fo  = Array{T,2}(undef,ny,sim_length)
+    simulated_jumps     = Array{T,2}(undef,ny,sim_length)
+
+    simulated_states_f[:,1]  .= initial_state .- soln.hbar
+    simulated_states_s[:,1]  .= zeros(nx)
+    simulated_states_t[:,1]  .= zeros(nx)
     simulated_states_fo[:,1] .= zeros(nx)
 
     @views for i = 2:sim_length+1
         simulated_states_f[:,i]   = soln.hx*simulated_states_f[:,i-1]
-        simulated_jumps_f[:,i-1]  = soln.gx*simulated_states_f[:,i-1]
-        simulated_states_s[:,i]   = soln.hx*simulated_states_s[:,i-1]  + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
-        simulated_jumps_s[:,i-1]  = soln.gx*simulated_states_s[:,i-1]  + gxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
-        simulated_states_t[:,i]   = soln.hx*simulated_states_t[:,i-1]  + hxx*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
-        simulated_jumps_t[:,i-1]  = soln.gx*simulated_states_t[:,i-1]  + gxx*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + gxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
-        simulated_states_fo[:,i]  = soln.hx*simulated_states_fo[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1]) + hxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
-        simulated_jumps_fo[:,i-1] = soln.gx*simulated_states_fo[:,i-1] + gxx*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + gxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1]) + gxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
+        simulated_states_s[:,i]   = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
+        simulated_states_t[:,i]   = soln.hx*simulated_states_t[:,i-1] + hxx*2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssx*simulated_states_f[:,i-1]
+        simulated_states_fo[:,i]  = soln.hx*simulated_states_fo[:,i-1] + hxx*(2*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + kron(simulated_states_s[:,i-1],simulated_states_s[:,i-1])) + hxxx*3*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1]) + hssx*simulated_states_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
+        simulated_jumps[:,i-1] = soln.gx*(simulated_states_f[:,i-1] + simulated_states_s[:,i-1] + simulated_states_t[:,i-1] + simulated_states_fo[:,i-1]) + gxx*(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + kron(simulated_states_s[:,i-1],simulated_states_s[:,i-1])) + gxxx*(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + 3*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1])) + gssx*simulated_states_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + gssxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
     end
 
     simulated_states = simulated_states_f + simulated_states_s + simulated_states_t + simulated_states_fo
@@ -1304,35 +1279,26 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S; rndseed = 123
     hssss = (1/24)*soln.hssss
     gssss = (1/24)*soln.gssss
 
-    simulated_states_f = Array{T,2}(undef,nx,sim_length+1)
-    simulated_jumps_f  = Array{T,2}(undef,ny,sim_length)
-    simulated_states_f[:,1] .= initial_state .- soln.hbar
-
-    simulated_states_s = Array{T,2}(undef,nx,sim_length+1)
-    simulated_jumps_s  = Array{T,2}(undef,ny,sim_length)
-    simulated_states_s[:,1] .= zeros(nx)
-
-    simulated_states_t = Array{T,2}(undef,nx,sim_length+1)
-    simulated_jumps_t  = Array{T,2}(undef,ny,sim_length)
-    simulated_states_t[:,1] .= zeros(nx)
-
+    simulated_states_f  = Array{T,2}(undef,nx,sim_length+1)
+    simulated_states_s  = Array{T,2}(undef,nx,sim_length+1)
+    simulated_states_t  = Array{T,2}(undef,nx,sim_length+1)
     simulated_states_fo = Array{T,2}(undef,nx,sim_length+1)
-    simulated_jumps_fo  = Array{T,2}(undef,ny,sim_length)
+    simulated_jumps     = Array{T,2}(undef,ny,sim_length)
+
+    simulated_states_f[:,1]  .= initial_state .- soln.hbar
+    simulated_states_s[:,1]  .= zeros(nx)
+    simulated_states_t[:,1]  .= zeros(nx)
     simulated_states_fo[:,1] .= zeros(nx)
 
     @views for i = 2:sim_length+1
-        simulated_states_f[:,i]   = soln.hx*simulated_states_f[:,i-1]  + soln.k*randn(ns)
-        simulated_jumps_f[:,i-1]  = soln.gx*simulated_states_f[:,i-1]
-        simulated_states_s[:,i]   = soln.hx*simulated_states_s[:,i-1]  + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + hss
-        simulated_jumps_s[:,i-1]  = soln.gx*simulated_states_s[:,i-1]  + gxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + gss
-        simulated_states_t[:,i]   = soln.hx*simulated_states_t[:,i-1]  + hxx*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssx*simulated_states_f[:,i-1] 
-        simulated_jumps_t[:,i-1]  = soln.gx*simulated_states_t[:,i-1]  + gxx*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + gxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + gssx*simulated_states_f[:,i-1] 
-        simulated_states_fo[:,i]  = soln.hx*simulated_states_fo[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1]) + hssx*simulated_states_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1])  + hssxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + hssss
-        simulated_jumps_fo[:,i-1] = soln.gx*simulated_states_fo[:,i-1] + gxx*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + gxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1]) + gssx*simulated_states_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + gssxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + gssss
+        simulated_states_f[:,i]   = soln.hx*simulated_states_f[:,i-1] + soln.k*randn(ns)
+        simulated_states_s[:,i]   = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + hss
+        simulated_states_t[:,i]   = soln.hx*simulated_states_t[:,i-1] + hxx*2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssx*simulated_states_f[:,i-1]
+        simulated_states_fo[:,i]  = soln.hx*simulated_states_fo[:,i-1] + hxx*(2*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + kron(simulated_states_s[:,i-1],simulated_states_s[:,i-1])) + hxxx*3*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1]) + hssx*simulated_states_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + hssss
+        simulated_jumps[:,i-1]    = soln.gx*(simulated_states_f[:,i-1] + simulated_states_s[:,i-1] + simulated_states_t[:,i-1] + simulated_states_fo[:,i-1]) + gxx*(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + kron(simulated_states_s[:,i-1],simulated_states_s[:,i-1])) + gxxx*(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + 3*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1])) + gssx*simulated_states_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + gssxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + gss + gssss
     end
 
     simulated_states = simulated_states_f + simulated_states_s + simulated_states_t + simulated_states_fo
-    simulated_jumps  = simulated_jumps_f + simulated_jumps_s + simulated_jumps_t + simulated_jumps_fo
 
     return [simulated_states[:,1:sim_length] .+ soln.hbar; simulated_jumps[:,1:end] .+ soln.gbar]
 
@@ -1447,7 +1413,7 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
     end
 
-    return [simulated_states_pos_f[:,1:n]+soln.hbar; simulated_jumps_pos_f+soln.gbar],[simulated_states_neg_f[:,1:n]+soln.hbar; simulated_jumps_neg_f+soln.gbar]
+    return [simulated_states_pos_f[:,1:n]; simulated_jumps_pos_f],[simulated_states_neg_f[:,1:n]; simulated_jumps_neg_f]
 
 end
 
@@ -1561,25 +1527,22 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
         @views for i = 2:n+1
             simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
             simulated_states_pos_s[:,i]  = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
-            simulated_jumps_pos_s[:,i-1] = soln.gx*simulated_states_pos_s[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
+            simulated_jumps_pos_s[:,i-1] = soln.gx*(simulated_states_pos_f[:,i-1]+simulated_states_pos_s[:,i-1]) + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
 
             simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
             simulated_states_neg_s[:,i]  = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
-            simulated_jumps_neg_s[:,i-1] = soln.gx*simulated_states_neg_s[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
+            simulated_jumps_neg_s[:,i-1] = soln.gx*(simulated_states_neg_f[:,i-1]+simulated_states_neg_s[:,i-1]) + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
 
             simulated_states_base_f[:,i]  = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_base_f[:,i-1] = soln.gx*simulated_states_base_f[:,i-1]
             simulated_states_base_s[:,i]  = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
-            simulated_jumps_base_s[:,i-1] = soln.gx*simulated_states_base_s[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
+            simulated_jumps_base_s[:,i-1] = soln.gx*(simulated_states_base_f[:,i-1]+simulated_states_base_s[:,i-1]) + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
         end
 
         impulses_states_pos .+= (simulated_states_pos_f + simulated_states_pos_s - simulated_states_base_f - simulated_states_base_s)
-        impulses_jumps_pos  .+= (simulated_jumps_pos_f + simulated_jumps_pos_s - simulated_jumps_base_f - simulated_jumps_base_s)
+        impulses_jumps_pos  .+= (simulated_jumps_pos_s - simulated_jumps_base_s)
         impulses_states_neg .+= (simulated_states_neg_f + simulated_states_neg_s - simulated_states_base_f - simulated_states_base_s)
-        impulses_jumps_neg  .+= (simulated_jumps_neg_f + simulated_jumps_neg_s - simulated_jumps_base_f - simulated_jumps_base_s)
+        impulses_jumps_neg  .+= (simulated_jumps_neg_s - simulated_jumps_base_s)
 
     end
 
@@ -1611,9 +1574,9 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
     gss = (1/2)*soln.gss
 
     impulses_states_pos = zeros(nx,n + 1)
-    impulses_jumps_pos = zeros(ny,n)
+    impulses_jumps_pos  = zeros(ny,n)
     impulses_states_neg = zeros(nx,n + 1)
-    impulses_jumps_neg = zeros(ny,n)
+    impulses_jumps_neg  = zeros(ny,n)
 
     for j = 1:reps
         simulated_states_pos_f = zeros(nx,n + 1)
@@ -1639,25 +1602,22 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
         @views for i = 2:n+1
             simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
             simulated_states_pos_s[:,i]  = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
-            simulated_jumps_pos_s[:,i-1] = soln.gx*simulated_states_pos_s[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
+            simulated_jumps_pos_s[:,i-1] = soln.gx*(simulated_states_pos_f[:,i-1]+simulated_states_pos_s[:,i-1]) + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
 
             simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
             simulated_states_neg_s[:,i]  = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
-            simulated_jumps_neg_s[:,i-1] = soln.gx*simulated_states_neg_s[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
+            simulated_jumps_neg_s[:,i-1] = soln.gx*(simulated_states_neg_f[:,i-1]+simulated_states_neg_s[:,i-1]) + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
 
             simulated_states_base_f[:,i]  = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_base_f[:,i-1] = soln.gx*simulated_states_base_f[:,i-1]
             simulated_states_base_s[:,i]  = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
-            simulated_jumps_base_s[:,i-1] = soln.gx*simulated_states_base_s[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
+            simulated_jumps_base_s[:,i-1] = soln.gx*(simulated_states_base_f[:,i-1]+simulated_states_base_s[:,i-1]) + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
         end
 
         impulses_states_pos .+= (simulated_states_pos_f + simulated_states_pos_s - simulated_states_base_f - simulated_states_base_s)
-        impulses_jumps_pos  .+= (simulated_jumps_pos_f + simulated_jumps_pos_s - simulated_jumps_base_f - simulated_jumps_base_s)
+        impulses_jumps_pos  .+= (simulated_jumps_pos_s - simulated_jumps_base_s)
         impulses_states_neg .+= (simulated_states_neg_f + simulated_states_neg_s - simulated_states_base_f - simulated_states_base_s)
-        impulses_jumps_neg  .+= (simulated_jumps_neg_f + simulated_jumps_neg_s - simulated_jumps_base_f - simulated_jumps_base_s)
+        impulses_jumps_neg  .+= (simulated_jumps_neg_s - simulated_jumps_base_s)
 
     end
 
@@ -1683,14 +1643,14 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
 
-    hxx = (1/2)*soln.hxx
-    gxx = (1/2)*soln.gxx
+    hxx  = (1/2)*soln.hxx
+    gxx  = (1/2)*soln.gxx
     hxxx = (1/6)*soln.hxxx
     gxxx = (1/6)*soln.gxxx
     hssx = (3/6)*soln.hssx
     gssx = (3/6)*soln.gssx
-    hss = (1/2)*soln.hss
-    gss = (1/2)*soln.gss
+    hss  = (1/2)*soln.hss
+    gss  = (1/2)*soln.gss
     hsss = (1/6)*soln.hsss
     gsss = (1/6)*soln.gsss
 
@@ -1732,31 +1692,25 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
         @views for i = 2:n+1
             simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
             simulated_states_pos_s[:,i]  = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
-            simulated_jumps_pos_s[:,i-1] = soln.gx*simulated_states_pos_s[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
-            simulated_states_pos_t[:,i]  = soln.hx*simulated_states_pos_t[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hsss
-            simulated_jumps_pos_t[:,i-1] = soln.gx*simulated_states_pos_t[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + gxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssx*simulated_states_pos_f[:,i-1] + gsss
+            simulated_states_pos_t[:,i]  = soln.hx*simulated_states_pos_t[:,i-1] + hxx*2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hsss
+            simulated_jumps_pos_t[:,i-1] = soln.gx*(simulated_states_pos_f[:,i-1]+simulated_states_pos_s[:,i-1]+simulated_states_pos_t[:,i-1]) + gxx*(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1])+2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1])) + gxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssx*simulated_states_pos_f[:,i-1] + gss + gsss
 
             simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
             simulated_states_neg_s[:,i]  = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
-            simulated_jumps_neg_s[:,i-1] = soln.gx*simulated_states_neg_s[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
-            simulated_states_neg_t[:,i]  = soln.hx*simulated_states_neg_t[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hsss
-            simulated_jumps_neg_t[:,i-1] = soln.gx*simulated_states_neg_t[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + gxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + gssx*simulated_states_neg_f[:,i-1] + gsss
+            simulated_states_neg_t[:,i]  = soln.hx*simulated_states_neg_t[:,i-1] + hxx*2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hsss
+            simulated_jumps_neg_t[:,i-1] = soln.gx*(simulated_states_neg_f[:,i-1]+simulated_states_neg_s[:,i-1]+simulated_states_neg_t[:,i-1]) + gxx*(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1])+2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1])) + gxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + gssx*simulated_states_neg_f[:,i-1] + gss + gsss
 
             simulated_states_base_f[:,i]  = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_base_f[:,i-1] = soln.gx*simulated_states_base_f[:,i-1]
             simulated_states_base_s[:,i]  = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
-            simulated_jumps_base_s[:,i-1] = soln.gx*simulated_states_base_s[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
-            simulated_states_base_t[:,i]  = soln.hx*simulated_states_base_t[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hsss
-            simulated_jumps_base_t[:,i-1] = soln.gx*simulated_states_base_t[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_pos_s[:,i-1]) + gxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssx*simulated_states_base_f[:,i-1] + gsss
+            simulated_states_base_t[:,i]  = soln.hx*simulated_states_base_t[:,i-1] + hxx*2*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hsss
+            simulated_jumps_base_t[:,i-1] = soln.gx*(simulated_states_base_f[:,i-1]+simulated_states_base_s[:,i-1]+simulated_states_base_t[:,i-1]) + gxx*(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1])+2*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1])) + gxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssx*simulated_states_base_f[:,i-1] + gss + gsss
         end
 
         impulses_states_pos .+= (simulated_states_pos_f + simulated_states_pos_s + simulated_states_pos_t - simulated_states_base_f - simulated_states_base_s - simulated_states_base_t)
-        impulses_jumps_pos  .+= (simulated_jumps_pos_f + simulated_jumps_pos_s + simulated_jumps_pos_t - simulated_jumps_base_f - simulated_jumps_base_s - simulated_jumps_base_t)
+        impulses_jumps_pos  .+= (simulated_jumps_pos_t - simulated_jumps_base_t)
         impulses_states_neg .+= (simulated_states_neg_f + simulated_states_neg_s + simulated_states_neg_t - simulated_states_base_f - simulated_states_base_s - simulated_states_base_t)
-        impulses_jumps_neg  .+= (simulated_jumps_neg_f + simulated_jumps_neg_s + simulated_jumps_neg_t - simulated_jumps_base_f - simulated_jumps_base_s - simulated_jumps_base_t)
+        impulses_jumps_neg  .+= (simulated_jumps_neg_t - simulated_jumps_base_t)
 
     end
 
@@ -1828,31 +1782,25 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
         @views for i = 2:n+1
             simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_pos_f[:,i-1] = soln.gx*simulated_states_pos_f[:,i-1]
             simulated_states_pos_s[:,i]  = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
-            simulated_jumps_pos_s[:,i-1] = soln.gx*simulated_states_pos_s[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
-            simulated_states_pos_t[:,i]  = soln.hx*simulated_states_pos_t[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hsss
-            simulated_jumps_pos_t[:,i-1] = soln.gx*simulated_states_pos_t[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + gxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssx*simulated_states_pos_f[:,i-1] + gsss
+            simulated_states_pos_t[:,i]  = soln.hx*simulated_states_pos_t[:,i-1] + hxx*2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hsss
+            simulated_jumps_pos_t[:,i-1] = soln.gx*(simulated_states_pos_f[:,i-1]+simulated_states_pos_s[:,i-1]+simulated_states_pos_t[:,i-1]) + gxx*(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1])+2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1])) + gxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssx*simulated_states_pos_f[:,i-1] + gss + gsss
 
             simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_neg_f[:,i-1] = soln.gx*simulated_states_neg_f[:,i-1]
             simulated_states_neg_s[:,i]  = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
-            simulated_jumps_neg_s[:,i-1] = soln.gx*simulated_states_neg_s[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
-            simulated_states_neg_t[:,i]  = soln.hx*simulated_states_neg_t[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hsss
-            simulated_jumps_neg_t[:,i-1] = soln.gx*simulated_states_neg_t[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + gxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + gssx*simulated_states_neg_f[:,i-1] + gsss
+            simulated_states_neg_t[:,i]  = soln.hx*simulated_states_neg_t[:,i-1] + hxx*2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hsss
+            simulated_jumps_neg_t[:,i-1] = soln.gx*(simulated_states_neg_f[:,i-1]+simulated_states_neg_s[:,i-1]+simulated_states_neg_t[:,i-1]) + gxx*(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1])+2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1])) + gxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + gssx*simulated_states_neg_f[:,i-1] + gss + gsss
 
             simulated_states_base_f[:,i]  = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
-            simulated_jumps_base_f[:,i-1] = soln.gx*simulated_states_base_f[:,i-1]
             simulated_states_base_s[:,i]  = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
-            simulated_jumps_base_s[:,i-1] = soln.gx*simulated_states_base_s[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
-            simulated_states_base_t[:,i]  = soln.hx*simulated_states_base_t[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hsss
-            simulated_jumps_base_t[:,i-1] = soln.gx*simulated_states_base_t[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_pos_s[:,i-1]) + gxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssx*simulated_states_base_f[:,i-1] + gsss
+            simulated_states_base_t[:,i]  = soln.hx*simulated_states_base_t[:,i-1] + hxx*2*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hsss
+            simulated_jumps_base_t[:,i-1] = soln.gx*(simulated_states_base_f[:,i-1]+simulated_states_base_s[:,i-1]+simulated_states_base_t[:,i-1]) + gxx*(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1])+2*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1])) + gxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssx*simulated_states_base_f[:,i-1] + gss + gsss
         end
 
         impulses_states_pos .+= (simulated_states_pos_f + simulated_states_pos_s + simulated_states_pos_t - simulated_states_base_f - simulated_states_base_s - simulated_states_base_t)
-        impulses_jumps_pos  .+= (simulated_jumps_pos_f + simulated_jumps_pos_s + simulated_jumps_pos_t - simulated_jumps_base_f - simulated_jumps_base_s - simulated_jumps_base_t)
+        impulses_jumps_pos  .+= (simulated_jumps_pos_t - simulated_jumps_base_t)
         impulses_states_neg .+= (simulated_states_neg_f + simulated_states_neg_s + simulated_states_neg_t - simulated_states_base_f - simulated_states_base_s - simulated_states_base_t)
-        impulses_jumps_neg  .+= (simulated_jumps_neg_f + simulated_jumps_neg_s + simulated_jumps_neg_t - simulated_jumps_base_f - simulated_jumps_base_s - simulated_jumps_base_t)
+        impulses_jumps_neg  .+= (simulated_jumps_neg_t - simulated_jumps_base_t)
 
     end
 
@@ -1936,40 +1884,29 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
         innovations = randn(size(soln.k,2),n+1)
 
         @views for i = 2:n+1
-
-            simulated_states_pos_f[:,i]   = soln.hx*simulated_states_pos_f[:,i-1]  + soln.k*innovations[:,i]
-            simulated_jumps_pos_f[:,i-1]  = soln.gx*simulated_states_pos_f[:,i-1]
-            simulated_states_pos_s[:,i]   = soln.hx*simulated_states_pos_s[:,i-1]  + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
-            simulated_jumps_pos_s[:,i-1]  = soln.gx*simulated_states_pos_s[:,i-1]  + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
-            simulated_states_pos_t[:,i]   = soln.hx*simulated_states_pos_t[:,i-1]  + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] 
-            simulated_jumps_pos_t[:,i-1]  = soln.gx*simulated_states_pos_t[:,i-1]  + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + gxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssx*simulated_states_pos_f[:,i-1] 
-            simulated_states_pos_fo[:,i]  = soln.hx*simulated_states_pos_fo[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_t[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_s[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hssss
-            simulated_jumps_pos_fo[:,i-1] = soln.gx*simulated_states_pos_fo[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_t[:,i-1]) + gxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_s[:,i-1]) + gssx*simulated_states_pos_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gssss
+            simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_pos_s[:,i]  = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
+            simulated_states_pos_t[:,i]  = soln.hx*simulated_states_pos_t[:,i-1] + hxx*2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1]
+            simulated_states_pos_fo[:,i]  = soln.hx*simulated_states_pos_fo[:,i-1] + hxx*(2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_t[:,i-1]) + kron(simulated_states_pos_s[:,i-1],simulated_states_pos_s[:,i-1])) + hxxx*3*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_s[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hssss
+            simulated_jumps_pos_fo[:,i-1] = soln.gx*(simulated_states_pos_f[:,i-1]+simulated_states_pos_s[:,i-1]+simulated_states_pos_t[:,i-1]+simulated_states_pos_fo[:,i-1]) + gxx*(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1])+2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1])+2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_t[:,i-1])+kron(simulated_states_pos_s[:,i-1],simulated_states_pos_s[:,i-1])) + gxxx*(kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1])+3*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_s[:,i-1])) + gssx*simulated_states_pos_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss + gssss
     
-            simulated_states_neg_f[:,i]   = soln.hx*simulated_states_neg_f[:,i-1]  + soln.k*innovations[:,i]
-            simulated_jumps_neg_f[:,i-1]  = soln.gx*simulated_states_neg_f[:,i-1]
-            simulated_states_neg_s[:,i]   = soln.hx*simulated_states_neg_s[:,i-1]  + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
-            simulated_jumps_neg_s[:,i-1]  = soln.gx*simulated_states_neg_s[:,i-1]  + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
-            simulated_states_neg_t[:,i]   = soln.hx*simulated_states_neg_t[:,i-1]  + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] 
-            simulated_jumps_neg_t[:,i-1]  = soln.gx*simulated_states_neg_t[:,i-1]  + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + gxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + gssx*simulated_states_neg_f[:,i-1] 
-            simulated_states_neg_fo[:,i]  = soln.hx*simulated_states_neg_fo[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_t[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_s[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hssss
-            simulated_jumps_neg_fo[:,i-1] = soln.gx*simulated_states_neg_fo[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_t[:,i-1]) + gxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_s[:,i-1]) + gssx*simulated_states_neg_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + gssxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gssss
+            simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_neg_s[:,i]  = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
+            simulated_states_neg_t[:,i]  = soln.hx*simulated_states_neg_t[:,i-1] + hxx*2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1]
+            simulated_states_neg_fo[:,i]  = soln.hx*simulated_states_neg_fo[:,i-1] + hxx*(2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_t[:,i-1]) + kron(simulated_states_neg_s[:,i-1],simulated_states_neg_s[:,i-1])) + hxxx*3*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_s[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hssss
+            simulated_jumps_neg_fo[:,i-1] = soln.gx*(simulated_states_neg_f[:,i-1]+simulated_states_neg_s[:,i-1]+simulated_states_neg_t[:,i-1]+simulated_states_neg_fo[:,i-1]) + gxx*(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1])+2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1])+2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_t[:,i-1])+kron(simulated_states_neg_s[:,i-1],simulated_states_neg_s[:,i-1])) + gxxx*(kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1])+3*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_s[:,i-1])) + gssx*simulated_states_neg_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss + gssss
 
-            simulated_states_base_f[:,i]   = soln.hx*simulated_states_base_f[:,i-1]  + soln.k*innovations[:,i]
-            simulated_jumps_base_f[:,i-1]  = soln.gx*simulated_states_base_f[:,i-1]
-            simulated_states_base_s[:,i]   = soln.hx*simulated_states_base_s[:,i-1]  + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
-            simulated_jumps_base_s[:,i-1]  = soln.gx*simulated_states_base_s[:,i-1]  + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
-            simulated_states_base_t[:,i]   = soln.hx*simulated_states_base_t[:,i-1]  + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1] 
-            simulated_jumps_base_t[:,i-1]  = soln.gx*simulated_states_base_t[:,i-1]  + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1]) + gxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssx*simulated_states_base_f[:,i-1] 
-            simulated_states_base_fo[:,i]  = soln.hx*simulated_states_base_fo[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_t[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_s[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hssss
-            simulated_jumps_base_fo[:,i-1] = soln.gx*simulated_states_base_fo[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_t[:,i-1]) + gxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_s[:,i-1]) + gssx*simulated_states_base_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gssss
-
+            simulated_states_base_f[:,i]  = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_base_s[:,i]  = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
+            simulated_states_base_t[:,i]  = soln.hx*simulated_states_base_t[:,i-1] + hxx*2*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1]
+            simulated_states_base_fo[:,i]  = soln.hx*simulated_states_base_fo[:,i-1] + hxx*(2*kron(simulated_states_base_f[:,i-1],simulated_states_base_t[:,i-1]) + kron(simulated_states_base_s[:,i-1],simulated_states_base_s[:,i-1])) + hxxx*3*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_s[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hssss
+            simulated_jumps_base_fo[:,i-1] = soln.gx*(simulated_states_base_f[:,i-1]+simulated_states_base_s[:,i-1]+simulated_states_base_t[:,i-1]+simulated_states_base_fo[:,i-1]) + gxx*(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1])+2*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1])+2*kron(simulated_states_base_f[:,i-1],simulated_states_base_t[:,i-1])+kron(simulated_states_base_s[:,i-1],simulated_states_base_s[:,i-1])) + gxxx*(kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1])+3*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_s[:,i-1])) + gssx*simulated_states_base_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss + gssss
         end
 
         impulses_states_pos .+= (simulated_states_pos_f + simulated_states_pos_s + simulated_states_pos_t + simulated_states_pos_fo - simulated_states_base_f - simulated_states_base_s - simulated_states_base_t - simulated_states_base_fo)
-        impulses_jumps_pos  .+= (simulated_jumps_pos_f  + simulated_jumps_pos_s  + simulated_jumps_pos_t  + simulated_jumps_pos_fo  - simulated_jumps_base_f  - simulated_jumps_base_s  - simulated_jumps_base_t  - simulated_jumps_base_fo)
+        impulses_jumps_pos  .+= (simulated_jumps_pos_fo - simulated_jumps_base_fo)
         impulses_states_neg .+= (simulated_states_neg_f + simulated_states_neg_s + simulated_states_neg_t + simulated_states_neg_fo - simulated_states_base_f - simulated_states_base_s - simulated_states_base_t - simulated_states_base_fo)
-        impulses_jumps_neg  .+= (simulated_jumps_neg_f  + simulated_jumps_neg_s  + simulated_jumps_neg_t  + simulated_jumps_neg_fo  - simulated_jumps_base_f  - simulated_jumps_base_s  - simulated_jumps_base_t  - simulated_jumps_base_fo)
+        impulses_jumps_neg  .+= (simulated_jumps_neg_fo - simulated_jumps_base_fo)
 
     end
 
@@ -2050,40 +1987,29 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         innovations = randn(size(soln.k,2),n+1)
 
         @views for i = 2:n+1
-
-            simulated_states_pos_f[:,i]   = soln.hx*simulated_states_pos_f[:,i-1]  + soln.k*innovations[:,i]
-            simulated_jumps_pos_f[:,i-1]  = soln.gx*simulated_states_pos_f[:,i-1]
-            simulated_states_pos_s[:,i]   = soln.hx*simulated_states_pos_s[:,i-1]  + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
-            simulated_jumps_pos_s[:,i-1]  = soln.gx*simulated_states_pos_s[:,i-1]  + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss
-            simulated_states_pos_t[:,i]   = soln.hx*simulated_states_pos_t[:,i-1]  + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] 
-            simulated_jumps_pos_t[:,i-1]  = soln.gx*simulated_states_pos_t[:,i-1]  + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + gxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssx*simulated_states_pos_f[:,i-1] 
-            simulated_states_pos_fo[:,i]  = soln.hx*simulated_states_pos_fo[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_t[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_s[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hssss
-            simulated_jumps_pos_fo[:,i-1] = soln.gx*simulated_states_pos_fo[:,i-1] + gxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_t[:,i-1]) + gxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_s[:,i-1]) + gssx*simulated_states_pos_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gssss
+            simulated_states_pos_f[:,i]  = soln.hx*simulated_states_pos_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_pos_s[:,i]  = soln.hx*simulated_states_pos_s[:,i-1] + hxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hss
+            simulated_states_pos_t[:,i]  = soln.hx*simulated_states_pos_t[:,i-1] + hxx*2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1]) + hxxx*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssx*simulated_states_pos_f[:,i-1]
+            simulated_states_pos_fo[:,i]  = soln.hx*simulated_states_pos_fo[:,i-1] + hxx*(2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_t[:,i-1]) + kron(simulated_states_pos_s[:,i-1],simulated_states_pos_s[:,i-1])) + hxxx*3*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_s[:,i-1]) + hssx*simulated_states_pos_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + hssxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + hssss
+            simulated_jumps_pos_fo[:,i-1] = soln.gx*(simulated_states_pos_f[:,i-1]+simulated_states_pos_s[:,i-1]+simulated_states_pos_t[:,i-1]+simulated_states_pos_fo[:,i-1]) + gxx*(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1])+2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_s[:,i-1])+2*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_t[:,i-1])+kron(simulated_states_pos_s[:,i-1],simulated_states_pos_s[:,i-1])) + gxxx*(kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1])+3*kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_s[:,i-1])) + gssx*simulated_states_pos_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssxx*kron(simulated_states_pos_f[:,i-1],simulated_states_pos_f[:,i-1]) + gss + gssss
     
-            simulated_states_neg_f[:,i]   = soln.hx*simulated_states_neg_f[:,i-1]  + soln.k*innovations[:,i]
-            simulated_jumps_neg_f[:,i-1]  = soln.gx*simulated_states_neg_f[:,i-1]
-            simulated_states_neg_s[:,i]   = soln.hx*simulated_states_neg_s[:,i-1]  + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
-            simulated_jumps_neg_s[:,i-1]  = soln.gx*simulated_states_neg_s[:,i-1]  + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss
-            simulated_states_neg_t[:,i]   = soln.hx*simulated_states_neg_t[:,i-1]  + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] 
-            simulated_jumps_neg_t[:,i-1]  = soln.gx*simulated_states_neg_t[:,i-1]  + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + gxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + gssx*simulated_states_neg_f[:,i-1] 
-            simulated_states_neg_fo[:,i]  = soln.hx*simulated_states_neg_fo[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_t[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_s[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hssss
-            simulated_jumps_neg_fo[:,i-1] = soln.gx*simulated_states_neg_fo[:,i-1] + gxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_t[:,i-1]) + gxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_s[:,i-1]) + gssx*simulated_states_neg_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + gssxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gssss
+            simulated_states_neg_f[:,i]  = soln.hx*simulated_states_neg_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_neg_s[:,i]  = soln.hx*simulated_states_neg_s[:,i-1] + hxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hss
+            simulated_states_neg_t[:,i]  = soln.hx*simulated_states_neg_t[:,i-1] + hxx*2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1]) + hxxx*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssx*simulated_states_neg_f[:,i-1]
+            simulated_states_neg_fo[:,i]  = soln.hx*simulated_states_neg_fo[:,i-1] + hxx*(2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_t[:,i-1]) + kron(simulated_states_neg_s[:,i-1],simulated_states_neg_s[:,i-1])) + hxxx*3*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_s[:,i-1]) + hssx*simulated_states_neg_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]) + hssxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + hssss
+            simulated_jumps_neg_fo[:,i-1] = soln.gx*(simulated_states_neg_f[:,i-1]+simulated_states_neg_s[:,i-1]+simulated_states_neg_t[:,i-1]+simulated_states_neg_fo[:,i-1]) + gxx*(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1])+2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_s[:,i-1])+2*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_t[:,i-1])+kron(simulated_states_neg_s[:,i-1],simulated_states_neg_s[:,i-1])) + gxxx*(kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1])+3*kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_s[:,i-1])) + gssx*simulated_states_neg_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]),simulated_states_neg_f[:,i-1]),simulated_states_pos_f[:,i-1]) + gssxx*kron(simulated_states_neg_f[:,i-1],simulated_states_neg_f[:,i-1]) + gss + gssss
 
-            simulated_states_base_f[:,i]   = soln.hx*simulated_states_base_f[:,i-1]  + soln.k*innovations[:,i]
-            simulated_jumps_base_f[:,i-1]  = soln.gx*simulated_states_base_f[:,i-1]
-            simulated_states_base_s[:,i]   = soln.hx*simulated_states_base_s[:,i-1]  + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
-            simulated_jumps_base_s[:,i-1]  = soln.gx*simulated_states_base_s[:,i-1]  + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss
-            simulated_states_base_t[:,i]   = soln.hx*simulated_states_base_t[:,i-1]  + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1] 
-            simulated_jumps_base_t[:,i-1]  = soln.gx*simulated_states_base_t[:,i-1]  + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1]) + gxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssx*simulated_states_base_f[:,i-1] 
-            simulated_states_base_fo[:,i]  = soln.hx*simulated_states_base_fo[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_t[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_s[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hssss
-            simulated_jumps_base_fo[:,i-1] = soln.gx*simulated_states_base_fo[:,i-1] + gxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_t[:,i-1]) + gxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_s[:,i-1]) + gssx*simulated_states_base_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gssss
-
+            simulated_states_base_f[:,i]  = soln.hx*simulated_states_base_f[:,i-1] + soln.k*innovations[:,i]
+            simulated_states_base_s[:,i]  = soln.hx*simulated_states_base_s[:,i-1] + hxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hss
+            simulated_states_base_t[:,i]  = soln.hx*simulated_states_base_t[:,i-1] + hxx*2*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1]) + hxxx*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssx*simulated_states_base_f[:,i-1]
+            simulated_states_base_fo[:,i]  = soln.hx*simulated_states_base_fo[:,i-1] + hxx*(2*kron(simulated_states_base_f[:,i-1],simulated_states_base_t[:,i-1]) + kron(simulated_states_base_s[:,i-1],simulated_states_base_s[:,i-1])) + hxxx*3*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_s[:,i-1]) + hssx*simulated_states_base_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + hssxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + hssss
+            simulated_jumps_base_fo[:,i-1] = soln.gx*(simulated_states_base_f[:,i-1]+simulated_states_base_s[:,i-1]+simulated_states_base_t[:,i-1]+simulated_states_base_fo[:,i-1]) + gxx*(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1])+2*kron(simulated_states_base_f[:,i-1],simulated_states_base_s[:,i-1])+2*kron(simulated_states_base_f[:,i-1],simulated_states_base_t[:,i-1])+kron(simulated_states_base_s[:,i-1],simulated_states_base_s[:,i-1])) + gxxx*(kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1])+3*kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_s[:,i-1])) + gssx*simulated_states_base_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]),simulated_states_base_f[:,i-1]) + gssxx*kron(simulated_states_base_f[:,i-1],simulated_states_base_f[:,i-1]) + gss + gssss
         end
 
         impulses_states_pos .+= (simulated_states_pos_f + simulated_states_pos_s + simulated_states_pos_t + simulated_states_pos_fo - simulated_states_base_f - simulated_states_base_s - simulated_states_base_t - simulated_states_base_fo)
-        impulses_jumps_pos  .+= (simulated_jumps_pos_f  + simulated_jumps_pos_s  + simulated_jumps_pos_t  + simulated_jumps_pos_fo  - simulated_jumps_base_f  - simulated_jumps_base_s  - simulated_jumps_base_t  - simulated_jumps_base_fo)
+        impulses_jumps_pos  .+= (simulated_jumps_pos_fo - simulated_jumps_base_fo)
         impulses_states_neg .+= (simulated_states_neg_f + simulated_states_neg_s + simulated_states_neg_t + simulated_states_neg_fo - simulated_states_base_f - simulated_states_base_s - simulated_states_base_t - simulated_states_base_fo)
-        impulses_jumps_neg  .+= (simulated_jumps_neg_f  + simulated_jumps_neg_s  + simulated_jumps_neg_t  + simulated_jumps_neg_fo  - simulated_jumps_base_f  - simulated_jumps_base_s  - simulated_jumps_base_t  - simulated_jumps_base_fo)
+        impulses_jumps_neg  .+= (simulated_jumps_neg_fo - simulated_jumps_base_fo)
 
     end
 
@@ -3097,126 +3023,4 @@ function den_haan_marcet(model::REModel,soln::R,steady_state::Array{T,1},seed::S
 
     return dhm_stat
 
-end
-
-function check_taylor_convergence(model::REModel,ss::Array{T,1},z::Array{T,1},degree::S) where {T<:Real,S<:Integer}
-
-    if degree > 7
-        error("The degree is too large (too many derivatives)")
-    end
-    if degree < 0
-        error("The degree cannot be negative")
-    end
-
-    ne = model.number_equations
-    nv = model.number_variables
-    ns = model.number_shocks
-
-    model_equations = model.each_eqn_function
-    
-    ss    = [ss;ss]
-    z     = [z;z]
-    point = [ss;zeros(ns)]
-
-    taylor_terms = zeros(ne-ns,degree+1)
-
-    taylor_terms[:,1] = model.dynamic_function(point)[ns+1:end]
-    if degree == 0
-        return taylor_terms
-    else
-        println("Skipping the shock processes.")
-        @sync @qthreads for i = 1:ne-ns
-            println("Working on equation ", ns+i)
-            kprod = 1.0
-
-            d(x) = ForwardDiff.gradient(model_equations[ns+i],x,ForwardDiff.GradientConfig(model_equations[ns+i],x,ForwardDiff.Chunk{2}()))[1:2*nv]
-            dd(x) = ForwardDiff.jacobian(d,x,ForwardDiff.JacobianConfig(d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-            ddd(x) = ForwardDiff.jacobian(dd,x,ForwardDiff.JacobianConfig(dd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-            dddd(x) = ForwardDiff.jacobian(ddd,x,ForwardDiff.JacobianConfig(ddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-            ddddd(x) = ForwardDiff.jacobian(dddd,x,ForwardDiff.JacobianConfig(dddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-            dddddd(x) = ForwardDiff.jacobian(ddddd,x,ForwardDiff.JacobianConfig(ddddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-            ddddddd(x) = ForwardDiff.jacobian(dddddd,x,ForwardDiff.JacobianConfig(dddddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-
-            for j = 1:degree
-                kprod = kron(kprod,(z - ss))
-                if j == 1
-                    taylor_terms[i,j+1] = abs.(d(point))'kprod
-                elseif j == 2
-                    taylor_terms[i,j+1] = abs.(vec(dd(point)))'kprod/factorial(j)
-                elseif j == 3
-                    taylor_terms[i,j+1] = abs.(vec(ddd(point)))'kprod/factorial(j)
-                elseif j == 4
-                    taylor_terms[i,j+1] = abs.(vec(dddd(point)))'kprod/factorial(j)
-                elseif j == 5
-                    taylor_terms[i,j+1] = abs.(vec(ddddd(point)))'kprod/factorial(j)
-                elseif j ==6
-                    taylor_terms[i,j+1] = abs.(vec(dddddd(point)))'kprod/factorial(j)
-                else
-                    taylor_terms[i,j+1] = abs.(vec(ddddddd(point)))'kprod/factorial(j)
-                end
-            end
-        end
-        return taylor_terms
-    end
-end
-
-function check_taylor_convergence(model::REModel,ss::Array{T,1},z::Array{T,1},degree::S,eqns::Array{S,1}) where {T<:Real,S<:Integer}
-
-    if degree > 7
-        error("The degree is too large (too many derivatives)")
-    end
-    if degree < 0
-        error("The degree cannot be negative")
-    end
-
-    ne = model.number_equations
-    nv = model.number_variables
-    ns = model.number_shocks
-
-    model_equations = model.each_eqn_function
-    
-    ss    = [ss;ss]
-    z     = [z;z]
-    point = [ss;zeros(ns)]
-
-    taylor_terms = zeros(length(eqns),degree+1)
-
-    taylor_terms[:,1] = model.dynamic_function(point)[eqns]
-    if degree == 0
-        return taylor_terms
-    else
-        println("Skipping the shock processes.")
-        @sync @qthreads for i = 1:length(eqns)
-            println("Working on equation ", eqns[i])
-            kprod = 1.0
-
-            d(x) = ForwardDiff.gradient(model_equations[eqns[i]],x,ForwardDiff.GradientConfig(model_equations[eqns[i]],x,ForwardDiff.Chunk{2}()))[1:2*nv]
-            dd(x) = ForwardDiff.jacobian(d,x,ForwardDiff.JacobianConfig(d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-            ddd(x) = ForwardDiff.jacobian(dd,x,ForwardDiff.JacobianConfig(dd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-            dddd(x) = ForwardDiff.jacobian(ddd,x,ForwardDiff.JacobianConfig(ddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-            ddddd(x) = ForwardDiff.jacobian(dddd,x,ForwardDiff.JacobianConfig(dddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-            dddddd(x) = ForwardDiff.jacobian(ddddd,x,ForwardDiff.JacobianConfig(ddddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-            ddddddd(x) = ForwardDiff.jacobian(dddddd,x,ForwardDiff.JacobianConfig(dddddd,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-
-            for j = 1:degree
-                kprod = kron(kprod,(z - ss))
-                if j == 1
-                    taylor_terms[i,j+1] = abs.(d(point))'kprod
-                elseif j == 2
-                    taylor_terms[i,j+1] = abs.(vec(dd(point)))'kprod/factorial(j)
-                elseif j == 3
-                    taylor_terms[i,j+1] = abs.(vec(ddd(point)))'kprod/factorial(j)
-                elseif j == 4
-                    taylor_terms[i,j+1] = abs.(vec(dddd(point)))'kprod/factorial(j)
-                elseif j == 5
-                    taylor_terms[i,j+1] = abs.(vec(ddddd(point)))'kprod/factorial(j)
-                elseif j ==6
-                    taylor_terms[i,j+1] = abs.(vec(dddddd(point)))'kprod/factorial(j)
-                else
-                    taylor_terms[i,j+1] = abs.(vec(ddddddd(point)))'kprod/factorial(j)
-                end
-            end
-        end
-        return taylor_terms
-    end
 end
