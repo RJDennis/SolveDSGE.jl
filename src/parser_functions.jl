@@ -89,7 +89,7 @@ function get_variables(model_array::Array{Q,1},term::Q) where {Q<:AbstractString
 
     # Remove any trailing variable separators: "," or ";".
 
-    for i = 1:length(term_block)
+    for i in eachindex(term_block)
         if endswith(term_block[i],union(",",";"))
             term_block[i] = term_block[i][1:end-1]
         end
@@ -155,7 +155,7 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q<:Ab
 
     # Remove any trailing separators: "," or ";".
 
-    for i = 1:length(parameterblock)
+    for i in eachindex(parameterblock)
         if endswith(parameterblock[i],union(",",";"))
             parameterblock[i] = parameterblock[i][1:end-1]
         end
@@ -173,7 +173,7 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q<:Ab
 
     parameters = Array{Q}(undef,length(revised_parameterblock))
     values = Array{Q}(undef,length(revised_parameterblock))
-    for i = 1:length(revised_parameterblock)
+    for i in eachindex(revised_parameterblock)
         if occursin("=",revised_parameterblock[i]) == false
             parameters[i] = revised_parameterblock[i]
             values[i] = "p[$unassigned_parameter_index]" # p is a reserved name
@@ -210,7 +210,7 @@ function get_equations(model_array::Array{Q,1},term::Q) where {Q<:AbstractString
 
     # Remove any trailing separators: "," or ";".
 
-    for i = 1:length(equation_block)
+    for i in eachindex(equation_block)
         if endswith(equation_block[i],union(",",";"))
             equation_block[i] = equation_block[i][1:end-1]
         end
@@ -225,7 +225,7 @@ function get_equations(model_array::Array{Q,1},term::Q) where {Q<:AbstractString
 
     # For every model equation...
 
-    for i = 1:length(equation_block)
+    for i in eachindex(equation_block)
         if occursin("[",equations[i]) == true # Replace open square bracket with open round parenthesis
             equations[i] = replace(equations[i],"[" => "(")
         elseif occursin("]",equations[i]) == true # Replace close square bracket with close round parenthesis
@@ -298,7 +298,7 @@ function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1
     states_number = zeros(Int64,length(equations))
     jumps_number  = zeros(Int64,length(equations))
    
-    for i = 1:length(junk_equations)
+    for i in eachindex(junk_equations)
         for j in sorted_combined_names
             if occursin(j,junk_equations[i]) == true
                 if j in states
@@ -326,10 +326,10 @@ function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1
     # Now sort out the order of the states in the system
 
     states_that_have_been_ordered = Int64[]
-    for k = 1:length(states)
+    for k in eachindex(states)
         for j = 1:number_eqns_with_no_jumps
             if states_number[j] == k
-                for i = 1:length(states)
+                for i in eachindex(states)
                     if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i && (i in states_that_have_been_ordered) == false
                         reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i]
                         push!(states_that_have_been_ordered,j)
@@ -364,7 +364,7 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
     states_number = zeros(Int64,length(equations))
     jumps_number  = zeros(Int64,length(equations))
 
-    for i = 1:length(junk_equations)
+    for i in eachindex(junk_equations)
         for j in sorted_combined_names
             if occursin(j,junk_equations[i]) == true
                 if j in states
@@ -405,10 +405,10 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
     # Order the shock processes to try to make shock's variance-covariance matrix have non-zero diagonals.
 
     shocks_that_have_been_ordered = Int64[]
-    for k = 1:length(shocks)
+    for k in eachindex(shocks)
         for j = 1:number_eqns_with_shocks
             if shocks_number[j] == k
-                for i = 1:length(shocks)
+                for i in eachindex(shocks)
                     if occursin(reordered_shocks[i],reordered_equations[j]) == true && j == i && (i in shocks_that_have_been_ordered) == false
                         push!(shocks_that_have_been_ordered,i)
                         break
@@ -426,10 +426,10 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
     # Now sort out the order of the states in the system
 
     states_that_have_been_ordered = Int64[]
-    for k = 1:length(states)
+    for k in eachindex(states)
         for j = 1:number_eqns_with_shocks
             if states_number[j] == k
-                for i = 1:length(states)
+                for i in eachindex(states)
                     if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i && (i in states_that_have_been_ordered) == false
                         reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i]
                         push!(states_that_have_been_ordered,j)
@@ -457,7 +457,7 @@ function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,
     # First we determine if any equation contains a lagged variable.
 
     model_has_lags = false
-    for i = 1:length(equations)
+    for i in eachindex(equations)
         for j in lag_variables
             if occursin(j,equations[i]) == true
                 model_has_lags = true
@@ -471,9 +471,9 @@ function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,
        equations. =#
 
     if model_has_lags == true
-        for j = 1:length(lag_variables)
+        for j in eachindex(lag_variables)
             if sum(occursin.(lag_variables[j],equations)) != 0
-                for i = 1:length(equations)
+                for i in eachindex(equations)
                     reorganized_equations[i] = replace(reorganized_equations[i],lag_variables[j] => string(variables[j],"lag"))
                 end
                 reorganized_states = [reorganized_states; string(variables[j],"lag")]
@@ -519,7 +519,7 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractStri
         error("Some parameters, variables, or shocks have the same name.")
     end
 
-    reserved_names = ("exp", "log", "x", "p", ":", ";")
+    reserved_names = ("deriv", "exp", "log", "x", "p", ":", ";")
     for name in reserved_names
         if name in combined_names
             error("$name cannot be the name for a variable, a shock, or a parameter.")
@@ -535,7 +535,7 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractStri
 
 end
 
-function repackage_equations(model::ModelPrimatives)
+function repackage_equations(model::DSGEModelPrimatives)
 
     #= This function is critical for repackaging the model's equations, replacing
        parameter names with values, and numbering variables. =#
@@ -561,7 +561,7 @@ function repackage_equations(model::ModelPrimatives)
     #= First we go through every equation and replace exp with : and log with ;.  
        This is to guard them during variables and parameter substitution. =#
 
-    for i = 1:length(repackaged_equations)
+    for i in eachindex(repackaged_equations)
         if occursin("exp",equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],"exp" => ":")
         elseif occursin("log",equations[i]) == true
@@ -572,7 +572,7 @@ function repackage_equations(model::ModelPrimatives)
     #= Next we go through every parameter expression and replace exp with : and log with ;.  
     This is to guard them during variables and parameter substitution. =#
 
-    for i = 1:length(parametervalues)
+    for i in eachindex(parametervalues)
         if occursin("exp",parametervalues[i]) == true
             repackaged_parametervalues[i] = replace(repackaged_parametervalues[i],"exp" => ":")
         elseif occursin("log",parametervalues[i]) == true
@@ -588,7 +588,7 @@ function repackage_equations(model::ModelPrimatives)
         count = 0 # counts whether parameter values are still being assigned
         for j in sorted_parameters
             parameter_index = findfirst(isequal(j),parameters)
-            for i = 1:length(repackaged_parametervalues)
+            for i in eachindex(repackaged_parametervalues)
                 if occursin(j,repackaged_parametervalues[i]) == true
                     repackaged_parametervalues[i] = replace(repackaged_parametervalues[i],j => string("(",repackaged_parametervalues[parameter_index],")"))
                     count += 1
@@ -611,18 +611,19 @@ function repackage_equations(model::ModelPrimatives)
     for j in sorted_combined_names
         if j in variables
             variable_index = findfirst(isequal(j),variables)
-            for i = 1:length(repackaged_equations)
+            for i in eachindex(repackaged_equations)
                 repackaged_equations[i] = replace(repackaged_equations[i],"$j(+1)" => "x[$(length(variables) + variable_index)]")
                 repackaged_equations[i] = replace(repackaged_equations[i],j => "x[$(variable_index)]")
             end
         elseif j in parameters
             parameter_index = findfirst(isequal(j),parameters)
-            for i = 1:length(repackaged_equations)
+            for i in eachindex(repackaged_equations)
+                repackaged_equations[i] = replace(repackaged_equations[i],j => string("(",j,")"))
                 repackaged_equations[i] = replace(repackaged_equations[i],j => repackaged_parametervalues[parameter_index])
             end
         elseif j in shocks # Okay even if there are no shocks
             shock_index = findfirst(isequal(j),shocks)
-            for i = 1:length(repackaged_equations)
+            for i in eachindex(repackaged_equations)
                 repackaged_equations[i] = replace(repackaged_equations[i],j => "x[$(2*length(variables) + shock_index)]")
             end
         end
@@ -630,7 +631,7 @@ function repackage_equations(model::ModelPrimatives)
 
     #= Finally, go back through every equation and restore exp and log where necessary =#
 
-    for i = 1:length(repackaged_equations)
+    for i in eachindex(repackaged_equations)
         if occursin(":",repackaged_equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],":" => "exp")
         end
@@ -643,7 +644,7 @@ function repackage_equations(model::ModelPrimatives)
 
 end
 
-function create_steady_state_equations(model::ModelPrimatives)
+function create_steady_state_equations(model::DSGEModelPrimatives)
 
     # Make the model static by replacing leads and lags with current variables
     # and setting shocks equal to zero.  Also, replace parameter names with
@@ -670,7 +671,7 @@ function create_steady_state_equations(model::ModelPrimatives)
     #= First we go through every equation and replace exp with : and log with ;.  
     This is to guard them during variables and parameter substitution. =#
 
-    for i = 1:length(steady_state_equations)
+    for i in eachindex(steady_state_equations)
         if occursin("exp",equations[i]) == true
             steady_state_equations[i] = replace(steady_state_equations[i],"exp" => ":")
         elseif occursin("log",steady_state_equations[i]) == true
@@ -681,7 +682,7 @@ function create_steady_state_equations(model::ModelPrimatives)
     #= Next we go through every parameter expression and replace exp with : and log with ;.  
     This is to guard them during variables and parameter substitution. =#
 
-    for i = 1:length(parametervalues)
+    for i in eachindex(parametervalues)
         if occursin("exp",parametervalues[i]) == true
             steady_state_parametervalues[i] = replace(steady_state_parametervalues[i],"exp" => ":")
         elseif occursin("log",parametervalues[i]) == true
@@ -697,10 +698,9 @@ function create_steady_state_equations(model::ModelPrimatives)
         count = 0 # counts whether parameter values are still being assigned
         for j in sorted_parameters
             parameter_index = findfirst(isequal(j),parameters)
-            for i = 1:length(steady_state_parametervalues)
+            for i in eachindex(steady_state_parametervalues)
                 if occursin(j,steady_state_parametervalues[i]) == true
                     steady_state_parametervalues[i] = replace(steady_state_parametervalues[i],j => string("(",steady_state_parametervalues[parameter_index],")"))
-                    #steady_state_equations[i] = replace(steady_state_equations[i],j => steady_state_parametervalues[parameter_index])
                     count += 1
                 end
             end
@@ -721,19 +721,20 @@ function create_steady_state_equations(model::ModelPrimatives)
     for j in sorted_combined_names
         if j in variables
             variable_index = findfirst(isequal(j),variables)
-            for i = 1:length(equations)
+            for i in eachindex(equations)
                 steady_state_equations[i] = replace(steady_state_equations[i],"$j(-1)" => "x[$(variable_index)]")
                 steady_state_equations[i] = replace(steady_state_equations[i],"$j(+1)" => "x[$(variable_index)]")
                 steady_state_equations[i] = replace(steady_state_equations[i],j => "x[$(variable_index)]")
             end
         elseif j in parameters
             parameter_index = findfirst(isequal(j),parameters)
-            for i = 1:length(equations)
+            for i in eachindex(equations)
+                steady_state_equations[i] = replace(steady_state_equations[i],j => string("(",j,")"))
                 steady_state_equations[i] = replace(steady_state_equations[i],j => steady_state_parametervalues[parameter_index])
             end
         elseif j in shocks
             shock_index = findfirst(isequal(j),shocks)
-            for i = 1:length(equations)
+            for i in eachindex(equations)
                 steady_state_equations[i] = replace(steady_state_equations[i],j => 0.0)
             end
         end
@@ -741,7 +742,7 @@ function create_steady_state_equations(model::ModelPrimatives)
 
     #= Finally, go back through every equation and restore exp and log where necessary =#
 
-    for i = 1:length(steady_state_equations)
+    for i in eachindex(steady_state_equations)
         if occursin(":",steady_state_equations[i]) == true
             steady_state_equations[i] = replace(steady_state_equations[i],":" => "exp")
         end
@@ -760,7 +761,7 @@ function make_equations_equal_zero(equations::Array{Q,1}) where {Q<:AbstractStri
 
     zeroed_equations = similar(equations)
 
-    for i = 1:length(equations)
+    for i in eachindex(equations)
         pair = strip.(split(equations[i],"="))
         zeroed_equations[i] = string(pair[1]," - (",pair[2],")")
     end
@@ -769,7 +770,7 @@ function make_equations_equal_zero(equations::Array{Q,1}) where {Q<:AbstractStri
 
 end
 
-function create_projection_equations(equations::Array{Q,1},model::ModelPrimatives) where {Q<:AbstractString}
+function create_projection_equations(equations::Array{Q,1},model::DSGEModelPrimatives) where {Q<:AbstractString}
 
     projection_equations = copy(equations)
 
@@ -821,7 +822,7 @@ function create_projection_equations(equations::Array{Q,1},model::ModelPrimative
 
 end
 
-function create_processed_model_file(model::ModelPrimatives, path::Q) where {Q<:AbstractString}
+function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where {Q<:AbstractString}
 
     # Takes the model's primatives and turns these into a processed-model file.
     # This file is saved as a text file in the same folder as the model file.
@@ -843,7 +844,9 @@ function create_processed_model_file(model::ModelPrimatives, path::Q) where {Q<:
     number_variables = length(model.variables)
     number_equations = length(model.equations)
 
-    variables = model.variables
+    #variables = model.variables
+    #variables = sort(Dict(model.variables[i] => i for i = 1:number_variables), byvalue = :true)
+    variables = OrderedDict(model.variables[i] => i for i = 1:number_variables)
 
     # Build up the string containing the processed model information that gets saved
 
@@ -869,7 +872,7 @@ function create_processed_model_file(model::ModelPrimatives, path::Q) where {Q<:
         static_string = "function static_equations(x::Array{T,1}) where {T<:Number} \n \n"
     end
     static_string = string(static_string, "  f = Array{T,1}(undef,length(x)) \n \n")
-    for i = 1:length(static_equations)
+    for i in eachindex(static_equations)
         nlsolve_static_string = string(nlsolve_static_string, "  f[$i] = ", static_equations[i], "\n")
         static_string = string(static_string, "  f[$i] = ", static_equations[i], "\n")
     end
@@ -932,7 +935,7 @@ function create_processed_model_file(model::ModelPrimatives, path::Q) where {Q<:
         weight_number += 1
     end
     closure_cheb_string = string(closure_cheb_string, "\n", "    #f = Array{T,1}(undef,$number_equations) \n \n")
-    for i = 1:length(projection_equations)
+    for i in eachindex(projection_equations)
         closure_cheb_string = string(closure_cheb_string, "    f[$i] = ", projection_equations[i], "\n")
     end
     closure_cheb_string = string(closure_cheb_string, "\n    #return f \n \n  end \n \n  return chebyshev_equations \n \n", "end \n")
@@ -953,7 +956,7 @@ function create_processed_model_file(model::ModelPrimatives, path::Q) where {Q<:
         weight_number += 1
     end
     closure_smol_string = string(closure_smol_string, "\n", "    #f = Array{T,1}(undef,$number_equations) \n \n")
-    for i = 1:length(projection_equations)
+    for i in eachindex(projection_equations)
         closure_smol_string = string(closure_smol_string, "    f[$i] = ", projection_equations[i], "\n")
     end
     closure_smol_string = string(closure_smol_string, "\n    #return f \n \n  end \n \n  return smolyak_equations \n \n", "end \n")
@@ -974,7 +977,7 @@ function create_processed_model_file(model::ModelPrimatives, path::Q) where {Q<:
         weight_number += 1
     end
     closure_hcross_string = string(closure_hcross_string, "\n", "    #f = Array{T,1}(undef,$number_equations) \n \n")
-    for i = 1:length(projection_equations)
+    for i in eachindex(projection_equations)
         closure_hcross_string = string(closure_hcross_string, "    f[$i] = ", projection_equations[i], "\n")
     end
     closure_hcross_string = string(closure_hcross_string, "\n    #return f \n \n  end \n \n  return hcross_equations \n \n", "end \n")
@@ -1005,7 +1008,7 @@ function create_processed_model_file(model::ModelPrimatives, path::Q) where {Q<:
     end
 
     closure_pl_string = string(closure_pl_string, "\n", "    #f = Array{T,1}(undef,$number_equations) \n \n")
-    for i = 1:length(projection_equations)
+    for i in eachindex(projection_equations)
         closure_pl_string = string(closure_pl_string, "    f[$i] = ", projection_equations[i], "\n")
     end
 
@@ -1072,7 +1075,7 @@ function retrieve_processed_model(path::Q) where {Q<:AbstractString}
 
 end
 
-function assign_parameters(model,param::Array{T,1}) where {T<:Number}
+function assign_parameters(model::REModelPartial,param::Array{T,1}) where {T<:Number}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -1107,5 +1110,19 @@ function assign_parameters(model,param::Array{T,1}) where {T<:Number}
         newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,vars,nlsse,sf,df,ief,cf_cheb,cf_smol,cf_hcross,cfpl_det,solvers)
         return newmod
     end
+
+end
+
+function assign_parameters(model::REModelPartial,paramdict::Dict{Q,T}) where {T<:Number,Q<:AbstractString}
+
+    param = zeros(length(paramdict))
+
+    for i in eachindex(model.unassigned_parameters)
+        param[i] = paramdict[model.unassigned_parameters[i]]
+    end
+
+    newmod = assign_parameters(model,param)
+
+    return newmod
 
 end
