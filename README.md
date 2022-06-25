@@ -1,39 +1,41 @@
 SolveDSGE
 =========
 
-SolveDSGE is a Julia package for solving Dynamic Stochastic General Equilibrium (DSGE) models.  The package is aimed at macroeconomists interested in perturbation-based and projection-based solutions to their nonlinear general equilibrium models.  SolveDSGE offers a broad array of solution methods that can be applied inter-changeably, allowing one solution to form the initialization for another.
+SolveDSGE is a Julia package for solving Dynamic Stochastic General Equilibrium (DSGE) models.  The package is aimed at macroeconomists interested in projection-based(primarily) and projection-based solutions to their nonlinear general equilibrium models.  SolveDSGE offers a broad array of solution methods that can be applied inter-changeably, allowing one solution to form the initialization for another.  The solution algorithms provided allow a wide-range of model to be solved, including models with correlated shocks, models with shocks that have MA components, and models with occasionally binding constraints.  The package also allows parameters to be assigned values "on-the-fly", allowing it to be combined with simulated method of moments and Bayesian/likelihood-based estimation methods, including local filters and particle filters.  The package has options to solve models using sparse grids, including Smolyak methods and Hyperbolic-cross methods, allowing models with a "large" number of state variables to be solved. 
 
 To solve a model using SolveDSGE two files are required.  The model file contains the specifications, parameters, equations, etc for the model that is to be solved.  The solution file reads and processes the model file, specifies a solution scheme, solves the model, and performs any post-solution analysis.
 
-If you use this package, then please star the package on github and acknowledge its use appropriately in your work.
+Although I wish I could claim that the package can solve any model you throw at it, I cannot.  Nevertheless, the solution methods provided are intended to help you solve your nonlinear models, and the wide-range of solution methods provided, combined with homotopy (the package allows a solution using one method to be used as an initialization for another), allow many models to be solved.
+
+If you use this package, then please give it a star on github and acknowledge its use appropriately in your work.
 
 Installation
 ------------
 
-You can install SolveDSGE by typing in REPL
+You can install SolveDSGE by typing in REPL:
 
 ```julia
 using Pkg
 Pkg.add("SolveDSGE")
 ```
 
-SolveDSGE is supported by several other packages: NLsolve, ForwardDiff, GaussQuadrature, ChebyshevApprox, SmolyakApprox, and PiecewiseLinearApprox.
+SolveDSGE is supported by several other packages: ForwardDiff.jl, GaussQuadrature.jl, ChebyshevApprox.jl, SmolyakApprox.jl, PiecewiseLinearApprox.jl, and NLboxsolve.jl.
 
 Perturbation methods
 --------------------
 
-SolveDSGE allows rational expectations equilibria to be computed using first-, second-, and third-order perturbation methods.
+SolveDSGE allows rational expectations equilibria to be computed using first-, second-, third- and fourth-order perturbation methods.
 
 Projection methods
 ------------------
 
-SolveDSGE can also solve DSGE models using projection methods that are based on Chebyshev polynomials, Smolyak polynomials, and piecewise linear approximation.
+SolveDSGE can solve DSGE models using projection methods that are based on Chebyshev polynomials (complete and tensor-product polynomials), Smolyak polynomials (isotropic and anisotropic grids), Hyperbolic-cross methods (isotropic and anisotropic grids), and piecewise linear approximation.
 
 Further information
 -------------------
-This version (version 0.4.x) represents an important update on version 0.3, which didn't allow any form of parallization.  In the current version, at the user's discretion, models can be solved using multi-threaded projection methods.  This version also removes support for the optimal policy routines that were present in version 0.2.  At some point in the future, SolveDSGE's approach to solving and analyzing optimal policy is likely to be reintroduced based on the model-file/solution-file framework.
+This version (version 0.5.x) introduces methods intended to help solve models with occasionally binding constraints.  In the current version, at the user's discretion, models can be solved using multi-threaded projection methods.  Similarly, version 0.4.x represented an important update on version 0.3, which didn't allow any form of parallization.  Version 0.4.x also removes support for the optimal policy routines that were present in version 0.2.  At some point in the future, SolveDSGE's approach to solving and analyzing optimal policy is likely to be reintroduced based on the model-file/solution-file framework.
 
-Examples of how to use SolveDSGE to solve a model are contained in the examples folder.  At the moment there are three examples: two stochastic models and one deterministic model.  The example models are intended to be familiar, easy to follow, and easy to replicate.
+Examples of how to use SolveDSGE to solve a model are contained in the examples folder.  At the moment there are four examples: a deterministic model, two stochastic models, and a model with an occasionally binding constraint (a zero-lower-bound on the nominal interest rate).  The example models are intended to be familiar, easy to follow, and easy to replicate.
 
 Although it no-doubt requires much improvement, there is a User Guide that describes in detail the steps that should be taken to solve a model, and documents the relevant functions, solution schemes, and solution structures.  How to simulate data from a solved model, compute impulse response functions, and approximate PDFs and CDFs is also described.
 
@@ -45,6 +47,8 @@ The main research papers upon which the solution methods are based are the follo
 Andreasen, M., Fernández-Villaverde, J., and J. Rubio-Ramirez, (2017), "The Pruned State-Space System for Non-Linear DSGE Models: Theory and Empirical Applications", Review of Economic Studies, 0, pp. 1---49.
 
 Binning, A., (2013), "Third-Order Approximation of Dynamic Models Without the Use of Tensors", Norges Bank Working Paper 2013---13.
+
+Dennis R., (2021), "Using a hyperbolic cross to solve non-linear macroeconomic models", CAMA Working Paper No. 93/2021
 
 Gomme, P., and P. Klein, (2011), "Second-Order Approximation of Dynamic Models Without the Use of Tensors", Journal of Economic Dynamics and Control, 35, pp. 604---615.
 
