@@ -1,9 +1,9 @@
 ################ Introduce the model structures ###############
 
 abstract type DSGEModel end
-abstract type ModelPrimatives end
+abstract type DSGEModelPrimatives end
 
-struct REModelPrimatives{Q<:AbstractString} <: ModelPrimatives
+struct REModelPrimatives{Q<:AbstractString} <: DSGEModelPrimatives
 
     # This structure contains the crucial model information extracted from a
     # model file.
