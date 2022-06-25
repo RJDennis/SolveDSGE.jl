@@ -1714,7 +1714,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
         if typeof(soln) <: ProjectionSolution
             domain = soln.domain
         elseif typeof(soln) <: PerturbationSolutionStoch
-            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,aoln.gx,soln.sigma,soln.grc,soln.soln_type)
+            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,soln.gx,soln.sigma,soln.grc,soln.soln_type)
             state_vars,jump_vars = compute_variances(soln_fo)
             domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
         end
@@ -2382,9 +2382,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
         if typeof(soln) <: ProjectionSolution
             domain = soln.domain
         elseif typeof(soln) <: PerturbationSolutionStoch
-            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,aoln.gx,soln.sigma,soln.grc,soln.soln_type)
+            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,soln.gx,soln.sigma,soln.grc,soln.soln_type)
             state_vars,jump_vars = compute_variances(soln_fo)
-            domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
+            domain = Matrix([soln.hbar + 3*sqrt.(diag(state_vars)) soln.hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
         end
     end
 
@@ -2504,9 +2504,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
         if typeof(soln) <: ProjectionSolution
             domain = soln.domain
         elseif typeof(soln) <: PerturbationSolutionStoch
-            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,aoln.gx,soln.sigma,soln.grc,soln.soln_type)
+            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,soln.gx,soln.sigma,soln.grc,soln.soln_type)
             state_vars,jump_vars = compute_variances(soln_fo)
-            domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
+            domain = Matrix([soln.hbar + 3*sqrt.(diag(state_vars)) soln.hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
         end
     end
 
@@ -3168,9 +3168,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         if typeof(soln) <: ProjectionSolution
             domain = soln.domain
         elseif typeof(soln) <: PerturbationSolutionStoch
-            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,aoln.gx,soln.sigma,soln.grc,soln.soln_type)
+            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,soln.gx,soln.sigma,soln.grc,soln.soln_type)
             state_vars,jump_vars = compute_variances(soln_fo)
-            domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
+            domain = Matrix([soln.hbar + 3*sqrt.(diag(state_vars)) soln.hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
         end
     end
 
@@ -3299,9 +3299,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         if typeof(soln) <: ProjectionSolution
             domain = soln.domain
         elseif typeof(soln) <: PerturbationSolutionStoch
-            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,aoln.gx,soln.sigma,soln.grc,soln.soln_type)
+            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,soln.gx,soln.sigma,soln.grc,soln.soln_type)
             state_vars,jump_vars = compute_variances(soln_fo)
-            domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
+            domain = Matrix([soln.hbar + 3*sqrt.(diag(state_vars)) soln.hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
         end
     end
 
@@ -3952,9 +3952,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
         if typeof(soln) <: ProjectionSolution
             domain = soln.domain
         elseif typeof(soln) <: PerturbationSolutionStoch
-            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,aoln.gx,soln.sigma,soln.grc,soln.soln_type)
+            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,soln.gx,soln.sigma,soln.grc,soln.soln_type)
             state_vars,jump_vars = compute_variances(soln_fo)
-            domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
+            domain = Matrix([soln.hbar + 3*sqrt.(diag(state_vars)) soln.hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
         end
     end
 
@@ -4075,9 +4075,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
         if typeof(soln) <: ProjectionSolution
             domain = soln.domain
         elseif typeof(soln) <: PerturbationSolutionStoch
-            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,aoln.gx,soln.sigma,soln.grc,soln.soln_type)
+            soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,soln.gx,soln.sigma,soln.grc,soln.soln_type)
             state_vars,jump_vars = compute_variances(soln_fo)
-            domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
+            domain = Matrix([soln.hbar + 3*sqrt.(diag(state_vars)) soln.hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
         end
     end
 
