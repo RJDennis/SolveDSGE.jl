@@ -1,11 +1,11 @@
-# Example three --- Three shock New Keynesian model
+# Three shock New Keynesian model with ZLB
 
 states:
 z, ϵ, β
 end
 
 jumps:
-c, muca, mucb, i, h, infl
+c, muca, mucb, i, h, infl, lm
 end
 
 shocks:
@@ -25,10 +25,10 @@ sd_1   = 0.0028
 ρ2     = 0.800
 sd_2   = 0.025
 ρ3     = 0.8
-sd_3   = 0.003
+sd_3   = 0.004
 end
 
-solvers: Any
+solvers: Projection
 
 equations:
 z(+1) = ρ1*z + sd_1*η1
@@ -39,5 +39,6 @@ muca = exp(β)*c^(θ-1-σ*θ)*(1-h)^((1-σ)*(1-θ))/(1+infl)
 mucb = exp(β)*c^(θ-1-σ*θ)*(1-h)^((1-σ)*(1-θ))*c*infl*(1+infl)
 infl*(1+infl) = (1-τ)*(1-ε*exp(ϵ))/ϕ + mucb(+1)/(c*c^(θ-1-σ*θ)*(1-h)^((1-σ)*(1-θ))) + (ε*exp(ϵ)/ϕ)*((1-θ)/θ)*c/((1-h)*exp(z))
 c = exp(z)*h
-1+i = ((1+pistar)/exp(β))*((1+infl)/(1+pistar))^(1.5)*(c/c(-1))^(0.125)
+1+i = ((1+pistar)/exp(β))*((1+infl)/(1+pistar))^(1.5)*(c/c(-1))^(0.125) + lm
+i*lm = 0.0
 end

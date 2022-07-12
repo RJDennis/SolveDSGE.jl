@@ -1,9 +1,9 @@
 ################ Introduce the model structures ###############
 
 abstract type DSGEModel end
-abstract type ModelPrimatives end
+abstract type DSGEModelPrimatives end
 
-struct REModelPrimatives{Q<:AbstractString} <: ModelPrimatives
+struct REModelPrimatives{Q<:AbstractString} <: DSGEModelPrimatives
 
     # This structure contains the crucial model information extracted from a
     # model file.
@@ -22,8 +22,8 @@ end
 
 struct REModel{S<:Integer,Q<:AbstractString} <: DSGEModel
 
-    # This structure contains information about a model in a form that the
-    # model-solvers can work with.
+    # This structure contains information about a rational expectations model 
+    # in a form that the model-solvers can work with.
 
     number_states::S
     number_jumps::S
@@ -32,7 +32,7 @@ struct REModel{S<:Integer,Q<:AbstractString} <: DSGEModel
     number_equations::S
     jumps_approximated::Array{S,1}
     eqns_approximated::Array{S,1}
-    variables::Array{Q,1}
+    variables::OrderedDict{Q,S}
     nlsolve_static_function::Function
     static_function::Function
     dynamic_function::Function
@@ -57,7 +57,7 @@ struct REModelPartial{S<:Integer,Q<:AbstractString} <: DSGEModel
     number_equations::S
     jumps_approximated::Array{S,1}
     eqns_approximated::Array{S,1}
-    variables::Array{Q,1}
+    variables::OrderedDict{Q,S}
     nlsolve_static_function::Function
     static_function::Function
     dynamic_function::Function
@@ -75,10 +75,10 @@ end
 
 abstract type SolutionScheme end
 abstract type ProjectionScheme <: SolutionScheme end
-abstract type ChebyshevScheme <: ProjectionScheme end
-abstract type SmolyakScheme <: ProjectionScheme end
-abstract type PiecewiseLinearScheme <: ProjectionScheme end
-abstract type HyperbolicCrossScheme <: ProjectionScheme end
+abstract type ProjectionSchemeDet <: ProjectionScheme end
+abstract type ProjectionSchemeStoch <: ProjectionScheme end
+abstract type ProjectionSchemeOBCDet <: ProjectionScheme end
+abstract type ProjectionSchemeOBCStoch <: ProjectionScheme end
 
 struct PerturbationScheme{T<:Real,Q<:AbstractString} <: SolutionScheme
 
@@ -88,20 +88,37 @@ struct PerturbationScheme{T<:Real,Q<:AbstractString} <: SolutionScheme
 
 end
 
-struct ChebyshevSchemeDet{T<:Real,S<:Integer} <: ChebyshevScheme
+struct ChebyshevSchemeDet{T<:Real,S<:Integer} <: ProjectionSchemeDet
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
     node_number::Union{S,Array{S,1}}
     order::Union{S,Array{S,1}}
     domain::Union{Array{T,1},Array{T,2}}
-    tol_fix_point_solver::T
-    tol_variables::T
+    ftol::T
+    xtol::T
     maxiters::S
+    method::Symbol
 
 end
 
-struct ChebyshevSchemeStoch{T<:Real,S<:Integer} <: ChebyshevScheme
+struct ChebyshevSchemeDetOBC{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
+
+    initial_guess::Union{T,Array{T,1}}
+    node_generator::Function
+    node_number::Union{S,Array{S,1}}
+    order::Union{S,Array{S,1}}
+    domain::Union{Array{T,1},Array{T,2}}
+    lb::Array{T,1}
+    ub::Array{T,1}
+    ftol::T
+    xtol::T
+    maxiters::S
+    method::Symbol
+
+end
+
+struct ChebyshevSchemeStoch{T<:Real,S<:Integer} <: ProjectionSchemeStoch
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
@@ -109,84 +126,201 @@ struct ChebyshevSchemeStoch{T<:Real,S<:Integer} <: ChebyshevScheme
     num_quad_nodes::S
     order::Union{S,Array{S,1}}
     domain::Union{Array{T,1},Array{T,2}}
-    tol_fix_point_solver::T
-    tol_variables::T
+    ftol::T
+    xtol::T
     maxiters::S
+    method::Symbol
 
 end
 
-struct SmolyakSchemeDet{T<:Real,S<:Integer} <: SmolyakScheme
+struct ChebyshevSchemeOBCStoch{T<:Real,S<:Integer} <: ProjectionSchemeOBCStoch
+
+    initial_guess::Union{T,Array{T,1}}
+    node_generator::Function
+    node_number::Union{S,Array{S,1}}
+    num_quad_nodes::S
+    order::Union{S,Array{S,1}}
+    domain::Union{Array{T,1},Array{T,2}}
+    lb::Array{T,1}
+    ub::Array{T,1}
+    ftol::T
+    xtol::T
+    maxiters::S
+    method::Symbol
+
+end
+
+struct SmolyakSchemeDet{T<:Real,S<:Integer} <: ProjectionSchemeDet
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
     layer::Union{S,Array{S,1}}
     domain::Union{Array{T,1},Array{T,2}}
-    tol_fix_point_solver::T
-    tol_variables::T
+    ftol::T
+    xtol::T
     maxiters::S
+    method::Symbol
 
 end
 
-struct SmolyakSchemeStoch{T<:Real,S<:Integer} <: SmolyakScheme
+struct SmolyakSchemeDetOBC{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
+
+    initial_guess::Union{T,Array{T,1}}
+    node_generator::Function
+    layer::Union{S,Array{S,1}}
+    domain::Union{Array{T,1},Array{T,2}}
+    lb::Array{T,1}
+    ub::Array{T,1}
+    ftol::T
+    xtol::T
+    maxiters::S
+    method::Symbol
+
+end
+
+struct SmolyakSchemeStoch{T<:Real,S<:Integer} <: ProjectionSchemeStoch
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
     num_quad_nodes::S
     layer::Union{S,Array{S,1}}
     domain::Union{Array{T,1},Array{T,2}}
-    tol_fix_point_solver::T
-    tol_variables::T
+    ftol::T
+    xtol::T
     maxiters::S
+    method::Symbol
 
 end
 
-struct HyperbolicCrossSchemeDet{T<:Real,S<:Integer} <: HyperbolicCrossScheme
-
-    initial_guess::Union{T,Array{T,1}}
-    node_generator::Function
-    layer::Union{S,Array{S,1}}
-    n::S
-    domain::Union{Array{T,1},Array{T,2}}
-    tol_fix_point_solver::T
-    tol_variables::T
-    maxiters::S
-
-end
-
-struct HyperbolicCrossSchemeStoch{T<:Real,S<:Integer} <: HyperbolicCrossScheme
+struct SmolyakSchemeOBCStoch{T<:Real,S<:Integer} <: ProjectionSchemeOBCStoch
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
     num_quad_nodes::S
     layer::Union{S,Array{S,1}}
-    n::S
     domain::Union{Array{T,1},Array{T,2}}
-    tol_fix_point_solver::T
-    tol_variables::T
+    lb::Array{T,1}
+    ub::Array{T,1}
+    ftol::T
+    xtol::T
     maxiters::S
+    method::Symbol
 
 end
 
-struct PiecewiseLinearSchemeDet{T<:Real,S<:Integer} <: PiecewiseLinearScheme
+struct HyperbolicCrossSchemeDet{T<:Real,S<:Integer} <: ProjectionSchemeDet
+
+    initial_guess::Union{T,Array{T,1}}
+    node_generator::Function
+    layer::S
+    n::Union{S,Array{S,1}}
+    domain::Union{Array{T,1},Array{T,2}}
+    ftol::T
+    xtol::T
+    maxiters::S
+    method::Symbol
+
+end
+
+struct HyperbolicCrossSchemeDetOBC{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
+
+    initial_guess::Union{T,Array{T,1}}
+    node_generator::Function
+    layer::S
+    n::Union{S,Array{S,1}}
+    domain::Union{Array{T,1},Array{T,2}}
+    lb::Array{T,1}
+    ub::Array{T,1}
+    ftol::T
+    xtol::T
+    maxiters::S
+    method::Symbol
+
+end
+
+struct HyperbolicCrossSchemeStoch{T<:Real,S<:Integer} <: ProjectionSchemeStoch
+
+    initial_guess::Union{T,Array{T,1}}
+    node_generator::Function
+    num_quad_nodes::S
+    layer::S
+    n::Union{S,Array{S,1}}
+    domain::Union{Array{T,1},Array{T,2}}
+    ftol::T
+    xtol::T
+    maxiters::S
+    method::Symbol
+
+end
+
+struct HyperbolicCrossSchemeOBCStoch{T<:Real,S<:Integer} <: ProjectionSchemeOBCStoch
+
+    initial_guess::Union{T,Array{T,1}}
+    node_generator::Function
+    num_quad_nodes::S
+    layer::S
+    n::Union{S,Array{S,1}}
+    domain::Union{Array{T,1},Array{T,2}}
+    lb::Array{T,1}
+    ub::Array{T,1}
+    ftol::T
+    xtol::T
+    maxiters::S
+    method::Symbol
+
+end
+
+struct PiecewiseLinearSchemeDet{T<:Real,S<:Integer} <: ProjectionSchemeDet
 
     initial_guess::Union{T,Array{T,1}}
     node_number::Union{S,Array{S,1}}
     domain::Union{Array{T,1},Array{T,2}}
-    tol_fix_point_solver::T
-    tol_variables::T
+    ftol::T
+    xtol::T
     maxiters::S
+    method::Symbol
 
 end
 
-struct PiecewiseLinearSchemeStoch{T<:Real,S<:Integer} <: PiecewiseLinearScheme
+struct PiecewiseLinearSchemeDetOBC{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
+
+    initial_guess::Union{T,Array{T,1}}
+    node_number::Union{S,Array{S,1}}
+    domain::Union{Array{T,1},Array{T,2}}
+    lb::Array{T,1}
+    ub::Array{T,1}
+    ftol::T
+    xtol::T
+    maxiters::S
+    method::Symbol
+
+end
+
+struct PiecewiseLinearSchemeStoch{T<:Real,S<:Integer} <: ProjectionSchemeStoch
 
     initial_guess::Union{T,Array{T,1}}
     node_number::Union{S,Array{S,1}}
     num_quad_nodes::S
     domain::Union{Array{T,1},Array{T,2}}
-    tol_fix_point_solver::T
-    tol_variables::T
+    ftol::T
+    xtol::T
     maxiters::S
+    method::Symbol
+
+end
+
+struct PiecewiseLinearSchemeOBCStoch{T<:Real,S<:Integer} <: ProjectionSchemeOBCStoch
+
+    initial_guess::Union{T,Array{T,1}}
+    node_number::Union{S,Array{S,1}}
+    num_quad_nodes::S
+    domain::Union{Array{T,1},Array{T,2}}
+    lb::Array{T,1}
+    ub::Array{T,1}
+    ftol::T
+    xtol::T
+    maxiters::S
+    method::Symbol
 
 end
 
@@ -407,7 +541,7 @@ struct SmolyakSolutionDet{T<:Real,S<:Integer} <: ProjectionSolutionDet
     weights::Array{Array{T,1},1}         # Smolyak weights
     grid::Union{Array{T,2},Array{T,1}}   # Smolyak grid
     multi_index::Array{S,2}              # Smolyak multi index
-    layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
+    layer::Union{S,Array{S,1}}          # Isotropic / anisotropic
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     iteration_count::S                   # Number of iterations needed for convergence
     node_generator::Function             # Function to generate the nodes
@@ -421,7 +555,7 @@ struct SmolyakSolutionStoch{T<:Real,S<:Integer} <: ProjectionSolutionStoch
     scale_factor::Array{T,1}             # Scale factor for computing scaled weights
     grid::Union{Array{T,2},Array{T,1}}   # Smolyak grid
     multi_index::Array{S,2}              # Smolyak multi index
-    layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
+    layer::Union{S,Array{S,1}}          # Isotropic / anisotropic
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     k::Union{Array{T,2},Array{T,1}}      # Innovation loading matrix
     iteration_count::S                   # Number of iterations needed for convergence
@@ -435,7 +569,7 @@ struct HyperbolicCrossSolutionDet{T<:Real,S<:Integer} <: ProjectionSolutionDet
     weights::Array{Array{T,1},1}         # Hyperbolic cross weights
     grid::Union{Array{T,2},Array{T,1}}   # Hyperbolic cross grid
     multi_index::Array{S,2}              # Hyperbolic cross multi index
-    layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
+    layer::S                             # Number of approximation layers
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     iteration_count::S                   # Number of iterations needed for convergence
     node_generator::Function             # Function to generate the nodes
@@ -449,7 +583,7 @@ struct HyperbolicCrossSolutionStoch{T<:Real,S<:Integer} <: ProjectionSolutionSto
     scale_factor::Array{T,1}             # Scale factor for computing scaled weights
     grid::Union{Array{T,2},Array{T,1}}   # Hyperbolic cross grid
     multi_index::Array{S,2}              # Hyperbolic cross multi index
-    layer::Union{S,Array{S,1}}           # Isotropic / anisotropic
+    layer::S                             # Number of approximation layers
     domain::Union{Array{T,2},Array{T,1}} # Domain for state variables / state variable
     k::Union{Array{T,2},Array{T,1}}      # Innovation loading matrix
     iteration_count::S                   # Number of iterations needed for convergence

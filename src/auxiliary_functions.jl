@@ -464,7 +464,7 @@ function kron_prod_times_matrix(A::Union{Array{Array{T,2},1},Array{Array{Complex
 
     N = prod(n[1:p])
     y = Array{Complex{T}}(undef,N,size(x,2))
-    for j = 1:size(x,2)
+    for j in axes(x,2)
         @views z = x[:,j]
         for i = 1:p
             z = transpose(A[i]*reshape(z,n[i],div(N,n[i])))
@@ -642,7 +642,7 @@ function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T
     integrals2 = Array{T}(undef,order+1)
     for i = 1:(order+1)
         integrals2[i] = sum(exp.(sqrt(2)*sigma*(i-1)*eps_nodes).*eps_weights)*pi^(-1/2)
-        for j = 1:length(selected_nodes)
+        for j in eachindex(selected_nodes)
             terms_num .= rho*nodes[j] .+ sqrt(2)*sigma*eps_nodes
             terms_den = rho*nodes[j]
             terms_num .= chebyshev_polynomial(i,terms_num)[:,i]
@@ -656,7 +656,7 @@ function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T
         if length(selected_nodes) == 1
             integrals[:,1] .= integrals2
         else
-            for i = 1:length(selected_nodes)
+            for i in eachindex(selected_nodes)
                 if nodetoosmall[i] == 1
                     if i == 1
                         integrals[:,i] .= integrals[:,i+1]
@@ -678,15 +678,15 @@ function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T
 
     # Case where shocks are AR(1) and innovations are correlated
 
-    N = size(k,2)
-    for i = 1:N
+    n = size(k,2)
+    for i = 1:n
         if Ρ[i,i] == 0.0
             Ρ[i,i] = eps()
         end
     end
 
     selected_nodes = similar(nodes)
-    for i = 1:length(nodes)
+    for i in eachindex(nodes)
         if length(nodes[i]) > 2
             selected_number = ceil(Int,sqrt(length(nodes[i])))
             if isodd(length(nodes[i])) && iseven(selected_number)
@@ -700,49 +700,49 @@ function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T
     end
 
     if typeof(order) == S
-        ord = fill(order,N)
+        ord = tuple(fill(order,N)...)
     else
-        ord = copy(order)
+        ord = tuple(order...)
     end
 
     terms_num = Array{T}(undef,length(eps_nodes))
-    integrals = Array{T}(undef,((ord.+1)...,length.(selected_nodes)...))
-    integrals2 = Array{T}(undef,(ord.+1)...)
+    integrals = Array{T}(undef,(ord.+1...,length.(selected_nodes)...))
+    integrals2 = Array{T}(undef,ord.+1)
 
     order_prod = prod(ord.+1)
     nodes_prod = prod(length.(selected_nodes))
-    eps_prod = length(eps_nodes)^N
+    eps_prod = length(eps_nodes)^n
 
     for i = 1:order_prod
-        ii = ind2sub(i,Tuple(ord.+1))
+        ii = ind2sub(i,ord.+1)
         int2 = 0.0
         for j = 1:eps_prod
-            jj = ind2sub(j,Tuple(fill(length(eps_nodes),N)))
+            jj = ind2sub(j,Tuple(fill(length(eps_nodes),n)))
             eps_w = eps_weights[jj[1]]
             eps_node = eps_nodes[jj[1]]
-            for k = 2:N
+            for k = 2:n
                 eps_w *= eps_weights[jj[k]]
                 eps_node = [eps_node; eps_nodes[jj[k]]]
             end
-            int2 += exp(2^(N/2)*sqrt(det(k*k'))*collect(Tuple(ii).-1)'*(k*k')*eps_node)*eps_w*pi^(-N/2)
+            int2 += exp(2^(n/2)*sqrt(det(k*k'))*collect(Tuple(ii).-1)'*(k*k')*eps_node)*eps_w*pi^(-n/2)
         end
         integrals2[Tuple(ii)...] = int2 # exp(collect(ii.-1)'*(k*k')*collect(ii.-1)/2) # This is the analytic expression
     end
 
     for i = 1:order_prod
-        ii = ind2sub(i,Tuple(ord.+1))
+        ii = ind2sub(i,ord.+1)
         for m = 1:nodes_prod
             mm = ind2sub(m,Tuple(length.(selected_nodes)))
             int2 = 0.0
             node = selected_nodes[1][mm[1]]
-            for k = 2:N
+            for k = 2:n
                 node = [node; selected_nodes[k][mm[k]]]
             end
             for j = 1:eps_prod
-                jj = ind2sub(j,Tuple(fill(length(eps_nodes),N)))
+                jj = ind2sub(j,Tuple(fill(length(eps_nodes),n)))
                 eps_w = eps_weights[jj[1]]
                 eps_node = eps_nodes[jj[1]]
-                for k = 2:N
+                for k = 2:n
                     eps_w *= eps_weights[jj[k]]
                     eps_node = [eps_node; eps_nodes[jj[k]]]
                 end
@@ -750,11 +750,11 @@ function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T
                 terms_den = Ρ*node
                 num = chebyshev_polynomial(ii[1],terms_num[1])[ii[1]]
                 den = chebyshev_polynomial(ii[1],terms_den[1])[ii[1]]
-                for k = 2:N
+                for k = 2:n
                     num = [num; chebyshev_polynomial(ii[k],terms_num[k])[ii[k]]]
                     den = [den; chebyshev_polynomial(ii[k],terms_den[k])[ii[k]]]
                 end
-                int2 += (prod(num)/prod(den))*eps_w*pi^(-N/2)
+                int2 += (prod(num)/prod(den))*eps_w*pi^(-n/2)
             end
             integrals[Tuple(ii)...,Tuple(mm)...] = int2
         end
@@ -766,16 +766,16 @@ function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T
             if length(integrals) == 1
                 integrals[i] = integrals2[i]
             else
-                integrals[i] = integrals2[CartesianIndex(Tuple(ii)[1:N])]
+                integrals[i] = integrals2[CartesianIndex(Tuple(ii)[1:n])]
             end
         end
     end
 
-    for i = N:-1:1
-        integrals = sum(integrals,dims = (N+i))/length(selected_nodes[i])
+    for i = n:-1:1
+        integrals = sum(integrals,dims = (n+i))/length(selected_nodes[i])
     end
 
-    return reshape(integrals,Tuple(ord.+1))
+    return reshape(integrals,ord.+1)
 
 end
 
@@ -808,7 +808,7 @@ end
 
 function scale_chebyshev_weights!(weights::Array{Array{T,N},1},scaled_weights::Array{Array{T,N},1},integrals::Array{Array{T,1},1},j_approx::Union{S,Array{S,1}},ns::S) where {T<:AbstractFloat,N,S<:Integer}
 
-    for i = 1:length(j_approx)
+    for i in eachindex(j_approx)
         for j = 1:ns
             index = [1:ndims(weights[i]);]
             index[1],index[j] = index[j],index[1]
@@ -820,7 +820,7 @@ end
 
 function scale_chebyshev_weights!(weights::Array{Array{T,N},1},scaled_weights::Array{Array{T,N},1},integrals::Array{T,N2},j_approx::Union{S,Array{S,1}},ns::S) where {T<:AbstractFloat,N,N2,S<:Integer}
 
-    for i = 1:length(j_approx)
+    for i in eachindex(j_approx)
         for j = 1:ns
             scaled_weights[i] .= integrals.*weights[i]
         end
@@ -841,7 +841,7 @@ function _compute_sparse_integrals(eps_nodes::Array{T,1},eps_weights::Array{T,1}
     integrals2 = Array{T}(undef,order+1)
     for i = 1:(order+1)
         integrals2[i] = sum(exp.(sqrt(2)*sigma*(i-1)*eps_nodes).*eps_weights)*pi^(-1/2)
-        for j = 1:length(nodes)
+        for j in eachindex(nodes)
             terms_num .= rho*nodes[j] .+ sqrt(2)*sigma*eps_nodes
             terms_den = rho*nodes[j]
             terms_num .= chebyshev_polynomial(i,terms_num)[:,i]
@@ -855,7 +855,7 @@ function _compute_sparse_integrals(eps_nodes::Array{T,1},eps_weights::Array{T,1}
         if length(nodes) == 1
             integrals[:,1] .= integrals2
         else
-            for i = 1:length(nodes)
+            for i in eachindex(nodes)
                 if nodetoosmall[i] == 1
                     if i == 1
                         integrals[:,i] .= integrals[:,i+1]
@@ -876,7 +876,7 @@ end
 function compute_sparse_integrals(eps_nodes,eps_weights,nx,order,grid,RHO,k)
 
     integrals = ones(nx,order+1)
-    for j = 1:size(k,2)
+    for j in axes(k,2)
         nodes = unique(grid[:,j])
         integrals[j,:] .= _compute_sparse_integrals(eps_nodes,eps_weights,nodes,order,RHO[j,j],k[j,j])
     end
@@ -893,7 +893,7 @@ function smolyak_weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,grid,
     # Here we construct the base integrals
 
     base_integrals = Array{Array{Float64,2}}(undef,length(unique_orders))
-    for i = 1:length(unique_orders)
+    for i in eachindex(unique_orders)
         base_integrals[i] = compute_sparse_integrals(eps_nodes,eps_weights,nx,unique_orders[i],grid,RHO,sigma)
     end
 
@@ -948,7 +948,7 @@ function hcross_weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,grid,R
 
     # Compute the unique polynomial terms from the base polynomials
 
-    for i = 1:size(multi_index,1)
+    for i in axes(multi_index,1)
         for j = 1:d
             if multi_index[i,j] == 0
                 unique_base_integrals[i,j] = [base_integrals[j][1]]
@@ -962,7 +962,7 @@ function hcross_weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,grid,R
 
     weight_scale_factor = Array{T,1}(undef,N)
     l = 1
-    @inbounds for j = 1:size(multi_index,1)
+    @inbounds for j in axes(multi_index,1)
         new_integrals = unique_base_integrals[j,1]
         for i = 2:d
             new_integrals = kron(new_integrals,unique_base_integrals[j,i])

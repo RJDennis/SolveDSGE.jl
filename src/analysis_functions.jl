@@ -1036,9 +1036,9 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Fir
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S; rndseed = 123456) where {R<:FirstOrderSolutionStoch,T<:Real,S<:Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S; seed = 123456) where {R<:FirstOrderSolutionStoch,T<:Real,S<:Integer}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -1092,9 +1092,9 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Sec
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S; rndseed = 123456) where {R<:SecondOrderSolutionStoch,T<:Real,S<:Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S; seed = 123456) where {R<:SecondOrderSolutionStoch,T<:Real,S<:Integer}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -1165,9 +1165,9 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Thi
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S; rndseed = 123456) where {R<:ThirdOrderSolutionStoch,T<:Real,S<:Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S; seed = 123456) where {R<:ThirdOrderSolutionStoch,T<:Real,S<:Integer}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -1252,9 +1252,9 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Fou
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S; rndseed = 123456) where {R<:FourthOrderSolutionStoch,T<:Real,S<:Integer}
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S; seed = 123456) where {R<:FourthOrderSolutionStoch,T<:Real,S<:Integer}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -1329,9 +1329,34 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Pro
 
 end
 
-function simulate(soln::R,initial_state::Array{T,1},sim_length::S; rndseed = 123456) where {R<:ProjectionSolutionStoch,T<:Real,S<:Integer}
+function simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::Array{T,1},sim_length::S) where {R<:ProjectionSolutionDet,T<:Real,S<:Integer}
 
-    Random.seed!(rndseed)
+    eqm = state_space_eqm(soln)
+
+    nv = length(soln.variables)
+    nx = size(soln.domain,2)
+    ny = nv - nx
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
+    simulated_states = Array{T,2}(undef,nx,sim_length + 1)
+    simulated_jumps = Array{T,2}(undef,ny,sim_length)
+    simulated_states[:,1] .= initial_state
+
+    for i = 2:sim_length+1
+        simulated_states[:,i] .= NLboxsolve.box_projection(eqm.h(simulated_states[:,i-1]),lb[1:nx],ub[1:nx])
+        simulated_jumps[:,i-1] .= NLboxsolve.box_projection(eqm.g(simulated_states[:,i-1]),lb[nx+1:end],ub[nx+1:end])
+    end
+
+    return [simulated_states[:,1:sim_length]; simulated_jumps[:,1:end]]
+
+end
+
+function simulate(soln::R,initial_state::Array{T,1},sim_length::S; seed = 123456) where {R<:ProjectionSolutionStoch,T<:Real,S<:Integer}
+
+    Random.seed!(seed)
 
     eqm = state_space_eqm(soln)
 
@@ -1357,7 +1382,167 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S; rndseed = 123
 
 end
 
-function impulses(soln::R,n::S,innovation_vector::Array{T,1},rndseed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
+function simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::Array{T,1},sim_length::S; seed = 123456) where {R<:ProjectionSolutionStoch,T<:Real,S<:Integer}
+
+    Random.seed!(seed)
+
+    eqm = state_space_eqm(soln)
+
+    nv = length(soln.variables)
+    nx = size(soln.domain,2)
+    ns = size(soln.k,2)
+    ny = nv - nx
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
+    simulated_states = Array{T,2}(undef,nx,sim_length + 1)
+    simulated_jumps = Array{T,2}(undef,ny,sim_length)
+    simulated_states[:,1] .= initial_state
+
+    for i = 2:sim_length+1
+        simulated_states[:,i] .= NLboxsolve.box_projection(eqm.h(simulated_states[:,i-1],randn(ns)),lb[1:nx],ub[1:nx])
+        simulated_jumps[:,i-1] .= NLboxsolve.box_projection(eqm.g(simulated_states[:,i-1]),lb[nx+1:end],ub[nx+1:end])
+    end
+
+    return [simulated_states[:,1:sim_length]; simulated_jumps[:,1:end]]
+
+end
+
+function ensemble_simulate(soln::R,initial_state::Array{T,1},sim_reps::S,sim_length::S;seed=123456) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},T<:Real,S<:Integer}
+
+    Random.seed!(seed)
+    sim_results = Array{Array{T,2},1}(undef,sim_reps)
+
+    for j in 1:sim_reps
+
+        random_seed = rand(1:10_000_000)
+        sim_results[j] = simulate(soln,initial_state,sim_length,seed = random_seed)
+
+    end
+
+    return sim_results
+
+end
+
+function ensemble_simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::Array{T,1},sim_reps::S,sim_length::S;seed=123456) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},T<:Real,S<:Integer}
+
+    Random.seed!(seed)
+    sim_results = Array{Array{T,2},1}(undef,sim_reps)
+
+    for j in 1:sim_reps
+
+        random_seed = rand(1:10_000_000)
+        sim_results[j] = simulate(soln,initial_state,lb,ub,sim_length,seed = random_seed)
+
+    end
+
+    return sim_results
+
+end
+
+function ensemble_simulate(soln::R,initial_state::Array{T,1},aggregate_shocks::Array{S,1},sim_reps::S,sim_length::S;seed = 123456) where {R<:ProjectionSolutionStoch,T<:Real,S<:Integer}
+
+    Random.seed!(seed)
+
+    eqm = state_space_eqm(soln)
+
+    nv = length(soln.variables)
+    nx = size(soln.domain,2)
+    ns = size(soln.k,2)
+    ny = nv - nx
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
+    sim_results = Array{Array{T,2},1}(undef,sim_reps)
+
+    # Produce the paths for the aggregate shocks
+    idiosyncratic_shocks = setdiff(1:ns,aggregate_shocks)
+    shock_realizations = Array{T,2}(undef,ns,sim_length+1)
+    for i in aggregate_shocks
+        shock_realizations[i,:] = randn(sim_length+1)
+    end
+    
+    for j in 1:sim_reps
+
+        Random.seed!(rand(1:10_000_000))
+
+        simulated_states = Array{T,2}(undef,nx,sim_length + 1)
+        simulated_jumps = Array{T,2}(undef,ny,sim_length)
+        simulated_states[:,1] .= initial_state
+
+        # Produce the paths for the idiosyncratic shocks
+        for i in idiosyncratic_shocks
+            shock_realizations[i,:] = randn(sim_length + 1)
+        end
+
+        for i = 2:sim_length+1
+            simulated_states[:,i] .= eqm.h(simulated_states[:,i-1],shock_realizations[:,i])
+            simulated_jumps[:,i-1] .= eqm.g(simulated_states[:,i-1])
+        end
+
+        sim_results[j] = [simulated_states[:,1:sim_length]; simulated_jumps[:,1:end]]
+
+    end
+
+    return sim_results
+
+end
+
+function ensemble_simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::Array{T,1},aggregate_shocks::Array{S,1},sim_reps::S,sim_length::S;seed = 123456) where {R<:ProjectionSolutionStoch,T<:Real,S<:Integer}
+
+    Random.seed!(seed)
+
+    eqm = state_space_eqm(soln)
+
+    nv = length(soln.variables)
+    nx = size(soln.domain,2)
+    ns = size(soln.k,2)
+    ny = nv - nx
+
+    if length(initial_state) != nx
+        error("The number of inital values for the states must equal the number of states")
+    end
+
+    sim_results = Array{Array{T,2},1}(undef,sim_reps)
+
+    # Produce the paths for the aggregate shocks
+    idiosyncratic_shocks = setdiff(1:ns,aggregate_shocks)
+    shock_realizations = Array{T,2}(undef,ns,sim_length+1)
+    for i in aggregate_shocks
+        shock_realizations[i,:] = randn(sim_length+1)
+    end
+    
+    for j in 1:sim_reps
+
+        Random.seed!(rand(1:10_000_000))
+
+        simulated_states = Array{T,2}(undef,nx,sim_length + 1)
+        simulated_jumps = Array{T,2}(undef,ny,sim_length)
+        simulated_states[:,1] .= initial_state
+
+        # Produce the paths for the idiosyncratic shocks
+        for i in idiosyncratic_shocks
+            shock_realizations[i,:] = randn(sim_length + 1)
+        end
+
+        for i = 2:sim_length+1
+            simulated_states[:,i] .= NLboxsolve.box_projection(eqm.h(simulated_states[:,i-1],shock_realizations[:,i]),lb[1:nx],ub[1:nx])
+            simulated_jumps[:,i-1] .= NLboxsolve.box_projection(eqm.g(simulated_states[:,i-1]),lb[nx+1:end],ub[nx+1:end])
+        end
+
+        sim_results[j] = [simulated_states[:,1:sim_length]; simulated_jumps[:,1:end]]
+
+    end
+
+    return sim_results
+
+end
+
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},seed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
         error("There are more innovations than shocks.")
@@ -1387,7 +1572,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},rndseed = 123456) w
 
 end
 
-function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},rndseed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},seed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
         error("There are more innovations than shocks.")
@@ -1417,7 +1602,7 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
 end
 
-function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
         error("There are more innovations than shocks.")
@@ -1447,7 +1632,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
 end
 
-function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
         error("There are more innovations than shocks.")
@@ -1477,7 +1662,7 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
 end
 
-function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:SecondOrderSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:SecondOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
         error("There are more innovations than shocks.")
@@ -1485,7 +1670,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
         error("Each shock needs an innovation (even if it's zero).")
     end
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -1555,7 +1740,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
 end
 
-function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:SecondOrderSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:SecondOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
         error("There are more innovations than shocks.")
@@ -1563,7 +1748,7 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         error("Each shock needs an innovation (even if it's zero).")
     end
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -1630,7 +1815,7 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
 end
 
-function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:ThirdOrderSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:ThirdOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
         error("There are more innovations than shocks.")
@@ -1638,7 +1823,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
         error("Each shock needs an innovation (even if it's zero).")
     end
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -1723,7 +1908,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
 end
 
-function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:ThirdOrderSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:ThirdOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
         error("There are more innovations than shocks.")
@@ -1731,7 +1916,7 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         error("Each shock needs an innovation (even if it's zero).")
     end
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -1813,7 +1998,7 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
 end
 
-function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:FourthOrderSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:FourthOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
         error("There are more innovations than shocks.")
@@ -1821,7 +2006,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
         error("Each shock needs an innovation (even if it's zero).")
     end
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -1919,7 +2104,7 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
 end
 
-function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S;rndseed = 123456) where {R<:FourthOrderSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S;seed = 123456) where {R<:FourthOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
         error("There are more innovations than shocks.")
@@ -1927,7 +2112,7 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
         error("Each shock needs an innovation (even if it's zero).")
     end
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nx = length(soln.hbar)
     ny = length(soln.gbar)
@@ -2022,9 +2207,9 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
 end
 
-function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:ChebyshevSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:ChebyshevSolutionStoch,S<:Integer,T<:Real}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -2117,9 +2302,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
 end
 
-function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:ChebyshevSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:ChebyshevSolutionStoch,S<:Integer,T<:Real}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -2204,9 +2389,9 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
 end
 
-function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:SmolyakSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:SmolyakSolutionStoch,S<:Integer,T<:Real}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -2292,9 +2477,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
 end
 
-function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:SmolyakSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:SmolyakSolutionStoch,S<:Integer,T<:Real}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -2372,9 +2557,9 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
 end
 
-function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:HyperbolicCrossSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:HyperbolicCrossSolutionStoch,S<:Integer,T<:Real}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -2460,9 +2645,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
 end
 
-function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:HyperbolicCrossSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:HyperbolicCrossSolutionStoch,S<:Integer,T<:Real}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -2540,9 +2725,9 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
 end
 
-function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:PiecewiseLinearSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:PiecewiseLinearSolutionStoch,S<:Integer,T<:Real}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -2615,9 +2800,9 @@ function impulses(soln::R,n::S,innovation_vector::Array{T,1},reps::S; rndseed = 
 
 end
 
-function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; rndseed = 123456) where {R<:PiecewiseLinearSolutionStoch,S<:Integer,T<:Real}
+function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Array{T,1},reps::S; seed = 123456) where {R<:PiecewiseLinearSolutionStoch,S<:Integer,T<:Real}
 
-    Random.seed!(rndseed)
+    Random.seed!(seed)
 
     nv = length(soln.variables)
     nx = size(soln.domain,2)
@@ -3007,7 +3192,7 @@ function den_haan_marcet(model::REModel,soln::R,steady_state::Array{T,1},seed::S
         random_seed = rand(1:10_000_000)
         errors  = zeros(num_approx_eqns)
         weights = zeros(num_approx_eqns,num_approx_eqns)
-        simulated_data .= simulate(soln,steady_state[1:nx],sim_length+1,rndseed = random_seed)[:,(discarded_length+1):end]
+        simulated_data .= simulate(soln,steady_state[1:nx],sim_length+1,seed = random_seed)[:,(discarded_length+1):end]
         @views for j = 1:retained_length
             point = [simulated_data[:,j]; simulated_data[:,j+1]; shocks]
             f .= model.dynamic_function(point)

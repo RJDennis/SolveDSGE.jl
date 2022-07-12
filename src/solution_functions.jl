@@ -1,18 +1,22 @@
 ###################### Solution functions #############################
 
-function compute_steady_state(model::REModel,x::Array{T,1},tol::T,maxiters::S) where {T<:Real,S<:Integer}
+function compute_steady_state(model::REModel,x::Array{T,1},tol::T,maxiters::S,method::Symbol = :newton) where {T<:Real,S<:Integer}
+#function compute_steady_state(model::REModel,x::Array{T,1},xtol::T,ftol::T,maxiters::S,method::Symbol = :lm_ar) where {T<:Real,S<:Integer}
 
-    # Uses NLsolve (add this using the Package Manager if you don't have it) to
+    # Uses NLboxsolve (add this using the Package Manager if you don't have it) to
     # solve for the model's deterministic steady state
 
-    if length(x) != model.number_equations
-        error("The initialization has either too many or too few elements")
+    if length(x) > model.number_equations
+        error("The initialization has too many elements")
+    elseif length(x) < model.number_equations
+        error("The initialization has too few elements")
     end
 
     #equations = model.static_function
     #nlsoln = nlsolve(equations, x, xtol = tol, iterations = maxiters, autodiff = :forward, inplace = :false)
     equations = model.nlsolve_static_function
-    nlsoln = nlsolve(equations,x,ftol = tol,xtol = tol,iterations = maxiters,autodiff = :forward,inplace = :true)
+    nlsoln = nlsolve(equations,x,ftol = tol,xtol = tol,iterations = maxiters,autodiff = :forward,inplace = :true,method = method)
+    #nlsoln = nlboxsolve(equations,x,xtol = xtol,ftol = ftol,maxiters = maxiters,method = method)
 
     return nlsoln
 
@@ -49,15 +53,16 @@ function solve_first_order(model::REModel,scheme::PerturbationScheme) # Follows 
 
 end
 
-function solve_first_order_det(model::REModel,scheme::PerturbationScheme) # Follows Klein (2000)
+function solve_first_order_det(model::REModel,scheme::PerturbationScheme)
 
     nx = model.number_states
     ny = model.number_jumps
-    nv = nx + ny
+    nv = model.number_variables
 
     steady_state = scheme.steady_state
     cutoff = scheme.cutoff
-    T = eltype(steady_state)
+
+    # Compute the first-order deterministic terms
 
     d = compute_linearization(model,steady_state)
 
@@ -77,6 +82,17 @@ function solve_first_order_det(model::REModel,scheme::PerturbationScheme) # Foll
     #q = r.Q'  # So now q*a*z = s and q*b*z = t
     z = r.Z
 
+    # Construct the rational expectations equilibrium by eliminating the
+    # unstable dynamics
+
+    @views z11 = z[1:nx,1:nx]
+    @views z21 = z[nx+1:nv,1:nx]
+    @views t11 = t[1:nx,1:nx]
+    @views s11 = s[1:nx,1:nx]
+
+    hx = real((z11/t11)*(s11/z11))
+    gx = real(z21/z11)
+
     # Calculate the number of unstable eigenvalues
 
     grc = nv - sum(sel)
@@ -88,32 +104,26 @@ function solve_first_order_det(model::REModel,scheme::PerturbationScheme) # Foll
         soln_type = "explosive"
     end
 
-    # Construct the rational expectations equilibrium by eliminating the
-    # unstable dynamics
-
-    @views z11 = z[1:nx,1:nx]
-    @views z21 = z[nx+1:nv,1:nx]
-    @views t11 = t[1:nx,1:nx]
-    @views s11 = s[1:nx,1:nx]
-
-    hx = real((z11/t11)*(s11/z11))
-    gx = real(z21/z11)
+    # Return the solution
 
     soln = FirstOrderSolutionDet(steady_state[1:nx],hx,steady_state[nx+1:nv],gx,grc,soln_type)
     return soln
 
 end
 
-function solve_first_order_stoch(model::REModel,scheme::PerturbationScheme) # Follows Klein (2000)
+function solve_first_order_stoch(model::REModel,scheme::PerturbationScheme)
 
     nx = model.number_states
     ny = model.number_jumps
+    nv = model.number_variables
     ns = model.number_shocks
-    nv = nx + ny
 
     steady_state = scheme.steady_state
     cutoff = scheme.cutoff
+
     T = eltype(steady_state)
+
+    # Compute the first-order deterministic terms
 
     d = compute_linearization(model,steady_state)
 
@@ -133,17 +143,6 @@ function solve_first_order_stoch(model::REModel,scheme::PerturbationScheme) # Fo
     #q = r.Q'  # So now q*a*z = s and q*b*z = t
     z = r.Z
 
-    # Calculate the number of unstable eigenvalues
-
-    grc = nv - sum(sel)
-
-    soln_type = "determinate"
-    if grc < ny
-        soln_type = "indeterminate"
-    elseif grc > ny
-        soln_type = "explosive"
-    end
-
     # Construct the rational expectations equilibrium by eliminating the
     # unstable dynamics
 
@@ -155,8 +154,24 @@ function solve_first_order_stoch(model::REModel,scheme::PerturbationScheme) # Fo
     hx = real((z11/t11)*(s11/z11))
     gx = real(z21/z11)
 
+    # Compute the first-order stochastic terms
+
     @views k = -d[1:nx,2*nv+1:2*nv+ns]
     sigma = eye(T,ns)
+
+    # Calculate the number of unstable eigenvalues
+
+    grc = nv - sum(sel)
+
+    soln_type = "determinate"
+    if grc < ny
+        soln_type = "indeterminate"
+    elseif grc > ny
+        soln_type = "explosive"
+    end
+
+    # Return the solution
+
     soln = FirstOrderSolutionStoch(steady_state[1:nx],hx,k,steady_state[nx+1:nv],gx,sigma,grc,soln_type)
     return soln
 
@@ -179,23 +194,28 @@ function solve_second_order(model::REModel,scheme::PerturbationScheme) # Follows
 
 end
 
-function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Follows Gomme and Klein (2011)
+function solve_second_order_det(model::REModel,scheme::PerturbationScheme)
 
     nx = model.number_states
     ny = model.number_jumps
+    nv = model.number_variables
     ne = model.number_equations
-    nv = nx + ny
 
     steady_state = scheme.steady_state
     cutoff = scheme.cutoff
+
     T = eltype(steady_state)
+
+    # Calculate the first derivatives at the steady state
+
+    d = compute_linearization(model,steady_state)
 
     # Calculate the Hessian at the steady state for each equation and stack the
     # Hessians vertically.
 
     point = [steady_state; steady_state]
     deriv2 = zeros(ne*2*nv,2*nv)
-    for i = 1:nv
+    for i = 1:ne
         deriv2[(i-1)*2*nv+1:i*2*nv,:] = ForwardDiff.hessian(model.each_eqn_function[i],point,ForwardDiff.HessianConfig(model.each_eqn_function[i],point,ForwardDiff.Chunk{2}()))[1:2*nv,1:2*nv]
     end
 
@@ -207,11 +227,7 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     grc = first_order_soln.grc
     soln_type = first_order_soln.soln_type
 
-    # Compute the second-order solution
-
-    # Calculate the first derivatives at the steady state
-
-    d = compute_linearization(model,steady_state)
+    # Compute the second-order deterministic terms
 
     # Construct partitioned first derivative matrices
 
@@ -234,7 +250,7 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     # Use a Sylvester equation solver to compute the second order terms on the
     # states.
 
-    A = [b1 + b2*c2 b4]
+    A = [b1+b2*c2 b4]
     C = hx
     B = [zeros(size(b2,1),nx*nx) b2*c1]
     D = q
@@ -246,6 +262,8 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme) # Fol
     hxx = Matrix(reshape(z[1:nx*nx,:]',nx*nx,nx)')
     gxx = Matrix(reshape(z[nx^2+1:end,:]',nx*nx,ny)')
 
+    # Return the solution
+
     soln = SecondOrderSolutionDet(steady_state[1:nx],hx,hxx,steady_state[nx+1:nv],gx,gxx,grc,soln_type)
     return soln
 
@@ -255,85 +273,92 @@ function solve_second_order_stoch(model::REModel, scheme::PerturbationScheme) # 
 
     nx = model.number_states
     ny = model.number_jumps
-    ns = model.number_shocks
+    nv = model.number_variables
     ne = model.number_equations
-    nv = nx + ny
+    ns = model.number_shocks
 
     steady_state = scheme.steady_state
     cutoff = scheme.cutoff
+
     T = eltype(steady_state)
+
+    # Calculate the first derivatives at the steady state
+
+    d = compute_linearization(model,steady_state)
 
     # Calculate the Hessian at the steady state for each equation and stack the
     # Hessians vertically.
 
     point = [steady_state; steady_state; zeros(ns)]
-    deriv2 = zeros(ne * 2 * nv, 2 * nv)
-    for i = 1:nv
-        deriv2[(i-1)*2*nv+1:i*2*nv, :] = ForwardDiff.hessian(model.each_eqn_function[i], point, ForwardDiff.HessianConfig(model.each_eqn_function[i], point, ForwardDiff.Chunk{2}()))[1:2*nv, 1:2*nv]
+    deriv2 = zeros(ne*2*nv,2*nv)
+    for i = 1:ne
+        deriv2[(i-1)*2*nv+1:i*2*nv,:] = ForwardDiff.hessian(model.each_eqn_function[i], point, ForwardDiff.HessianConfig(model.each_eqn_function[i], point, ForwardDiff.Chunk{2}()))[1:2*nv,1:2*nv]
     end
 
     # Compute the first-order solution 
 
     first_order_soln = solve_first_order(model, PerturbationScheme(steady_state, cutoff, "first"))
-    hx = first_order_soln.hx
-    gx = first_order_soln.gx
-    grc = first_order_soln.grc
+    hx        = first_order_soln.hx
+    gx        = first_order_soln.gx
+    grc       = first_order_soln.grc
     soln_type = first_order_soln.soln_type
+    k         = first_order_soln.k
+    sigma     = first_order_soln.sigma
 
-    # Compute the second-order Solution
-
-    # Calculate the first derivatives at the steady state
-
-    d = compute_linearization(model, steady_state)
+    # Compute the second-order deterministic terms
 
     # Construct partitioned first derivative matrices
 
-    @views fx = d[:, 1:nx]
-    @views fy = d[:, (nx+1):nv]
-    @views fxp = d[:, (nv+1):(nv+nx)]
-    @views fyp = d[:, (nv+nx+1):2*nv]
+    @views fx  = d[:,1:nx]
+    @views fy  = d[:,(nx+1):nv]
+    @views fxp = d[:,(nv+1):(nv+nx)]
+    @views fyp = d[:,(nv+nx+1):2*nv]
 
     # Set up the Sylvester equation needed to construct the matrices on the
     # second-order states.
 
     Mx = [I; gx; hx; gx * hx]
-    q = kron_prod_times_matrix(eye(T, nv), Mx', deriv2 * Mx) #(eye(T,nv) ⊗ m')*(deriv2*m)
-    b1 = kron(fxp, eye(T, nx)) #fxp ⊗ eye(T,nx) 
-    b2 = kron(fyp, eye(T, nx)) #fyp ⊗ eye(T,nx)
-    b4 = kron(fy, eye(T, nx)) #fy ⊗ eye(T,nx) 
-    c1 = kron(eye(T, ny), hx') #eye(T,ny) ⊗ hx'
-    c2 = kron(gx, eye(T, nx)) #gx ⊗ eye(T,nx)
+    q = kron_prod_times_matrix(eye(T,nv),Mx',deriv2*Mx) #(eye(T,nv) ⊗ m')*(deriv2*m)
+    b1 = kron(fxp,eye(T,nx)) #fxp ⊗ eye(T,nx) 
+    b2 = kron(fyp,eye(T,nx)) #fyp ⊗ eye(T,nx)
+    b4 = kron(fy,eye(T,nx)) #fy ⊗ eye(T,nx) 
+    c1 = kron(eye(T,ny),hx') #eye(T,ny) ⊗ hx'
+    c2 = kron(gx,eye(T,nx)) #gx ⊗ eye(T,nx)
 
     # Use a Sylvester equation solver to compute the second order terms on the states.
 
-    A = [b1 + b2 * c2 b4]
-    B = [zeros(size(b2, 1), nx * nx) b2 * c1]
+    A = [b1+b2*c2 b4]
+    B = [zeros(size(b2,1),nx*nx) b2*c1]
     C = hx
     D = q
 
-    B .= A \ B
-    D .= A \ D
+    B .= A\B
+    D .= A\D
 
-    z = dsylvester(B, C, -D)
-    hxx = z[1:nx*nx, :]
-    gxx = z[nx^2+1:end, :]
+    z = dsylvester(B,C,-D)
+    hxx = z[1:nx*nx,:]
+    gxx = z[nx^2+1:end,:]
+
+    # Compute the second-order stochastic terms
 
     # Set up the LP problem needed to construct the intercepts, which contain
     # the volatility effects
 
-    k = first_order_soln.k
-    sigma = first_order_soln.sigma
-    qq = [fxp + fyp * gx fyp + fy]
-    nn = [zeros(nv, nx); I; gx]
-    q = fyp * tracem(kron_prod_times_matrix(eye(T, ny), k * sigma' * k', gxx)) + tracem(kron_prod_times_matrix(eye(T, nv), nn', deriv2 * nn * k * sigma' * k'))
-    ss = -qq \ q
+    qq = [fxp+fyp*gx fyp+fy]
+    nn = [zeros(nv,nx); I; gx]
+    q = fyp*tracem(kron_prod_times_matrix(eye(T,ny),k*sigma'*k',gxx)) + tracem(kron_prod_times_matrix(eye(T,nv),nn',deriv2*nn*k*sigma'*k'))
+    ss = -qq\q
     hss = ss[1:nx]
     gss = ss[nx+1:nv]
 
-    hxx = Matrix(reshape(z[1:nx*nx, :]', nx * nx, nx)')
-    gxx = Matrix(reshape(z[nx^2+1:end, :]', nx * nx, ny)')
+    # Reshape hxx and gxx to be conformable with Binning, Levintal, etc.
 
-    soln = SecondOrderSolutionStoch(steady_state[1:nx], hx, hss, hxx, k, steady_state[nx+1:nv], gx, gss, gxx, sigma, grc, soln_type)
+    hxx = Matrix(reshape(z[1:nx*nx,:]',nx*nx,nx)')
+    gxx = Matrix(reshape(z[nx^2+1:end,:]',nx*nx,ny)')
+
+    # Return the solution
+
+    soln = SecondOrderSolutionStoch(steady_state[1:nx],hx,hss,hxx,k,steady_state[nx+1:nv],gx,gss,gxx,sigma,grc,soln_type)
     return soln
 
 end
@@ -355,7 +380,7 @@ function solve_third_order(model::REModel,scheme::PerturbationScheme,skewness::U
 
 end
 
-function solve_third_order_det(model::REModel,scheme::PerturbationScheme) # Follows Binning (2013)
+function solve_third_order_det(model::REModel,scheme::PerturbationScheme)
 
     nv = model.number_variables
     nx = model.number_states
@@ -391,25 +416,21 @@ function solve_third_order_det(model::REModel,scheme::PerturbationScheme) # Foll
     # Compute the first-order solution
 
     first_order_soln = solve_first_order(model,PerturbationScheme(steady_state,cutoff,"first"))
-    hx = first_order_soln.hx
-    gx = first_order_soln.gx
-    grc = first_order_soln.grc
+    hx        = first_order_soln.hx
+    gx        = first_order_soln.gx
+    grc       = first_order_soln.grc
     soln_type = first_order_soln.soln_type
 
-    # Compute the second-order solution
+    # Compute the second-order deterministic terms
 
-    # Construct the Mx matrix --- Gradient of the policy functions
-
-    Mx = [I; gx; hx; gx*hx]
+    Mx = [I; gx; hx; gx*hx] # Gradient of the policy functions
 
     @views fx  = first_derivs[:,1:nx]
     @views fy  = first_derivs[:,nx+1:nv]
     @views fxp = first_derivs[:,nv+1:nv+nx]
     @views fyp = first_derivs[:,nv+nx+1:2*nv]
 
-    # Compute the second-order terms on the state variables
-
-    A = [fxp + fyp*gx fy]
+    A = [fxp+fyp*gx fy]
     B = [zeros(nv,nx) fyp]
     D = -matrix_times_kron_prod(second_derivs,Mx,Mx)
 
@@ -417,13 +438,9 @@ function solve_third_order_det(model::REModel,scheme::PerturbationScheme) # Foll
     hxx = z[1:nx,:]
     gxx = z[nx+1:nv,:]
 
-    # Compute the third-order solution
+    # Compute the third-order deterministic terms
 
-    # Construct the Mxx matrix --- Hessian of the policy functions
-
-    Mxx = [zeros(nx,nx^2); gxx; hxx; gxx*kron(hx,hx) + gx*hxx]
-
-    # Solve for the third order coefficients on the state variables
+    Mxx = [zeros(nx,nx^2); gxx; hxx; gxx*kron(hx,hx) + gx*hxx] # Hessian of the policy functions
 
     omega1 = create_omega3(nx)
 
@@ -433,12 +450,14 @@ function solve_third_order_det(model::REModel,scheme::PerturbationScheme) # Foll
     hxxx = z[1:nx,:]
     gxxx = z[nx+1:nv,:]
 
+    # Return the solution
+
     soln = ThirdOrderSolutionDet(steady_state[1:nx],hx,hxx,hxxx,steady_state[nx+1:nv],gx,gxx,gxxx,grc,soln_type)
     return soln
 
 end
 
-function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewness::Union{Array{T,1},Array{T,2}}) where {T<:Real} # Follows Binning (2013)
+function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewness::Union{Array{T,1},Array{T,2}}) where {T<:Real}
 
     ns = model.number_shocks
     nv = model.number_variables
@@ -475,37 +494,31 @@ function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewn
     # Compute the first-order solution
 
     first_order_soln = solve_first_order(model,PerturbationScheme(steady_state,cutoff,"first"))
-    hx = first_order_soln.hx
-    gx = first_order_soln.gx
-    grc = first_order_soln.grc
+    hx        = first_order_soln.hx
+    gx        = first_order_soln.gx
+    grc       = first_order_soln.grc
     soln_type = first_order_soln.soln_type
+    k         = first_order_soln.k
+    sigma     = first_order_soln.sigma
 
-    k = first_order_soln.k
-    sigma = first_order_soln.sigma
+    # Compute the second-order deterministic terms
 
-    # Compute the second-order solution
-
-    # Construct the Mx matrix --- Gradient of the policy functions
-
-    Mx = [I; gx; hx; gx*hx]
+    Mx = [I; gx; hx; gx*hx] # Gradient of the policy functions
 
     @views fx  = first_derivs[:,1:nx]
     @views fy  = first_derivs[:,nx+1:nv]
     @views fxp = first_derivs[:,nv+1:nv+nx]
     @views fyp = first_derivs[:,nv+nx+1:2*nv]
 
-    # Compute the second-order terms on the state variables
-
-    A = [fxp + fyp*gx fy]
+    A = [fxp+fyp*gx fy]
     B = [zeros(nv,nx) fyp]
     D = -matrix_times_kron_prod(second_derivs,Mx,Mx)
 
     z = martin_van_loan(A,B,hx,D,1)
-
     hxx = z[1:nx,:]
     gxx = z[nx+1:nv,:]
 
-    # Compute the risk-adjustment terms
+    # Compute the second-order stochastic terms
 
     Ns = [zeros(nv,nx); I; gx]
 
@@ -516,13 +529,9 @@ function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewn
     hss = z[1:nx]
     gss = z[nx+1:nv]
 
-    # Compute the third-order solution
+    # Compute the third-order deterministic terms
 
-    # Construct the Mxx matrix --- Hessian of the policy functions
-
-    Mxx = [zeros(nx,nx^2); gxx; hxx; gxx*kron(hx,hx) + gx*hxx]
-
-    # Solve for the third order coefficients on the state variables
+    Mxx = [zeros(nx,nx^2); gxx; hxx; gxx*kron(hx,hx) + gx*hxx] # Hessian of the policy functions
 
     omega1 = create_omega3(nx)
 
@@ -532,22 +541,22 @@ function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewn
     hxxx = z[1:nx,:]
     gxxx = z[nx+1:nv,:]
 
-    # Solve for the volatility-related terms.
+    # Compute the third-order stochastic terms
 
     Msx = [zeros(nv + nx,nx^2); gxx*kron(hx,eye(T,nx))]
     Mss = [zeros(nx,1); gss; hss; gx*hss + trm(gxx*kron(eye(T,nx),k*sigma*k')) + gss]
 
     C = hx
-    F = -trm2(matrix_times_kron_prod(third_derivs,Mx,Ns,Ns*k*sigma*k')) - 2*trm2(matrix_times_kron_prod(second_derivs,Msx,Ns*k*sigma*k')) - matrix_times_kron_prod(second_derivs,Mx,Mss[:,:])
-        -fyp*(trm2(gxxx*kron(hx,eye(T,nx^2))*kron(eye(T,nx^2),k*sigma*k')) + matrix_times_kron_prod(gxx,hx,hss[:,:]))
+    F = (-trm2(matrix_times_kron_prod(third_derivs,Mx,Ns,Ns*k*sigma*k')) .- 2*trm2(matrix_times_kron_prod(second_derivs,Msx,Ns*k*sigma*k')) .- matrix_times_kron_prod(second_derivs,Mx,Mss[:,:])
+        .-fyp*(trm2(gxxx*kron(hx,eye(T,nx^2))*kron(eye(T,nx^2),k*sigma*k')) .+ matrix_times_kron_prod(gxx,hx,hss[:,:])))
 
-    F = G\F
+    F .= A\F
 
     z = dsylvester(B,C,F)
     hssx = z[1:nx,:]
     gssx = z[nx+1:nv,:]
 
-    # Now check to see whether skewness is relevant.
+    # Compute the third-order stochastic terms related to skewness
 
     hsss = zeros(nx)
     gsss = zeros(ny)
@@ -559,19 +568,21 @@ function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewn
         skew = zeros(nx,nx^2)
         skew[1:ns,1:ns^2] = skewness
 
-        F = -trm(third_derivs*kron(Ns,kron(Ns,Ns*skew))) - 3*trm(second_derivs*kron(Nss,Ns*skew)) - fyp*trm(gxxx*kron(eye(T,nx^2),skew))
+        F = -trm(third_derivs*kron(Ns,kron(Ns,Ns*skew))) .- 3*trm(second_derivs*kron(Nss,Ns*skew)) .- fyp*trm(gxxx*kron(eye(T,nx^2),skew))
         z = G\F
         hsss .= z[1:nx]
         gsss .= z[nx+1:nv]
 
     end
 
+    # Return the solution
+
     soln = ThirdOrderSolutionStoch(steady_state[1:nx],hx,hss,hxx,hsss,hssx,hxxx,k,steady_state[nx+1:nv],gx,gss,gxx,gsss,gssx,gxxx,sigma,skewness,grc,soln_type)
     return soln
 
 end
 
-function solve_fourth_order(model::REModel,scheme::PerturbationScheme) where {T<:Real}
+function solve_fourth_order(model::REModel,scheme::PerturbationScheme) where {T<:Real} # Draws on Levintal (2017)
 
     if scheme.order != "fourth"
         error("A fourth order perturbation must be supplied")
@@ -628,25 +639,21 @@ function solve_fourth_order_det(model::REModel,scheme::PerturbationScheme)
     # Compute the first-order solution
 
     first_order_soln = solve_first_order(model,PerturbationScheme(steady_state,cutoff,"first"))
-    hx = first_order_soln.hx
-    gx = first_order_soln.gx
-    grc = first_order_soln.grc
+    hx        = first_order_soln.hx
+    gx        = first_order_soln.gx
+    grc       = first_order_soln.grc
     soln_type = first_order_soln.soln_type
 
-    # Compute the second-order solution
+    # Compute the second-order deterministic terms
 
-    # Construct the Mx matrix --- Gradient of the policy functions
-
-    Mx = [I; gx; hx; gx*hx]
+    Mx = [I; gx; hx; gx*hx] # Gradient of the policy functions
 
     @views fx  = first_derivs[:,1:nx]
     @views fy  = first_derivs[:,nx+1:nv]
     @views fxp = first_derivs[:,nv+1:nv+nx]
     @views fyp = first_derivs[:,nv+nx+1:2*nv]
 
-    # Compute the second-order terms on the state variables
-
-    A = [fxp + fyp*gx fy]
+    A = [fxp+fyp*gx fy]
     B = [zeros(nv,nx) fyp]
     D = -matrix_times_kron_prod(second_derivs,Mx,Mx)
 
@@ -654,13 +661,9 @@ function solve_fourth_order_det(model::REModel,scheme::PerturbationScheme)
     hxx = z[1:nx,:]
     gxx = z[nx+1:nv,:]
 
-    # Compute the third-order solution
+    # Compute the third-order deterministic terms
 
-    # Construct the Mxx matrix --- Hessian of the policy functions
-
-    Mxx = [zeros(nx,nx^2); gxx; hxx; gxx*kron(hx,hx) + gx*hxx]
-
-    # Solve for the third order coefficients on the state variables
+    Mxx = [zeros(nx,nx^2); gxx; hxx; gxx*kron(hx,hx) + gx*hxx] # Hessian of the policy functions
 
     omega1 = create_omega3(nx)
 
@@ -670,22 +673,20 @@ function solve_fourth_order_det(model::REModel,scheme::PerturbationScheme)
     hxxx = z[1:nx,:]
     gxxx = z[nx+1:nv,:]
 
-    # Compute the fourth-order solution
+    # Compute the fourth-order deterministic terms
 
-    # Construct the Mxxx matrix --- third derivatives of the policy functions
-
-    Mxxx = [zeros(nx,nx^3); gxxx; hxxx; gxxx*kron(hx,hx,hx) + gxx*kron(hxx,hx)*omega1 + gx*hxxx]
-
-    # Solve for the fourth order coefficients on the state variables
+    Mxxx = [zeros(nx,nx^3); gxxx; hxxx; gxxx*kron(hx,hx,hx) + gxx*kron(hxx,hx)*omega1 + gx*hxxx] # Third derivatives of the policy functions
 
     omega2, omega3, omega4 = create_omega4(nx)
 
-    D = -matrix_times_kron_prod(fourth_derivs,[Mx, Mx, Mx, Mx]) - matrix_times_kron_prod(third_derivs,[Mx, Mx, Mxx])*omega2 - matrix_times_kron_prod(second_derivs,Mx,Mxxx)*omega3 - matrix_times_kron_prod(second_derivs,Mxx,Mxx)*omega4
-        -fyp*(matrix_times_kron_prod(gxxx,[hx, hx, hxx])*omega2 + matrix_times_kron_prod(gxx,hx,hxxx)*omega3 + matrix_times_kron_prod(gxx,hxx,hxx)*omega4)
+    D = (-matrix_times_kron_prod(fourth_derivs,[Mx, Mx, Mx, Mx]) - matrix_times_kron_prod(third_derivs,[Mx, Mx, Mxx])*omega2 - matrix_times_kron_prod(second_derivs,Mx,Mxxx)*omega3 - matrix_times_kron_prod(second_derivs,Mxx,Mxx)*omega4
+        -fyp*(matrix_times_kron_prod(gxxx,[hx, hx, hxx])*omega2 + matrix_times_kron_prod(gxx,hx,hxxx)*omega3 + matrix_times_kron_prod(gxx,hxx,hxx)*omega4))
 
     z = martin_van_loan(A,B,hx,D,3)
     hxxxx = z[1:nx,:]
     gxxxx = z[nx+1:nv,:]
+
+    # Return the solution
 
     soln = FourthOrderSolutionDet(steady_state[1:nx],hx,hxx,hxxx,hxxxx,steady_state[nx+1:nv],gx,gxx,gxxx,gxxxx,grc,soln_type)
     return soln
@@ -716,45 +717,40 @@ function solve_fourth_order_stoch(model::REModel,scheme::PerturbationScheme)
     for i = 1:ne
 
         first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv]
-        first_derivs[i,:] .= vec(first_d(point))
+        first_derivs[i,:] .= first_d(point)
 
         second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
         #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
-        second_derivs[i,:] .= vec(vec(second_d(point)))
+        second_derivs[i,:] .= vec(second_d(point))
 
         third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
-        third_derivs[i,:] .= vec(vec(third_d(point)))
+        third_derivs[i,:] .= vec(third_d(point))
 
         fourth_d(x) = ForwardDiff.jacobian(third_d,x,ForwardDiff.JacobianConfig(third_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
-        fourth_derivs[i,:] .= vec(vec(fourth_d(point)))
+        fourth_derivs[i,:] .= vec(fourth_d(point))
 
     end
 
     # Compute the first-order Solution
 
     first_order_soln = solve_first_order(model,PerturbationScheme(steady_state,cutoff,"first"))
-    hx = first_order_soln.hx
-    gx = first_order_soln.gx
-    grc = first_order_soln.grc
+    hx        = first_order_soln.hx
+    gx        = first_order_soln.gx
+    grc       = first_order_soln.grc
     soln_type = first_order_soln.soln_type
+    k         = first_order_soln.k
+    sigma     = first_order_soln.sigma
 
-    k = first_order_soln.k
-    sigma = first_order_soln.sigma
+    # Compute the second-order deterministic terms
 
-    # Compute the second-order solution
-
-    # Construct the Mx matrix --- Gradient of the policy functions
-
-    Mx = [I; gx; hx; gx*hx]
+    Mx = [I; gx; hx; gx*hx] # Gradient of the policy functions
 
     @views fx  = first_derivs[:,1:nx]
     @views fy  = first_derivs[:,nx+1:nv]
     @views fxp = first_derivs[:,nv+1:nv+nx]
     @views fyp = first_derivs[:,nv+nx+1:2*nv]
 
-    # Compute the second-order coefficients on the state variables
-
-    A = [fxp + fyp*gx fy]
+    A = [fxp+fyp*gx fy]
     B = [zeros(nv,nx) fyp]
     D = -matrix_times_kron_prod(second_derivs,Mx,Mx)
 
@@ -762,24 +758,20 @@ function solve_fourth_order_stoch(model::REModel,scheme::PerturbationScheme)
     hxx = z[1:nx,:]
     gxx = z[nx+1:nv,:]
 
-    # Compute the volatility related terms
+    # Compute the second-order stochastic terms
 
     Ns = [zeros(nv,nx); I; gx]
 
-    G = [fxp + fyp*gx fy + fyp]
+    G = [fxp+fyp*gx fy+fyp]
     F = -trm(matrix_times_kron_prod(second_derivs,Ns,Ns*k*sigma*k')) .- fyp*trm(matrix_times_kron_prod(gxx,eye(nx),k*sigma*k'))
 
     z = G\F
     hss = z[1:nx]
     gss = z[nx+1:nv]
 
-    # Compute the third-order solution
+    # Compute the third-order deterministic terms
 
-    # Construct the Mxx matrix --- Jacobian of the policy functions
-
-    Mxx = [zeros(nx,nx^2); gxx; hxx; gxx*kron(hx,hx) + gx*hxx]
-
-    # Compute the third-order coefficients on the state variables
+    Mxx = [zeros(nx,nx^2); gxx; hxx; gxx*kron(hx,hx) + gx*hxx] # Hessian of the policy functions
 
     omega1 = create_omega3(nx)
 
@@ -789,16 +781,16 @@ function solve_fourth_order_stoch(model::REModel,scheme::PerturbationScheme)
     hxxx = z[1:nx,:]
     gxxx = z[nx+1:nv,:]
 
-    # Compute the volatility-related terms.
+    # Compute the third-order stochastic terms
 
     Mxs = [zeros(nv+nx,nx^2); gxx*kron(hx,eye(nx))]
     Mss = [zeros(nx,1); gss; hss; gx*hss+trm(gxx*kron(eye(nx),k*sigma*k'))+gss]
 
     C = hx
-    F = -trm2(matrix_times_kron_prod(third_derivs,Mx,Ns,Ns*k*sigma*k')) - 2*trm2(matrix_times_kron_prod(second_derivs,Mxs,Ns*k*sigma*k')) - matrix_times_kron_prod(second_derivs,Mx,Mss[:,:])
-        -fyp*(trm2(gxxx*kron(hx,eye(nx^2))*kron(eye(nx^2),k*sigma*k')) + matrix_times_kron_prod(gxx,hx,hss[:,:]))
+    F = (-trm2(matrix_times_kron_prod(third_derivs,Mx,Ns,Ns*k*sigma*k')) .- 2*trm2(matrix_times_kron_prod(second_derivs,Mxs,Ns*k*sigma*k')) .- matrix_times_kron_prod(second_derivs,Mx,Mss[:,:])
+        .-fyp*(trm2(gxxx*kron(hx,eye(nx^2))*kron(eye(nx^2),k*sigma*k')) .+ matrix_times_kron_prod(gxx,hx,hss[:,:])))
 
-    F .= G\F
+    F .= A\F
 
     z = dsylvester(B,C,F)
     hssx = z[1:nx,:]
@@ -807,34 +799,30 @@ function solve_fourth_order_stoch(model::REModel,scheme::PerturbationScheme)
     #hsxx = zeros(nx,nx^2)
     #gsxx = zeros(ny,nx^2)
 
-    hsss = zeros(nx)
-    gsss = zeros(ny)
+    #hsss = zeros(nx)
+    #gsss = zeros(ny)
 
-    # Compute the fourth-order solution
+    # Compute the fourth-order deterministic terms
 
-    # Construct the Mxxx matrix --- third derivatives of the policy functions
-
-    Mxxx = [zeros(nx,nx^3); gxxx; hxxx; gxxx*kron(hx,hx,hx) + gxx*kron(hx,hxx)*omega1 + gx*hxxx]
-
-    # Compute the fourth-order coefficients on the state variables
+    Mxxx = [zeros(nx,nx^3); gxxx; hxxx; gxxx*kron(hx,hx,hx) + gxx*kron(hx,hxx)*omega1 + gx*hxxx] # Third derivatives of the policy functions
 
     omega2, omega3, omega4 = create_omega4(nx)
 
-    D = -matrix_times_kron_prod(fourth_derivs,[Mx,Mx,Mx,Mx]) - matrix_times_kron_prod(third_derivs,[Mx,Mx,Mxx])*omega2 - matrix_times_kron_prod(second_derivs,Mx,Mxxx)*omega3 - matrix_times_kron_prod(second_derivs,Mxx,Mxx)*omega4
-        -fyp*(matrix_times_kron_prod(gxxx,[hx,hx,hxx])*omega2 + matrix_times_kron_prod(gxx,hx,hxxx)*omega3 + matrix_times_kron_prod(gxx,hxx,hxx)*omega4)
+    D = (-matrix_times_kron_prod(fourth_derivs,[Mx,Mx,Mx,Mx]) .- matrix_times_kron_prod(third_derivs,[Mx,Mx,Mxx])*omega2 .- matrix_times_kron_prod(second_derivs,Mx,Mxxx)*omega3 .- matrix_times_kron_prod(second_derivs,Mxx,Mxx)*omega4
+        .-fyp*(matrix_times_kron_prod(gxxx,[hx,hx,hxx])*omega2 .+ matrix_times_kron_prod(gxx,hx,hxxx)*omega3 .+ matrix_times_kron_prod(gxx,hxx,hxx)*omega4))
 
     z = martin_van_loan(A,B,hx,D,3)
     hxxxx = z[1:nx,:]
     gxxxx = z[nx+1:nv,:]
 
-    # Compute the volatility related terms
+    # Compute the fourth-order stochastic terms
 
     Mxxs = zeros(2*nx+2*ny,nx^2)
     Mxss = [zeros(nx,nx); gssx; hssx; gx*hssx + gxx*(kron(hss,hx)) + trm2(matrix_times_kron_prod(gxxx,eye(nx),k*sigma*k',hx))]
     Msss = zeros(2*nx+2*ny,1)
 
-    D = - matrix_times_kron_prod(second_derivs,Mss[:,:],Mxx) - matrix_times_kron_prod(second_derivs,Mxss,Mx) - matrix_times_kron_prod(second_derivs,Mx,Mxss) - matrix_times_kron_prod(third_derivs,[Mss[:,:],Mx,Mx]) - trm3(matrix_times_kron_prod(fourth_derivs,[Ns,Ns*k*sigma*k',Mx,Mx])) - trm3(matrix_times_kron_prod(third_derivs,[Ns,Ns*k*sigma*k',Mxx]))
-        - fyp*(matrix_times_kron_prod(gxx,hss[:,:],hxx) + gssx*hxx + gxx*kron(hssx,hx) + gxx*kron(hx,hssx) + matrix_times_kron_prod(gxxx,[hss[:,:],hx,hx]) + trm3(matrix_times_kron_prod(gxxxx,[eye(nx),k*sigma*k',hx,hx])))
+    D = (- matrix_times_kron_prod(second_derivs,Mss[:,:],Mxx) .- matrix_times_kron_prod(second_derivs,Mxss,Mx) .- matrix_times_kron_prod(second_derivs,Mx,Mxss) .- matrix_times_kron_prod(third_derivs,[Mss[:,:],Mx,Mx]) .- trm3(matrix_times_kron_prod(fourth_derivs,[Ns,Ns*k*sigma*k',Mx,Mx])) .- trm3(matrix_times_kron_prod(third_derivs,[Ns,Ns*k*sigma*k',Mxx]))
+        .- fyp*(matrix_times_kron_prod(gxx,hss[:,:],hxx) .+ gssx*hxx + gxx*kron(hssx,hx) + gxx*kron(hx,hssx) .+ matrix_times_kron_prod(gxxx,[hss[:,:],hx,hx]) .+ trm3(matrix_times_kron_prod(gxxxx,[eye(nx),k*sigma*k',hx,hx]))))
     
     z = martin_van_loan(A,B,hx,D,1)
     hxxss = z[1:nx,:]
@@ -842,19 +830,20 @@ function solve_fourth_order_stoch(model::REModel,scheme::PerturbationScheme)
 
     G = [fxp+fyp*gx fy+fyp]
 
-    F = - 3*matrix_times_kron_prod(second_derivs,Mss,Mss)
-        - fyp*(3*matrix_times_kron_prod(gxx,hss[:,:],hss[:,:]) + 3*trm(matrix_times_kron_prod(gxxx,[eye(nx),k*sigma*k',hss[:,:]])) + gssx*hss)
+    F = (- 3*matrix_times_kron_prod(second_derivs,Mss,Mss) .- fyp*(3*matrix_times_kron_prod(gxx,hss[:,:],hss[:,:]) .+ 3*trm(matrix_times_kron_prod(gxxx,[eye(nx),k*sigma*k',hss[:,:]])) .+ gssx*hss))
 
     z = G\F
     hssss = z[1:nx]
     gssss = z[nx+1:nv]
 
+    # Return the solution
+    
     soln = FourthOrderSolutionStoch(steady_state[1:nx],hx,hss,hxx,hssx,hxxx,hssss,hxxss,hxxxx,k,steady_state[nx+1:nv],gx,gss,gxx,gssx,gxxx,gssss,gxxss,gxxxx,sigma,grc,soln_type)
     return soln
 
 end
 
-function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
+function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeDetOBC})
 
     nx = model.number_states
     ny = model.number_jumps
@@ -868,11 +857,20 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
     order = scheme.order
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: ChebyshevSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -888,12 +886,12 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
     end
 
     if typeof(order) <: Integer
-        ord = fill(order,nx)
+        ord = tuple(fill(order,nx)...)
     else
-        ord = copy(order)
+        ord = tuple(order...)
     end
 
-    weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -912,9 +910,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
@@ -929,7 +927,12 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
             end
 
             projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: ChebyshevSchemeDetOBC
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -954,7 +957,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet)
 
 end
 
-function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet,threads::S) where {S<:Integer}
+function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeDetOBC},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -968,11 +971,20 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet,threads::S) w
     order = scheme.order
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: ChebyshevSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -988,12 +1000,12 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet,threads::S) w
     end
 
     if typeof(order) <: Integer
-        ord = fill(order,nx)
+        ord = tuple(fill(order,nx)...)
     else
-        ord = copy(order)
+        ord = tuple(order...)
     end
 
-    weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1009,9 +1021,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet,threads::S) w
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
@@ -1029,7 +1041,12 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet,threads::S) w
                 end
 
                 projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: ChebyshevSchemeDetOBC
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -1055,7 +1072,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeDet,threads::S) w
 
 end
 
-function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
+function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch})
 
     nx = model.number_states
     ns = model.number_shocks
@@ -1071,11 +1088,20 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
     order = scheme.order
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: ChebyshevSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
@@ -1101,13 +1127,13 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
     end
 
     if typeof(order) <: Integer
-        ord = fill(order,nx)
+        ord = tuple(fill(order,nx)...)
     else
-        ord = copy(order)
+        ord = tuple(order...)
     end
 
-    weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1126,9 +1152,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
@@ -1145,7 +1171,12 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
             end
 
             projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: ChebyshevSchemeOBCStoch
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -1170,7 +1201,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch)
 
 end
 
-function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S) where {S<:Integer}
+function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -1186,11 +1217,20 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
     order = scheme.order
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: ChebyshevSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
@@ -1216,13 +1256,13 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
     end
 
     if typeof(order) <: Integer
-        ord = fill(order,nx)
+        ord = tuple(fill(order,nx)...)
     else
-        ord = copy(order)
+        ord = tuple(order...)
     end
 
-    weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1238,9 +1278,9 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
@@ -1262,8 +1302,12 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
                 end
 
                 projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
-
+                if typeof(scheme) <: ChebyshevSchemeOBCStoch
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+    
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -1289,7 +1333,7 @@ function solve_nonlinear(model::REModel,scheme::ChebyshevSchemeStoch,threads::S)
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeDetOBC}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -1302,13 +1346,22 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
     order = scheme.order
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: ChebyshevSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
     ss_eqm = state_space_eqm(soln)
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -1334,21 +1387,21 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
         te = ss_eqm.h(state)
 
         for i = 1:ny
-            variables[i][j] = dr[i]
+            variables[i][j] = min(max(dr[i],lb[i]),ub[i])
         end
         for i = 1:nx
-            variables[ny+i][j] = te[i]
+            variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
         end
 
     end
 
     if typeof(order) <: Integer
-        ord = fill(order,nx)
+        ord = tuple(fill(order,nx)...)
     else
-        ord = copy(order)
+        ord = tuple(order...)
     end
 
-    weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1364,9 +1417,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
@@ -1381,7 +1434,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
             end
 
             projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: ChebyshevSchemeDetOBC
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -1406,7 +1464,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet) wher
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeDetOBC},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -1419,13 +1477,22 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
     order = scheme.order
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: ChebyshevSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
     ss_eqm = state_space_eqm(soln)
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -1452,21 +1519,22 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
             te = ss_eqm.h(state)
 
             for i = 1:ny
-                variables[i][j] = dr[i]
+                variables[i][j] = min(max(dr[i],lb[i]),ub[i])
             end
             for i = 1:nx
-                variables[ny+i][j] = te[i]
+                variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
             end
+
         end
     end
 
     if typeof(order) <: Integer
-        ord = fill(order,nx)
+        ord = tuple(fill(order,nx)...)
     else
-        ord = copy(order)
+        ord = tuple(order...)
     end
 
-    weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1480,9 +1548,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
@@ -1500,7 +1568,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
                 end
 
                 projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: ChebyshevSchemeDetOBC
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -1526,7 +1599,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeDet,threa
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -1541,6 +1614,15 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
     num_quad_nodes = scheme.num_quad_nodes
     order = scheme.order
     domain = scheme.domain
+
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: ChebyshevSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
 
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
@@ -1558,7 +1640,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
         RHO = -d[1:ns,1:ns]
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     if domain == []
         if typeof(soln) <: ProjectionSolution
@@ -1566,7 +1648,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
         elseif typeof(soln) <: PerturbationSolutionStoch
             soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,soln.gx,soln.sigma,soln.grc,soln.soln_type)
             state_vars,jump_vars = compute_variances(soln_fo)
-            domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
+            domain = Matrix([soln.hbar + 3*sqrt.(diag(state_vars)) soln.hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
         end
     end
 
@@ -1597,22 +1679,22 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
         te = ss_eqm.h(state,zeros(ns))
 
         for i = 1:ny
-            variables[i][j] = dr[i]
+            variables[i][j] = min(max(dr[i],lb[i]),ub[i])
         end
         for i = 1:nx
-            variables[ny+i][j] = te[i]
+            variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
         end
 
     end
 
     if typeof(order) <: Integer
-        ord = fill(order,nx)
+        ord = tuple(fill(order,nx)...)
     else
-        ord = copy(order)
+        ord = tuple(order...)
     end
 
-    weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1628,9 +1710,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
@@ -1647,7 +1729,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
             end
 
             projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: ChebyshevSchemeOBCStoch
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -1672,7 +1759,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch) wh
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -1687,6 +1774,15 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
     num_quad_nodes = scheme.num_quad_nodes
     order = scheme.order
     domain = scheme.domain
+
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: ChebyshevSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
 
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
@@ -1708,7 +1804,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
         error("This solver requires the shocks to be AR(1) processes")
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     if domain == []
         if typeof(soln) <: ProjectionSolution
@@ -1716,7 +1812,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
         elseif typeof(soln) <: PerturbationSolutionStoch
             soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,soln.gx,soln.sigma,soln.grc,soln.soln_type)
             state_vars,jump_vars = compute_variances(soln_fo)
-            domain = Matrix([hbar + 3*sqrt.(diag(state_vars)) hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
+            domain = Matrix([soln.hbar + 3*sqrt.(diag(state_vars)) soln.hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
         end
     end
 
@@ -1748,22 +1844,22 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
         te = ss_eqm.h(state,zeros(ns))
 
         for i = 1:ny
-            variables[i][j] = dr[i]
+            variables[i][j] = min(max(dr[i],lb[i]),ub[i])
         end
         for i = 1:nx
-            variables[ny+i][j] = te[i]
+            variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
         end
 
     end
 
     if typeof(order) <: Integer
-        ord = fill(order,nx)
+        ord = tuple(fill(order,nx)...)
     else
-        ord = copy(order)
+        ord = tuple(order...)
     end
 
-    weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(Tuple(ord.+1)) for _ in 1:length(jumps_approximated)]
+    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    scaled_weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1777,9 +1873,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
@@ -1801,7 +1897,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
                 end
 
                 projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: ChebyshevSchemeOBCStoch
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -1828,7 +1929,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::ChebyshevSchemeStoch,thr
 
 end
 
-function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
+function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSchemeDetOBC})
 
     nx = model.number_states
     ny = model.number_jumps
@@ -1841,7 +1942,16 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
     layer = scheme.layer
     domain = scheme.domain
 
-    T = typeof(scheme.tol_fix_point_solver)
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: SmolyakSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
+    T = typeof(scheme.ftol)
 
     grid,multi_ind = smolyak_grid(node_generator,nx,layer,domain)
 
@@ -1864,9 +1974,9 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
         end
 
@@ -1877,7 +1987,12 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
             end
 
             projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: SmolyakSchemeDetOBC
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -1902,7 +2017,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet)
 
 end
 
-function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) where {S<:Integer}
+function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSchemeDetOBC},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -1915,7 +2030,16 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) whe
     layer = scheme.layer
     domain = scheme.domain
 
-    T = typeof(scheme.tol_fix_point_solver)
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: SmolyakSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
+    T = typeof(scheme.ftol)
 
     grid,multi_ind = smolyak_grid(node_generator,nx,layer,domain)
 
@@ -1936,9 +2060,9 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) whe
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
         end
 
@@ -1951,7 +2075,12 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) whe
                 end
 
                 projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: SmolyakSchemeDetOBC
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -1977,7 +2106,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeDet,threads::S) whe
 
 end
 
-function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
+function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch})
 
     nx = model.number_states
     ns = model.number_shocks
@@ -1992,7 +2121,16 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
     layer = scheme.layer
     domain = scheme.domain
 
-    T = typeof(scheme.tol_fix_point_solver)
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: SmolyakSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
+    T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
@@ -2001,7 +2139,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
         error("This solver requires the shocks to be AR(1) processes")
     end
     for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns - 1 # Make sure there is only one shock per equation
+        if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
@@ -2030,9 +2168,9 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
@@ -2044,7 +2182,12 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
             end
 
             projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: SmolyakSchemeOBCStoch
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -2069,7 +2212,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch)
 
 end
 
-function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) where {S<:Integer}
+function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -2084,7 +2227,16 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
     layer = scheme.layer
     domain = scheme.domain
 
-    T = typeof(scheme.tol_fix_point_solver)
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: SmolyakSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
+    T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
@@ -2093,7 +2245,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
         error("This solver requires the shocks to be AR(1) processes")
     end
     for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns - 1 # Make sure there is only one shock per equation
+        if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
@@ -2120,9 +2272,9 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix 
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
@@ -2136,7 +2288,12 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
                 end
 
                 projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: SmolyakSchemeOBCStoch
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -2162,7 +2319,7 @@ function solve_nonlinear(model::REModel,scheme::SmolyakSchemeStoch,threads::S) w
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,SmolyakSchemeDetOBC}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -2175,9 +2332,18 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
     layer = scheme.layer
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: SmolyakSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     ss_eqm = state_space_eqm(soln)
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid,multi_ind = smolyak_grid(node_generator,nx,layer,domain)
 
@@ -2194,10 +2360,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
         te = ss_eqm.h(grid[j,:])
 
         for i = 1:ny
-            variables[i][j] = dr[i]
+            variables[i][j] = min(max(dr[i],lb[i]),ub[i])
         end
         for i = 1:nx
-            variables[ny+i][j] = te[i]
+            variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
         end
 
     end
@@ -2211,9 +2377,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
         end
 
@@ -2224,7 +2390,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
             end
 
             projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: SmolyakSchemeDetOBC
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -2249,7 +2419,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet) where 
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,SmolyakSchemeDetOBC},threads) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -2262,9 +2432,18 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
     layer = scheme.layer
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: SmolyakSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     ss_eqm = state_space_eqm(soln)
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid,multi_ind = smolyak_grid(node_generator,nx,layer,domain)
 
@@ -2282,12 +2461,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
             te = ss_eqm.h(grid[j,:])
 
             for i = 1:ny
-                variables[i][j] = dr[i]
+                variables[i][j] = min(max(dr[i],lb[i]),ub[i])
             end
             for i = 1:nx
-                variables[ny+i][j] = te[i]
+                variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
             end
-
+    
         end
 
     end
@@ -2299,9 +2478,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
         end
 
@@ -2314,7 +2493,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
                 end
 
                 projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: SmolyakSchemeDetOBC
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -2340,7 +2524,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeDet,threads
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -2354,6 +2538,15 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
     num_quad_nodes = scheme.num_quad_nodes
     layer = scheme.layer
     domain = scheme.domain
+
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: SmolyakSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
 
     ss_eqm = state_space_eqm(soln)
 
@@ -2371,12 +2564,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
         error("This solver requires the shocks to be AR(1) processes")
     end
     for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns - 1 # Make sure there is only one shock per equation
+        if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     if domain == []
         if typeof(soln) <: ProjectionSolution
@@ -2405,10 +2598,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
         te = ss_eqm.h(grid[j,:],zeros(ns))
 
         for i = 1:ny
-            variables[i][j] = dr[i]
+            variables[i][j] = min(max(dr[i],lb[i]),ub[i])
         end
         for i = 1:nx
-            variables[ny+i][j] = te[i]
+            variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
         end
 
     end
@@ -2423,9 +2616,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
@@ -2437,7 +2630,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
             end
 
             projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: SmolyakSchemeOBCStoch
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -2462,7 +2660,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch) wher
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -2476,6 +2674,15 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
     num_quad_nodes = scheme.num_quad_nodes
     layer = scheme.layer
     domain = scheme.domain
+
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: SmolyakSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
 
     ss_eqm = state_space_eqm(soln)
 
@@ -2493,12 +2700,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
         error("This solver requires the shocks to be AR(1) processes")
     end
     for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns - 1 # Make sure there is only one shock per equation
+        if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     if domain == []
         if typeof(soln) <: ProjectionSolution
@@ -2528,12 +2735,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
             te = ss_eqm.h(grid[j,:],zeros(ns))
 
             for i = 1:ny
-                variables[i][j] = dr[i]
+                variables[i][j] = min(max(dr[i],lb[i]),ub[i])
             end
             for i = 1:nx
-                variables[ny+i][j] = te[i]
+                variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
             end
-
+    
         end
     end
 
@@ -2545,9 +2752,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
@@ -2561,7 +2768,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
                 end
 
                 projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: SmolyakSchemeOBCStoch
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -2587,7 +2799,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::SmolyakSchemeStoch,threa
 
 end
 
-function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet)
+function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeDetOBC})
 
     nx = model.number_states
     ny = model.number_jumps
@@ -2599,11 +2811,20 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet)
     node_number = scheme.node_number
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: PiecewiseLinearSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -2628,7 +2849,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet)
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
         for i = 1:N
             sub = ind2sub(i,Tuple(length.(grid)))
@@ -2641,7 +2862,12 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet)
             end
 
             projection_equations = model.closure_function_piecewise(variables,grid,state)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: PiecewiseLinearSchemeDetOBC
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -2666,7 +2892,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet)
 
 end
 
-function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet,threads::S) where {S<:Integer}
+function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeDetOBC},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -2678,11 +2904,20 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet,threads
     node_number = scheme.node_number
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: PiecewiseLinearSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -2703,7 +2938,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet,threads
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
         @sync @qthreads for t = 1:threads
             for i = t:threads:N
@@ -2719,7 +2954,12 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet,threads
                 end
 
                 projection_equations = model.closure_function_piecewise(variables,grid,state)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: PiecewiseLinearSchemeDetOBC
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -2745,7 +2985,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeDet,threads
 
 end
 
-function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
+function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch})
 
     nx = model.number_states
     ns = model.number_shocks
@@ -2759,11 +2999,20 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
     num_quad_nodes = scheme.num_quad_nodes
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
@@ -2801,7 +3050,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
         for i = 1:N
             sub = ind2sub(i,Tuple(length.(grid)))
@@ -2814,7 +3063,12 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
             end
 
             projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -2839,7 +3093,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch)
 
 end
 
-function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch,threads::S) where {S<:Integer}
+function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -2853,11 +3107,20 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch,threa
     num_quad_nodes = scheme.num_quad_nodes
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
@@ -2891,7 +3154,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch,threa
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
         @sync @qthreads for t = 1:threads
             for i = t:threads:N
@@ -2907,7 +3170,12 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch,threa
                 end
 
                 projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+                
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -2933,7 +3201,7 @@ function solve_nonlinear(model::REModel,scheme::PiecewiseLinearSchemeStoch,threa
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeDetOBC}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -2943,13 +3211,22 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
     node_number = scheme.node_number
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: PiecewiseLinearSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
     ss_eqm = state_space_eqm(soln)
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -2976,11 +3253,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
         te = ss_eqm.h(state)
 
         for i = 1:ny
-            variables[i][j] = dr[i]
+            variables[i][j] = min(max(dr[i],lb[i]),ub[i])
         end
         for i = 1:nx
-            variables[ny+i][j] = te[i]
+            variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
         end
+
     end
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
@@ -2989,7 +3267,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
         for i = 1:N
             sub = ind2sub(i,Tuple(length.(grid)))
@@ -3002,7 +3280,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
             end
 
             projection_equations = model.closure_function_piecewise(variables,grid,state)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: PiecewiseLinearSchemeDetOBC
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -3027,7 +3310,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet,threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeDetOBC},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -3037,13 +3320,22 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
     node_number = scheme.node_number
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: PiecewiseLinearSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
     end
 
     ss_eqm = state_space_eqm(soln)
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid = Array{Array{T,1},1}(undef,nx)
     for i = 1:nx
@@ -3070,12 +3362,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
             te = ss_eqm.h(state)
 
             for i = 1:ny
-                variables[i][j] = dr[i]
+                variables[i][j] = min(max(dr[i],lb[i]),ub[i])
             end
             for i = 1:nx
-                variables[ny+i][j] = te[i]
+                variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
             end
-
+    
         end
     end
 
@@ -3083,7 +3375,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
         @sync @qthreads for t = 1:threads
             for i = t:threads:N
@@ -3099,7 +3391,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
                 end
 
                 projection_equations = model.closure_function_piecewise(variables,grid,state)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: PiecewiseLinearSchemeDetOBC
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+    
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -3125,7 +3422,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeDet
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeStoch) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -3136,6 +3433,15 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
     node_number = scheme.node_number
     num_quad_nodes = scheme.num_quad_nodes
     domain = scheme.domain
+
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
 
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
@@ -3157,12 +3463,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         error("This solver requires the shocks to be AR(1) processes")
     end
     for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns - 1 # Make sure there is only one shock per equation
+        if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     if domain == []
         if typeof(soln) <: ProjectionSolution
@@ -3205,11 +3511,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         te = ss_eqm.h(state,zeros(ns))
 
         for i = 1:ny
-            variables[i][j] = dr[i]
+            variables[i][j] = min(max(dr[i],lb[i]),ub[i])
         end
         for i = 1:nx
-            variables[ny+i][j] = te[i]
+            variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
         end
+
     end
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
@@ -3218,7 +3525,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
         for i = 1:N
             sub = ind2sub(i,Tuple(length.(grid)))
@@ -3231,7 +3538,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
             end
 
             projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+        
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -3256,7 +3568,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeStoch,threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -3267,6 +3579,15 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
     node_number = scheme.node_number
     num_quad_nodes = scheme.num_quad_nodes
     domain = scheme.domain
+
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
 
     if length(node_number) != nx
         error("The number of nodes is needed for each state and only each state variable.")
@@ -3288,12 +3609,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
         error("This solver requires the shocks to be AR(1) processes")
     end
     for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns - 1 # Make sure there is only one shock per equation
+        if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via Smolyak methods")
         end
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     if domain == []
         if typeof(soln) <: ProjectionSolution
@@ -3336,12 +3657,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
             te = ss_eqm.h(state,zeros(ns))
 
             for i = 1:ny
-                variables[i][j] = dr[i]
+                variables[i][j] = min(max(dr[i],lb[i]),ub[i])
             end
             for i = 1:nx
-                variables[ny+i][j] = te[i]
+                variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
             end
-
+    
         end
     end
 
@@ -3349,7 +3670,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
         @sync @qthreads for t = 1:threads
             for i = t:threads:N
@@ -3365,7 +3686,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
                 end
 
                 projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+    
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -3391,7 +3717,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::PiecewiseLinearSchemeSto
 
 end
 
-function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet)
+function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeDetOBC})
 
     nx = model.number_states
     ny = model.number_jumps
@@ -3405,7 +3731,16 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet)
     n = scheme.n
     domain = scheme.domain
 
-    T = typeof(scheme.tol_fix_point_solver)
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: HyperbolicCrossSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
+    T = typeof(scheme.ftol)
 
     grid,multi_ind = hyperbolic_cross_grid(node_generator,nx,layer,n,domain)
 
@@ -3428,9 +3763,9 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet)
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
         end
 
@@ -3441,7 +3776,12 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet)
             end
 
             projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: HyperbolicCrossSchemeDetOBC
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -3466,7 +3806,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet)
 
 end
 
-function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet,threads::S) where {S<:Integer}
+function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeDetOBC},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -3480,7 +3820,16 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet,threads
     n = scheme.n
     domain = scheme.domain
 
-    T = typeof(scheme.tol_fix_point_solver)
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: HyperbolicCrossSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
+    T = typeof(scheme.ftol)
 
     grid,multi_ind = hyperbolic_cross_grid(node_generator,nx,layer,n,domain)
 
@@ -3501,9 +3850,9 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet,threads
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
         end
 
@@ -3516,7 +3865,12 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet,threads
                 end
 
                 projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: HyperbolicCrossSchemeDetOBC
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -3542,7 +3896,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeDet,threads
 
 end
 
-function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch)
+function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch})
 
     nx = model.number_states
     ns = model.number_shocks
@@ -3558,7 +3912,16 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch)
     n = scheme.n
     domain = scheme.domain
 
-    T = typeof(scheme.tol_fix_point_solver)
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
+    T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
@@ -3567,7 +3930,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch)
         error("This solver requires the shocks to be AR(1) processes")
     end
     for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns - 1 # Make sure there is only one shock per equation
+        if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods")
         end
     end
@@ -3596,9 +3959,9 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch)
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
@@ -3610,7 +3973,12 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch)
             end
 
             projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -3635,7 +4003,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch)
 
 end
 
-function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch,threads::S) where {S<:Integer}
+function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -3651,7 +4019,16 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch,threa
     n = scheme.n
     domain = scheme.domain
 
-    T = typeof(scheme.tol_fix_point_solver)
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
+    T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
     k = -d[1:ns,2*nv+1:end]
@@ -3660,7 +4037,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch,threa
         error("This solver requires the shocks to be AR(1) processes")
     end
     for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns - 1 # Make sure there is only one shock per equation
+        if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods")
         end
     end
@@ -3687,9 +4064,9 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch,threa
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
@@ -3703,7 +4080,12 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch,threa
                 end
 
                 projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -3729,7 +4111,7 @@ function solve_nonlinear(model::REModel,scheme::HyperbolicCrossSchemeStoch,threa
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeDetOBC}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -3743,9 +4125,18 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
     n = scheme.n
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: HyperbolicCrossSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     ss_eqm = state_space_eqm(soln)
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid,multi_ind = hyperbolic_cross_grid(node_generator,nx,layer,n,domain)
 
@@ -3762,10 +4153,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
         te = ss_eqm.h(grid[j,:])
 
         for i = 1:ny
-            variables[i][j] = dr[i]
+            variables[i][j] = min(max(dr[i],lb[i]),ub[i])
         end
         for i = 1:nx
-            variables[ny+i][j] = te[i]
+            variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
         end
 
     end
@@ -3779,9 +4170,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
         end
 
@@ -3792,7 +4183,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
             end
 
             projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: HyperbolicCrossSchemeDetOBC
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -3817,7 +4213,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet,threads) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeDetOBC},threads) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -3831,9 +4227,18 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
     n = scheme.n
     domain = scheme.domain
 
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: HyperbolicCrossSchemeDetOBC
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
+
     ss_eqm = state_space_eqm(soln)
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     grid,multi_ind = hyperbolic_cross_grid(node_generator,nx,layer,n,domain)
 
@@ -3851,12 +4256,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
             te = ss_eqm.h(grid[j,:])
 
             for i = 1:ny
-                variables[i][j] = dr[i]
+                variables[i][j] = min(max(dr[i],lb[i]),ub[i])
             end
             for i = 1:nx
-                variables[ny+i][j] = te[i]
+                variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
             end
-
+    
         end
 
     end
@@ -3868,9 +4273,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
         end
 
@@ -3883,7 +4288,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
                 end
 
                 projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: HyperbolicCrossSchemeDetOBC
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -3909,7 +4319,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeDet
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeStoch) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -3924,6 +4334,15 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
     layer = scheme.layer
     n = scheme.n
     domain = scheme.domain
+
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
 
     ss_eqm = state_space_eqm(soln)
 
@@ -3941,12 +4360,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
         error("This solver requires the shocks to be AR(1) processes")
     end
     for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns - 1 # Make sure there is only one shock per equation
+        if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods")
         end
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     if domain == []
         if typeof(soln) <: ProjectionSolution
@@ -3975,10 +4394,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
         te = ss_eqm.h(grid[j,:],zeros(ns))
 
         for i = 1:ny
-            variables[i][j] = dr[i]
+            variables[i][j] = min(max(dr[i],lb[i]),ub[i])
         end
         for i = 1:nx
-            variables[ny+i][j] = te[i]
+            variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
         end
 
     end
@@ -3993,9 +4412,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
@@ -4007,7 +4426,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
             end
 
             projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
-            nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+            if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+            else
+                nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+            end
+
             for j = 1:nv
                 new_variables[j][i] = nlsoln.zero[j]
             end
@@ -4032,7 +4456,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeStoch,threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -4047,6 +4471,15 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
     layer = scheme.layer
     n = scheme.n
     domain = scheme.domain
+
+    ub = [Inf for _ in 1:nv]
+    lb = [-Inf for _ in 1:nv]
+    if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
+        ub[1:ny]    .= scheme.ub[nx+1:nv]
+        ub[ny+1:nv] .= scheme.ub[1:nx]
+        lb[1:ny]    .= scheme.lb[nx+1:nv]
+        lb[ny+1:nv] .= scheme.lb[1:nx]
+    end
 
     ss_eqm = state_space_eqm(soln)
 
@@ -4064,12 +4497,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
         error("This solver requires the shocks to be AR(1) processes")
     end
     for i = 1:ns
-        if sum(isless.(abs.(k[i,:]),scheme.tol_variables)) != ns - 1 # Make sure there is only one shock per equation
+        if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
             error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods")
         end
     end
 
-    T = typeof(scheme.tol_fix_point_solver)
+    T = typeof(scheme.ftol)
 
     if domain == []
         if typeof(soln) <: ProjectionSolution
@@ -4099,12 +4532,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
             te = ss_eqm.h(grid[j,:],zeros(ns))
 
             for i = 1:ny
-                variables[i][j] = dr[i]
+                variables[i][j] = min(max(dr[i],lb[i]),ub[i])
             end
             for i = 1:nx
-                variables[ny+i][j] = te[i]
+                variables[ny+i][j] = min(max(te[i],lb[ny+i]),ub[ny+i])
             end
-
+    
         end
     end
 
@@ -4116,9 +4549,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
 
     iters = 0
     len = Inf
-    while len > scheme.tol_variables && iters <= scheme.maxiters
+    while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i = 1:length(jumps_approximated)
+        for i in eachindex(jumps_approximated)
             weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
@@ -4132,7 +4565,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::HyperbolicCrossSchemeSto
                 end
 
                 projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
-                nlsoln = nlsolve(projection_equations,init,xtol = scheme.tol_fix_point_solver,iterations = scheme.maxiters,inplace = :true)
+                if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                else
+                    nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
+                end
+
                 for j = 1:nv
                     new_variables[j][i] = nlsoln.zero[j]
                 end
@@ -4181,9 +4619,9 @@ end
 function solve_model(model::REModel,scheme::P) where {P<:ProjectionScheme}
 
     if model.solvers in ("Any", "Projection")
-        if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
+        if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
             error("Stochastic model but deterministic SolutionScheme")
-        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
+        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
             error("Deterministic model but stochastic SolutionScheme")
         end
 
@@ -4198,9 +4636,9 @@ end
 function solve_model(model::REModel,scheme::P,threads::S) where {P<:ProjectionScheme,S<:Integer}
 
     if model.solvers in ("Any", "Projection")
-        if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
+        if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
             error("Stochastic model but deterministic SolutionScheme")
-        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
+        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
             error("Deterministic model but stochastic SolutionScheme")
         end
 
@@ -4222,9 +4660,9 @@ end
 function solve_model(model::REModel,soln::ModelSolution,scheme::P) where {P<:ProjectionScheme}
 
     if model.solvers in ("Any", "Projection")
-        if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
+        if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
             error("Stochastic model but deterministic SolutionScheme")
-        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
+        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
             error("Deterministic model but stochastic SolutionScheme")
         end
 
@@ -4239,9 +4677,9 @@ end
 function solve_model(model::REModel,soln::ModelSolution,scheme::P,threads::S) where {P<:ProjectionScheme,S<:Integer}
 
     if model.solvers in ("Any", "Projection")
-        if model.number_shocks != 0 && typeof(scheme) <: Union{ChebyshevSchemeDet,SmolyakSchemeDet,HyperbolicCrossSchemeDet,PiecewiseLinearSchemeDet}
+        if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
             error("Stochastic model but deterministic SolutionScheme")
-        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ChebyshevSchemeStoch,SmolyakSchemeStoch,HyperbolicCrossSchemeStoch,PiecewiseLinearSchemeStoch}
+        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
             error("Deterministic model but stochastic SolutionScheme")
         end
 

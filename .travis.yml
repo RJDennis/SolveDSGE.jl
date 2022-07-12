@@ -5,6 +5,7 @@ os:
 
 julia:
   - 1.6
+  - 1.7
   - nightly
 
 #script:

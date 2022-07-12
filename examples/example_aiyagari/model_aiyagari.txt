@@ -1,0 +1,39 @@
+# Example --- Aiyagari (1994) model
+
+states:
+k, l
+end
+
+jumps:
+c, muc, lm, rbar, wbar
+end
+
+shocks:
+ϵ
+end
+
+parameters:
+β  = 0.96
+σ  = 1.00
+α  = 0.36
+δ  = 0.08
+ϕ  = 0.00 # Not sure yet what value to use here
+ρ  = 0.60
+σϵ = 0.20
+lbar = 1.0
+kbar
+end
+
+solvers: Projection
+
+equations:
+
+rbar = α*(kbar/lbar)^(α-1.0) - δ
+wbar = (1.0-α)*(kbar/lbar)^(α)
+
+c^(-σ) = muc
+muc = lm + β*(1.0+rbar)*muc(+1)
+c + k(+1) = wbar*lbar*exp(l) + (1.0+rbar)*k
+lm*(k-ϕ) = 0.0
+l(+1) = ρ*l + σϵ*sqrt(1.0-ρ^2)*ϵ
+end

@@ -1,7 +1,7 @@
 name = "SolveDSGE"
 uuid = "00bf1f32-23ad-54cc-bf6e-3216db8a43a2"
 authors = ["Richard Dennis <richard.dennis@glasgow.ac.uk>"]
-version = "0.4.27"
+version = "0.5.0"
 
 [deps]
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -15,7 +15,8 @@ SmolyakApprox = "6b19cf85-48de-5d9d-bfff-465abea14fab"
 ThreadPools = "b189fb0b-2eb5-4ed4-bc0c-d34c51242431"
 ThreadsX = "ac1d9e8a-700a-412c-b207-f0111f4b6c0d"
 HyperbolicCrossApprox = "db4fe9aa-a353-4142-ac3f-608941c5a4fc"
-
+NLboxsolve = "57734975-34ee-4662-b82a-2ecfa01d03df"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 
 [compat]
 ChebyshevApprox = "^0.2"
@@ -28,3 +29,5 @@ julia = "^1.6"
 ThreadPools = "^2.0"
 ThreadsX = "^0.1.7"
 HyperbolicCrossApprox = "^0.2"
+NLboxsolve = "^0.2"
+OrderedCollections = "^1.4"
