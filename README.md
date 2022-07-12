@@ -19,7 +19,7 @@ using Pkg
 Pkg.add("SolveDSGE")
 ```
 
-SolveDSGE is supported by several other packages: ForwardDiff.jl, GaussQuadrature.jl, ChebyshevApprox.jl, SmolyakApprox.jl, PiecewiseLinearApprox.jl, and NLboxsolve.jl.
+SolveDSGE is supported by several other packages: ForwardDiff.jl, GaussQuadrature.jl, ChebyshevApprox.jl, SmolyakApprox.jl, HyperbolicCrossApprox.jl, PiecewiseLinearApprox.jl, and NLboxsolve.jl.
 
 Perturbation methods
 --------------------
@@ -35,7 +35,7 @@ Further information
 -------------------
 This version (version 0.5.x) introduces methods intended to help solve models with occasionally binding constraints.  In the current version, at the user's discretion, models can be solved using multi-threaded projection methods.  Similarly, version 0.4.x represented an important update on version 0.3, which didn't allow any form of parallization.  Version 0.4.x also removes support for the optimal policy routines that were present in version 0.2.  At some point in the future, SolveDSGE's approach to solving and analyzing optimal policy is likely to be reintroduced based on the model-file/solution-file framework.
 
-Examples of how to use SolveDSGE to solve a model are contained in the examples folder.  At the moment there are four examples: a deterministic model, two stochastic models, and a model with an occasionally binding constraint (a zero-lower-bound on the nominal interest rate).  The example models are intended to be familiar, easy to follow, and easy to replicate.
+Examples of how to use SolveDSGE to solve a model are contained in the examples folder.  At the moment there are four examples: a deterministic model, a stochastic growth model, a New Keynesian sticky price model with the zero lower bound, and a heterogeneous agents model.  The example models are intended to be familiar, easy to follow, and easy to replicate.
 
 Although it no-doubt requires much improvement, there is a User Guide that describes in detail the steps that should be taken to solve a model, and documents the relevant functions, solution schemes, and solution structures.  How to simulate data from a solved model, compute impulse response functions, and approximate PDFs and CDFs is also described.
 

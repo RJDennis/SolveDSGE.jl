@@ -11,7 +11,7 @@ using PiecewiseLinearApprox
 using HyperbolicCrossApprox
 using ThreadPools
 using ThreadsX
-using Nlboxsolve
+using NLboxsolve
 using OrderedCollections
 
 include("structures.jl")
