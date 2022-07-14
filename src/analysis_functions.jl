@@ -957,6 +957,11 @@ function expected_jumps(soln::R) where {R<:PiecewiseLinearSolutionStoch}
 
 end
 
+"""
+Constructs the terms in a state space equilibrium from a Solution
+
+Exported function.
+"""
 function state_space_eqm(soln::R) where {R<:ModelSolution}
 
     dec_rules = decision_rule(soln)
@@ -969,6 +974,11 @@ function state_space_eqm(soln::R) where {R<:ModelSolution}
 
 end
 
+"""
+Computes the unconditional means of the state variables and the jump variables from a perturbation solution.
+
+Exported function.
+"""
 function compute_mean(soln::R) where {R<:PerturbationSolution}
 
     if typeof(soln) <: FirstOrderSolutionStoch
@@ -3168,6 +3178,15 @@ function euler_errors(model::REModel,soln::R,npoints::S,seed::S = 123456) where 
 
 end
 
+"""
+Implements a simple version of the Den Haan and Marcet (1994) test of numerical accuracy.
+
+The implementation here is based on the mean residual.
+
+Performs 1000 tests and returns the 1%, 5%, 10% test statistics and the number of degrees of freedom.
+
+Exported function.
+"""
 function den_haan_marcet(model::REModel,soln::R,steady_state::Array{T,1},seed::S = 123456) where {T<:AbstractFloat,S<:Integer,R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
     nv = model.number_variables

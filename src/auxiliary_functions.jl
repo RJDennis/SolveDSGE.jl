@@ -1,50 +1,69 @@
 ########################## Auxiliary functions #############################
 
+"""
+Creates identity matrix.
+
+Internal function; not exposed to users.
+"""
 function eye(tpe::Type,n::S) where {S<:Integer}
 
     if tpe <: Number
+
         return Matrix{tpe}(I,n,n)
+
     end
 
 end
 
 eye(n::Integer) = eye(Float64,n::Integer)
 
+"""
+Computes the matrix-trace as defined by Gomme and Klein (2011)
+
+Internal function; not exposed to users.
+"""
 function tracem(x::Array{T,2}) where {T<:Real}
 
-    # Computes the matrix-trace as defined by Gomme and Klein (2011)
+    (n1,n2) = size(x)
 
-    # We require the number of rows to be greater than the number of columns, so
-    # that m is greater than one.
+    if n1 == n2 # Matrix is square
 
-    trans = false
+        y = reshape([tr(x)],1,1)
 
-    if size(x,1) < size(x,2)
-        x = Matrix(x')
-        trans = true
+        return y
+
+    elseif n1 >= n2 # Matrix is skinny
+
+        m = div(n1,n2)
+        y = Array{T,2}(undef,m,1)  # We want this to be a 2-d array for subsequent matrix multiplication
+
+        @inbounds for i = 1:m
+            @views y[i,1] = tr(x[(n2*(i-1)+1):i*n2,1:n2])
+        end
+
+        return y
+
+    else # Matrix is fat
+
+        m = div(n2,n1)
+        y = Array{T,2}(undef,1,m)  # We want this to be a 2-d array for subsequent matrix multiplication
+
+        @inbounds for i = 1:m
+            @views y[1,i] = tr(x[1:n1,(n1*(i-1)+1):i*n1])
+        end
+
+        return y
+
     end
-
-    n = size(x,2)
-    m = Int(size(x,1)/n)
-
-    y = zeros(m,1)  # We want this to be a 2-d array for subsequent matrix multiplication
-
-    @inbounds for i = 1:m
-        @views y[i,1] = tr(x[(n*(i-1)+1):i*n,1:n])
-    end
-
-    if trans == true
-        y = y'
-    end
-
-    return Matrix(y)
 
 end
 
-function kron_prod_times_vector(a::AbstractArray{T,2},b::AbstractArray{T,2},v::AbstractArray{T,1}) where {T<:Real}
+"""
+Efficiently computes (a ⊗ b) × v where a and b are matrices and v is a vector.
 
-    # This function efficiently computes (a ⊗ b) × v where a and b are matrices
-    # and v is a vector.
+Internal function; not exposed to users.
+"""
+function kron_prod_times_vector(a::AbstractArray{T,2},b::AbstractArray{T,2},v::AbstractArray{T,1}) where {T<:Real}
 
     (n1, n2) = size(a)
     (n3, n4) = size(b)
@@ -60,10 +79,12 @@ function kron_prod_times_vector(a::AbstractArray{T,2},b::AbstractArray{T,2},v::A
 
 end
 
-function vector_times_kron_prod(v::AbstractArray{T,1},a::AbstractArray{T,2},b::AbstractArray{T,2}) where {T<:Real}
+"""
+Efficiently computes v × (a ⊗ b) where a and b are matrices and v is a vector.
 
-    # This function efficiently computes v × (a ⊗ b) where a and b are matrices
-    # and v is a vector.
+Internal function; not exposed to users.
+"""
+function vector_times_kron_prod(v::AbstractArray{T,1},a::AbstractArray{T,2},b::AbstractArray{T,2}) where {T<:Real}
 
     p = Matrix(kron_prod_times_vector(a',b',v')')
 
@@ -71,10 +92,12 @@ function vector_times_kron_prod(v::AbstractArray{T,1},a::AbstractArray{T,2},b::A
 
 end
 
-function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},v::AbstractArray{T,2}) where {T<:Real}
+"""
+Efficiently computes (a ⊗ b) × v where a and b and v are conformable matrices.
 
-    # This function efficiently computes (a ⊗ b) × v where a, b, and v are
-    # conformable matrices.
+Internal function; not exposed to users.
+"""
+function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},v::AbstractArray{T,2}) where {T<:Real}
 
     (n1, n2) = size(a)
     (n3, n4) = size(b)
@@ -93,10 +116,12 @@ function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},v::A
 
 end
 
-function matrix_times_kron_prod(v::AbstractArray{T,2},a::AbstractArray{T,2},b::AbstractArray{T,2}) where {T<:Real}
+"""
+Efficiently computes v × (a ⊗ b) where a and b and v are conformable matrices.
 
-    # This function efficiently computes v × (a ⊗ b) where a, b, and v are
-    # conformable matrices.
+Internal function; not exposed to users.
+"""
+function matrix_times_kron_prod(v::AbstractArray{T,2},a::AbstractArray{T,2},b::AbstractArray{T,2}) where {T<:Real}
 
     p = Matrix(kron_prod_times_matrix(a',b',v')')
 
@@ -104,11 +129,12 @@ function matrix_times_kron_prod(v::AbstractArray{T,2},a::AbstractArray{T,2},b::A
 
 end
 
-function kron_prod_times_vector(a::AbstractArray{T,2},b::AbstractArray{T,2},c::AbstractArray{T,2},v::AbstractArray{T,1}) where {T<:Real}
+"""
+Efficiently computes (a ⊗ b ⊗ c) × v where a, b, and c are matrices and v is a vector.
 
-    # This function efficiently computes (a ⊗ b ⊗ c) × v where a, b, and c
-    # are matrices and v is a vector.  Included for completeness, but not
-    # actually used.
+Internal function (not actually used); not exposed to users.
+"""
+function kron_prod_times_vector(a::AbstractArray{T,2},b::AbstractArray{T,2},c::AbstractArray{T,2},v::AbstractArray{T,1}) where {T<:Real}
 
     (n1, n2) = size(a)
     (n3, n4) = size(b)
@@ -126,11 +152,13 @@ function kron_prod_times_vector(a::AbstractArray{T,2},b::AbstractArray{T,2},c::A
 
 end
 
+"""
+Efficiently computes v × (a ⊗ b ⊗ c) where a, b, and c # are matrices and v is a vector.
+
+Internal function (not actually used); not exposed to users.
+"""
 function vector_times_kron_prod(v::AbstractArray{T,1},a::AbstractArray{T,2},b::AbstractArray{T,2},c::AbstractArray{T,2}) where {T<:Real}
 
-    # This function efficiently computes v × (a ⊗ b ⊗ c) where a, b, and c
-    # are matrices and v is a vector.  Included for completeness, but not
-    # actually used.
 
     product = Matrix(kron_prod_times_vector(a',b',c',v')')
 
@@ -138,10 +166,12 @@ function vector_times_kron_prod(v::AbstractArray{T,1},a::AbstractArray{T,2},b::A
 
 end
 
-function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},c::AbstractArray{T,2},v::AbstractArray{T,2}) where {T<:Real}
+"""
+Efficiently computes (a ⊗ b ⊗ c) × v where a, b, c and v are comformable matrices.
 
-    # This function efficiently computes (a ⊗ b ⊗ c) × v where a, b, c and
-    # v are comformable matrices.
+Internal function; not exposed to users.
+"""
+function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},c::AbstractArray{T,2},v::AbstractArray{T,2}) where {T<:Real}
 
     (n1, n2) = size(a)
     (n3, n4) = size(b)
@@ -162,10 +192,12 @@ function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},c::A
 
 end
 
-function matrix_times_kron_prod(v::AbstractArray{T,2},a::AbstractArray{T,2},b::AbstractArray{T,2},c::AbstractArray{T,2}) where {T<:Real}
+"""
+Efficiently computes v × (a ⊗ b ⊗ c) where a, b, c and v are comformable matrices.
 
-    # This function efficiently computes v × (a ⊗ b ⊗ c) where a, b, c and
-    # v are comformable matrices.
+Internal function; not exposed to users.
+"""
+function matrix_times_kron_prod(v::AbstractArray{T,2},a::AbstractArray{T,2},b::AbstractArray{T,2},c::AbstractArray{T,2}) where {T<:Real}
 
     p = Matrix(kron_prod_times_matrix(a',b',c',v')')
 
@@ -173,10 +205,12 @@ function matrix_times_kron_prod(v::AbstractArray{T,2},a::AbstractArray{T,2},b::A
 
 end
 
-function kron_prod_times_matrix(q::Array{Array{T,2},1},v::Array{T,2}) where {T<:Real}
+"""
+Efficiently computes (q1 ⊗ q2 ⊗ q3 ⊗ ... ⊗ qN) × v where the matrices in q and v are comformable.
 
-    # This function efficiently computes (q1 ⊗ q2 ⊗ q3 ⊗ ... ⊗ qN) × v where the matrices in q and
-    # v are comformable.
+Internal function; not exposed to users.
+"""
+function kron_prod_times_matrix(q::Array{Array{T,2},1},v::Array{T,2}) where {T<:Real}
 
     qnr = size.(q,1)
     qnc = size.(q,2)
@@ -201,26 +235,29 @@ function kron_prod_times_matrix(q::Array{Array{T,2},1},v::Array{T,2}) where {T<:
 
 end
 
-function matrix_times_kron_prod(v::Array{T,2},q::Array{Array{T,2},1}) where {T<:Real}
+"""
+Efficiently computes v × (q1 ⊗ q2 ⊗ q3 ⊗ ... ⊗ qN) where the matrices in q and v are comformable.
 
-    # This function efficiently computes v × (q1 ⊗ q2 ⊗ q3 ⊗ ... ⊗ qN) where the matrices in q and
-    # v are comformable.
+Internal function; not exposed to users.
+"""
+function matrix_times_kron_prod(v::Array{T,2},q::Array{Array{T,2},1}) where {T<:Real}
 
     p = Matrix(kron_prod_times_matrix(reshape(Matrix.(q'),length(q)),Matrix(v'))')
     return p
 
 end
 
+"""
+Uses the Hessenberg-Schur method to find the bounded solution of the
+discrete Sylvester equation:
+
+      X + A*X*B = C
+
+Based on Golub, Nash, and Van Loan (1979).
+
+Internal function; not exposed to users.
+"""
 function dsylvester(a::AbstractArray{T,2},b::AbstractArray{T,2},c::Union{AbstractArray{T,1},AbstractArray{T,2}}) where {T<:Real}
-
-    #= Uses the Hessenberg-Schur method to find the bounded solution of the
-       discrete Sylvester equation:
-
-             X + A*X*B = C
-
-       Based on Golub, Nash, and Van Loan (1979).
-
-    =#
 
     n = size(a,1)
     m = size(b,1)
@@ -262,10 +299,12 @@ function dsylvester(a::AbstractArray{T,2},b::AbstractArray{T,2},c::Union{Abstrac
 
 end
 
-function trm(x::AbstractArray{T,2}) where {T<:Real}
+"""
+Computes the matrix trace as defined by Binning (2013).  Used for # computing the second-order terms, hss, gss.
 
-    # Computes the matrix trace as defined by Binning (2013).  Used for
-    # computing the second-order terms, hss, gss.
+Internal function; not exposed to users.
+"""
+function trm(x::AbstractArray{T,2}) where {T<:Real}
 
     (n1, n2) = size(x)
     k = Int(round(sqrt(n2)))
@@ -279,10 +318,12 @@ function trm(x::AbstractArray{T,2}) where {T<:Real}
 
 end
 
-function trm2(x::AbstractArray{T,2}) where {T<:Real}
+"""
+Computes the matrix trace as defined by Binning (2013).  Used for computing the third-order terms, hssx, gssx.
 
-    # Computes the matrix trace as defined by Binning (2013).  Used for
-    # computing the third-order terms, hssx, gssx.
+Internal function; not exposed to users.
+"""
+function trm2(x::AbstractArray{T,2}) where {T<:Real}
 
     (n1, n2) = size(x)
     k = Int(round(n2^(1//3)))
@@ -298,10 +339,12 @@ function trm2(x::AbstractArray{T,2}) where {T<:Real}
 
 end
 
-function trm3(x::AbstractArray{T,2}) where {T<:Real}
+"""
+Computes the matrix trace.  Used for computing the fourth-order terms, hssxx, gssxx.
 
-    # Computes the matrix trace.  Used for
-    # computing the fourth-order terms, hssxx, gssxx.
+Internal function; not exposed to users.
+"""
+function trm3(x::AbstractArray{T,2}) where {T<:Real}
 
     (n1, n2) = size(x)
     k = Int(round(n2^(1//2)))
@@ -317,9 +360,12 @@ function trm3(x::AbstractArray{T,2}) where {T<:Real}
 
 end
 
-function create_omega3(n::S) where {S<:Integer}
+"""
+Creates the combination matrix for a third-order perturbation as defined in Levintal (2017).
 
-    # Creates the combination matrix for a third-order perturbation as defined in Levintal (2017).
+Internal function; not exposed to users
+"""
+function create_omega3(n::S) where {S<:Integer}
 
     # This function is a simplified version of the create_OMEGA function originally written in
     # Matlab by Oren Levintal for his paper "Fifth Order Perturbation Solution to DSGE Models"
@@ -338,9 +384,12 @@ function create_omega3(n::S) where {S<:Integer}
 
 end
 
-function create_omega4(n::S) where {S<:Integer}
+"""
+Creates the combination matrices for a fourth-order perturbation as defined in Levintal (2017).
 
-    # Creates the combination matrices for a fourth-order perturbation as defined in Levintal (2017).
+Internal function; not exposed to users.
+"""
+function create_omega4(n::S) where {S<:Integer}
 
     # This function is a simplified version of the create_OMEGA function originally written in
     # Matlab by Oren Levintal for his paper "Fifth Order Perturbation Solution to DSGE Models"
@@ -371,9 +420,12 @@ function create_omega4(n::S) where {S<:Integer}
 
 end
 
-function create_omega5(n::S) where {S<:Integer}
+"""
+Creates the combination matrices for a fifth-order perturbation as defined in Levintal (2017).
 
-    # Creates the combination matrices for a fifth-order perturbation as defined in Levintal (2017).
+Internal function (not actually used); not exposed to users.
+"""
+function create_omega5(n::S) where {S<:Integer}
 
     # This function is a simplified version of the create_OMEGA function originally written in
     # Matlab by Oren Levintal for his paper "Fifth Order Perturbation Solution to DSGE Models"
@@ -443,9 +495,12 @@ function create_omega5(n::S) where {S<:Integer}
 
 end
 
-function kron_prod_times_vector(A::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},x::Union{Array{T,1},Array{Complex{T},1}},n::Array{S,1},p::S) where {T<:Real,S<:Integer}
+"""
+Computes y = (A[p]⊗A[p-1]⊗...⊗A[1] )*x where the elements of A and matrices and x is a conformable vector.
 
-    # Computes y = (A[p]⊗A[p-1]⊗...⊗A[1] )*x
+Internal function; not exposed to users.
+"""
+function kron_prod_times_vector(A::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},x::Union{Array{T,1},Array{Complex{T},1}},n::Array{S,1},p::S) where {T<:Real,S<:Integer}
 
     N = prod(n[1:p])
     z = copy(x)
@@ -458,9 +513,12 @@ function kron_prod_times_vector(A::Union{Array{Array{T,2},1},Array{Array{Complex
 
 end
 
-function kron_prod_times_matrix(A::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},x::Union{Array{T,2},Array{Complex{T},2}},n::Array{S,1},p::S) where {T<:Real,S<:Integer}
+"""
+Computes y = (A[p]⊗A[p-1]⊗...⊗A[1] )*x where the elements of A and x are conformable matrices.
 
-    # Computes y = (A[p]⊗A[p-1]⊗...⊗A[1] )*x
+Internal function; not exposed to users.
+"""
+function kron_prod_times_matrix(A::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}},x::Union{Array{T,2},Array{Complex{T},2}},n::Array{S,1},p::S) where {T<:Real,S<:Integer}
 
     N = prod(n[1:p])
     y = Array{Complex{T}}(undef,N,size(x,2))
@@ -504,18 +562,19 @@ function KPShiftSolve(TT::Union{Array{Array{T,2},1},Array{Array{Complex{T},2},1}
 
 end
 
+"""
+Uses a recursive Schur method to find the bounded solution of the Sylvester
+equation:
+
+AX + B*X*(Kron^(k)C) = D
+
+Based on Martin and Van Loan (2006).  This is a simplified implementation
+of their algorithm, but it captures most of the gains over Golub, Nash,
+and van Loan (1979).
+
+Internal function; not exposed to users.
+"""
 function martin_van_loan(a::Array{T,2},b::Array{T,2},c::Array{T,2},d::Array{T,2},k::S) where {T<:Real,S<:Integer}
-
-    #= Uses a recursive Schur method to find the bounded solution of the Sylvester
-       equation:
-
-       AX + B*X*(Kron^(k)C) = D
-
-       Based on Martin and Van Loan (2006).  This is a simplified implementation
-       of their algorithm, but it captures most of the gains over Golub, Nash,
-       and van Loan (1979).
-
-    =#
 
     a = copy(a)
     b = a\copy(b)
@@ -552,6 +611,12 @@ function martin_van_loan(a::Array{T,2},b::Array{T,2},c::Array{T,2},d::Array{T,2}
 
 end
 
+"""
+
+Solves discrete Lyapunov equations.
+
+Internal function; not exposed to users.
+"""
 function dlyap(a::Array{T,2},b::Array{T,2}) where {T<:Real}
 
     n = size(a,1)
@@ -591,6 +656,11 @@ function dlyap(a::Array{T,2},b::Array{T,2}) where {T<:Real}
 
 end
 
+"""
+Converts from a Cartesian Index to subscripts.
+
+Internal function; not exposed to users.
+"""
 function ind2sub(i::S,dims::Tuple{S,Vararg{S}}) where {S<:Integer}
 
     if i < 1 || i > prod(dims)
@@ -603,6 +673,11 @@ function ind2sub(i::S,dims::Tuple{S,Vararg{S}}) where {S<:Integer}
 
 end
 
+"""
+Computes the unconditional variance of a first-order VAR.
+
+Internal function; not exposed to users.
+"""
 function compute_variances(soln::FirstOrderSolutionStoch)
 
     hx = soln.hx
@@ -617,6 +692,12 @@ function compute_variances(soln::FirstOrderSolutionStoch)
 
 end
 
+"""
+Computes the integrals needed for precomputed quadrature for Chebyshev polynomials 
+for the case where the shocks are AR(1) and the innovations are independent.
+    
+Internal function; not exposed to users.
+"""
 function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T,1},nodes::Array{T,1},order::S,rho::T,sigma::T) where {T<:AbstractFloat,S<:Integer}
 
     # Case where shocks are AR(1) and innovations are independent
@@ -674,6 +755,12 @@ function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T
 
 end
 
+"""
+Computes the integrals needed for precomputed quadrature for Chebyshev polynomials 
+for the case where the shocks are AR(1) and the innovations are correlated.
+
+Internal function; not exposed to users.
+"""
 function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T,1},nodes::Array{Array{T,1},1},order::Union{S,Array{S,1}},Ρ::Array{T,2},k::Array{T,2}) where {T<:AbstractFloat,S<:Integer}
 
     # Case where shocks are AR(1) and innovations are correlated
@@ -779,6 +866,11 @@ function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T
 
 end
 
+"""
+Computes the integrals needed for precomputed quadrature with Chebyshev plynomials.
+
+Internal function; not exposed to users.
+"""
 function compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T,1},nodes::Array{Array{T,1},1},order::Union{S,Array{S,1}},Ρ::Array{T,2},k::Array{T,2}) where {T<:AbstractFloat,S<:Integer}
 
     if !isdiag(Ρ .> sqrt(eps()))
@@ -806,6 +898,11 @@ function compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T,
 
 end
 
+"""
+Uses the precomputed integrals to scale the Chebyshev weights.
+
+Internal function; not exposed to users.
+"""
 function scale_chebyshev_weights!(weights::Array{Array{T,N},1},scaled_weights::Array{Array{T,N},1},integrals::Array{Array{T,1},1},j_approx::Union{S,Array{S,1}},ns::S) where {T<:AbstractFloat,N,S<:Integer}
 
     for i in eachindex(j_approx)
@@ -828,6 +925,12 @@ function scale_chebyshev_weights!(weights::Array{Array{T,N},1},scaled_weights::A
 
 end
 
+"""
+Computes the integral factors for Smolyak and the hyperbolic cross approximation for the 
+case where the shocks are AR(1) and the innovations are independent.
+
+Internal function; not exposed to users.
+"""
 function _compute_sparse_integrals(eps_nodes::Array{T,1},eps_weights::Array{T,1},nodes::Array{T,1},order::S,rho::T,sigma::T) where {T<:AbstractFloat,S<:Integer}
 
     # Case where shocks are AR(1) and innovations are independent
@@ -873,6 +976,11 @@ function _compute_sparse_integrals(eps_nodes::Array{T,1},eps_weights::Array{T,1}
 
 end
 
+"""
+Computes the integral factors needed for Smolyak and hyperbolic cross approximation.
+
+Internal function; not exposed to users.
+"""
 function compute_sparse_integrals(eps_nodes,eps_weights,nx,order,grid,RHO,k)
 
     integrals = ones(nx,order+1)
@@ -885,6 +993,11 @@ function compute_sparse_integrals(eps_nodes,eps_weights,nx,order,grid,RHO,k)
 
 end
 
+"""
+Uses the precomputed integrals to construct the scale factors for Smolyak polynomials.
+
+Internal function; not exposed to users.
+"""
 function smolyak_weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,grid,RHO,sigma)
 
     unique_multi_index = sort(unique(multi_index))
@@ -930,6 +1043,11 @@ function smolyak_weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,grid,
 
 end
 
+"""
+Uses the precomputed integrals to construct the scale factors for hyperbolic cross polynomials.
+
+Internal function; not exposed to users.
+"""
 function hcross_weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,grid,RHO,sigma)
 
     T = eltype(eps_nodes)
@@ -976,12 +1094,22 @@ function hcross_weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,grid,R
 
 end
 
+"""
+Uses the precomputed scale factors to scale the weight in either Smolyak or hyperbolic cross polynomials.
+
+Internal function; not exposed to users.
+"""
 function scale_sparse_weights(weights,weight_scale_factor)
 
     scaled_weights = weights.*weight_scale_factor
 
 end
 
+"""
+Computes the integrals needed for precomputed quadrature using piecewise linear approximation.
+
+Internal function; not exposed to users.
+"""
 function compute_piecewise_linear_integrals(eps_nodes,eps_weights,sigma)
 
     integral = 1.0
@@ -991,6 +1119,11 @@ function compute_piecewise_linear_integrals(eps_nodes,eps_weights,sigma)
 
 end
 
+"""
+Computes the maximum absolute distance between elements in two multi-dimensional arrays.
+
+Internal function; not exposed to users.
+"""
 function mylen(len::T,a::Array{T,N},b::Array{T,N}) where {T<:AbstractFloat,N}
 
     for i in eachindex(a)

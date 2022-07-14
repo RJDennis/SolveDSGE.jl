@@ -1,8 +1,18 @@
 ################ Introduce the model structures ###############
 
+"""
+Parent model type.
+"""
 abstract type DSGEModel end
+
+"""
+Parent type for the primative or key components of a DSGEModel.
+"""
 abstract type DSGEModelPrimatives end
 
+"""
+Struct containing the privatives for a rational expectations model.
+"""
 struct REModelPrimatives{Q<:AbstractString} <: DSGEModelPrimatives
 
     # This structure contains the crucial model information extracted from a
@@ -20,10 +30,12 @@ struct REModelPrimatives{Q<:AbstractString} <: DSGEModelPrimatives
 
 end
 
+"""
+Struct for a fully specified rational expectations model, a subtype of DSGEModel.
+    
+Contains the model information in a form that the solvers can work with.
+"""
 struct REModel{S<:Integer,Q<:AbstractString} <: DSGEModel
-
-    # This structure contains information about a rational expectations model 
-    # in a form that the model-solvers can work with.
 
     number_states::S
     number_jumps::S
@@ -45,10 +57,13 @@ struct REModel{S<:Integer,Q<:AbstractString} <: DSGEModel
 
 end
 
-struct REModelPartial{S<:Integer,Q<:AbstractString} <: DSGEModel
+"""
+Struct for a partially specified rational expectations model, a subtype of DSGEModel.
 
-    # This structure is similar to REModel, but relates to the case
-    # where some parameter values have yet to be assigned.
+The model is partially specified in that one or more parameters lack values.  These values must be
+assigned using the assign_parameters() function in order for the model to become fully specified.
+"""
+struct REModelPartial{S<:Integer,Q<:AbstractString} <: DSGEModel
 
     number_states::S
     number_jumps::S
@@ -72,7 +87,6 @@ struct REModelPartial{S<:Integer,Q<:AbstractString} <: DSGEModel
 end
 
 ############### Introduce the solutionscheme structures #######################
-
 abstract type SolutionScheme end
 abstract type ProjectionScheme <: SolutionScheme end
 abstract type ProjectionSchemeDet <: ProjectionScheme end
@@ -102,7 +116,7 @@ struct ChebyshevSchemeDet{T<:Real,S<:Integer} <: ProjectionSchemeDet
 
 end
 
-struct ChebyshevSchemeDetOBC{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
+struct ChebyshevSchemeOBCDet{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
@@ -163,7 +177,7 @@ struct SmolyakSchemeDet{T<:Real,S<:Integer} <: ProjectionSchemeDet
 
 end
 
-struct SmolyakSchemeDetOBC{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
+struct SmolyakSchemeOBCDet{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
@@ -222,7 +236,7 @@ struct HyperbolicCrossSchemeDet{T<:Real,S<:Integer} <: ProjectionSchemeDet
 
 end
 
-struct HyperbolicCrossSchemeDetOBC{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
+struct HyperbolicCrossSchemeOBCDet{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
 
     initial_guess::Union{T,Array{T,1}}
     node_generator::Function
@@ -282,7 +296,7 @@ struct PiecewiseLinearSchemeDet{T<:Real,S<:Integer} <: ProjectionSchemeDet
 
 end
 
-struct PiecewiseLinearSchemeDetOBC{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
+struct PiecewiseLinearSchemeOBCDet{T<:Real,S<:Integer} <: ProjectionSchemeOBCDet
 
     initial_guess::Union{T,Array{T,1}}
     node_number::Union{S,Array{S,1}}
@@ -612,18 +626,30 @@ end
 
 ##################### Introduce the Equilibrium structure ########################
 
-struct StateSpaceEqm # Augmented to help compute Euler-equation errors
+"""
+Constains the solution to a nonlinear model in state-space form, with an additional 
+equation for forecasting next-period's jump variable:
 
-    # x(t+1)      = h(x(t))
-    #   y(t)      = g(x(t))
-    # E_{t}y(t+1) = gh(x(t))
+x(t+1)      = h(x(t))
+  y(t)      = g(x(t))
+E_{t}y(t+1) = gh(x(t)) = g(h(x(t)))
+"""
+struct StateSpaceEqm # Augmented to help compute Euler-equation errors
 
     g::Function    # Decision rules for jumps
     h::Function    # State transition eqn
-    gh::Function   # Forecast eqns for future jumps
+    gh::Function   # Forecast eqns for next-period's jump variables
 
 end
 
+"""
+Contains the summary information returned from the den_haan_marcet() function.
+
+This summary information: the 1%, 5%, and 10% statistics, which follow a 
+Chi-square distribution, along with the number of degrees of freedom, can be 
+used to apply the Den Haan and Marcet (1994) statistic for assessing solution 
+accuracy.
+"""
 struct DenHaanMarcetStatistic{T<:Real,S<:Integer}
 
     one_percent::T

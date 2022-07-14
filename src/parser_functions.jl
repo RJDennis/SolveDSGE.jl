@@ -1,9 +1,13 @@
 ################# Parser functions ######################
 
-function open_model_file(path::Q) where {Q<:AbstractString}
+"""
+Opens the model file and reads the contents, which are stored in a vector of strings.
 
-    #= Opens the model file and reads the contents, which are stored
-       in a vector of strings. =#
+This function also deals with comments, empty lines, and blank lines.
+
+Internal function; not exposed to users.
+"""
+function open_model_file(path::Q) where {Q<:AbstractString}
 
     model_file = open(path)
     model_array = readlines(model_file)
@@ -35,10 +39,13 @@ function open_model_file(path::Q) where {Q<:AbstractString}
 
 end
 
-function find_term(model_array::Array{Q,1},term::Q) where {Q<:AbstractString}
+"""
+Finds the position in the model's string-vector where model-terms (states, jumps,
+parameters, equations, etc) are located.
 
-    #= Finds the position in the String-vector where model-terms (states, jumps,
-       parameters, equations, etc) are located. =#
+Internal function; not exposed to users.
+"""
+function find_term(model_array::Array{Q,1},term::Q) where {Q<:AbstractString}
 
     locations = findall(y -> contains(y,term),model_array)
     if length(locations) == 1
@@ -51,11 +58,16 @@ function find_term(model_array::Array{Q,1},term::Q) where {Q<:AbstractString}
 
 end
 
-function find_end(model_array::Array{Q,1},startfrom::S) where {Q<:AbstractString,S<:Integer}
+"""
+Finds the position in the model's string-vector where the model-term 'end' appears.  The
+function searches the model's string-vector beginning from line 'startfrom' and returns 
+the line where the next 'end' occurs, signifying the end of a specification block.
 
-    #= Each of the key model terms must be followed by an 'end', whose location
-       in the vector this function finds.  White space at the start of a line is
-       stripped out. =#
+White space at the start of a line is ignored.
+
+Internal function; not exposed to users.
+"""
+function find_end(model_array::Array{Q,1},startfrom::S) where {Q<:AbstractString,S<:Integer}
 
     for end_location = startfrom:length(model_array)
         if startswith(strip(model_array[end_location]),"end") == true
@@ -67,13 +79,17 @@ function find_end(model_array::Array{Q,1},startfrom::S) where {Q<:AbstractString
 
 end
 
+"""
+Extracts the names from within a specification block of a model's string-vector 
+and checks that no names are repeated.  Used to capture the names of jumps:, 
+states:, and shocks:. 
+
+Internal function; not exposed to users.
+"""
 function get_variables(model_array::Array{Q,1},term::Q) where {Q<:AbstractString}
 
-    #= This function extracts the variable names and ensures that no names
-       are repeated =#
-
-    term_begin = find_term(model_array,term) + 1
-    term_end = find_end(model_array,term_begin) - 1
+    term_begin = find_term(model_array,term) + 1 # Starts the line after the term is located
+    term_end = find_end(model_array,term_begin) - 1 # Ends the line before 'end' is located
 
     if term_begin > term_end
         if term in ["shocks:","states:"]
@@ -84,8 +100,6 @@ function get_variables(model_array::Array{Q,1},term::Q) where {Q<:AbstractString
     end
 
     term_block = model_array[term_begin:term_end]
-
-    # Extract the variable names
 
     # Remove any trailing variable separators: "," or ";".
 
@@ -122,10 +136,14 @@ function get_variables(model_array::Array{Q,1},term::Q) where {Q<:AbstractString
 
 end
 
+"""
+Combines the states, "x", with the jump variables, "y", into a single vector to
+generate a vector of the model's variables.
+
+Internal function; not exposed to users.
+"""
 function combine_states_and_jumps(x::Array{Q,1},y::Array{Q,1}) where {Q<:AbstractString}
 
-    #= This function combines the states, "x", with the jump variables, "y", to
-       generate the model's variables. =#
 
     if length(x) == 0 # There are no states
         return y
@@ -137,21 +155,21 @@ function combine_states_and_jumps(x::Array{Q,1},y::Array{Q,1}) where {Q<:Abstrac
 
 end
 
+"""
+Extracts the names and values for each of the model's parameters.  The parameter names are 
+sorted so that larger names come first.
+
+Internal function; not exposed to users.
+"""
 function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q<:AbstractString}
 
-    #= This function extracts the names and associated values for each of the
-       model's parameters.  The parameter names are sorted so that larger names
-       come first. =#
-
-    parametersbegin = find_term(model_array,term) + 1
-    parametersend = find_end(model_array,parametersbegin) - 1
+    parametersbegin = find_term(model_array,term) + 1 # Starts the line after the term is located
+    parametersend = find_end(model_array,parametersbegin) - 1 # Ends the line before 'end' is located
     if parametersbegin > parametersend
         error("The model file contains no $(term[1:end-1])")
     end
 
     parameterblock = model_array[parametersbegin:parametersend]
-
-    # Extract the parameter names and values
 
     # Remove any trailing separators: "," or ";".
 
@@ -166,7 +184,7 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q<:Ab
         revised_parameterblock = [revised_parameterblock; String.(strip.(split(parameterblock[i],union(",",";"))))]
     end
 
-    # Extract the parameter names and values
+    # Extract the parameter names and values, making note of any parameters with unassigned values
 
     unassigned_parameter_index = 1
     unassigned_parameters = Array{Q}(undef,0)
@@ -194,19 +212,20 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q<:Ab
 
 end
 
+"""
+Extracts the model's equations.
+
+Internal function; not exposed to users.
+"""
 function get_equations(model_array::Array{Q,1},term::Q) where {Q<:AbstractString}
 
-    # Extract the model's equations.
-
-    equationsbegin = find_term(model_array,term) + 1
-    equationsend = find_end(model_array,equationsbegin) - 1
+    equationsbegin = find_term(model_array,term) + 1 # Starts the line after the term is located
+    equationsend = find_end(model_array,equationsbegin) - 1 # Ends the line before 'end' is located
     if equationsbegin > equationsend
         error("The model file contains no $(term[1:end-1])")
     end
 
     equation_block = model_array[equationsbegin:equationsend]
-
-    # Extract the equations
 
     # Remove any trailing separators: "," or ";".
 
@@ -246,11 +265,16 @@ function get_equations(model_array::Array{Q,1},term::Q) where {Q<:AbstractString
 
 end
 
+"""
+Extracts the solvers: designation, which determines which solvers can be applied to this model.
+
+Internal function; not exposed to users.
+"""
 function get_solvers(model_array::Array{Q,1}, term::Q) where {Q<:AbstractString}
 
     locations = findall(y -> contains(y, term), model_array)
     if length(locations) == 0
-        return "Any"
+        return "Any" # If solvers: is not specified it defaults to "Any"
     elseif length(locations) > 1
         error("The $term-designation appears multiple times in the model file.")
     else
@@ -270,20 +294,29 @@ function get_solvers(model_array::Array{Q,1}, term::Q) where {Q<:AbstractString}
     end
 end
 
+"""
+Reorders the model's equation so that the shock processes are at the top.
+
+Internal function; not exposed to users.
+"""
 function reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
+
     if isempty(shocks) == false # Case for stochastic models
-        reordered_equations, reordered_states, reordered_shocks = reorder_equations_stochastic(equations,shocks,states,jumps,parameters)
+        reordered_equations, reordered_states, reordered_shocks = _reorder_equations(equations,shocks,states,jumps,parameters)
         return reordered_equations, reordered_states, reordered_shocks
     else # Case for deterministic models
-        reordered_equations, reordered_states = reorder_equations_deterministic(equations,states,jumps,parameters)
+        reordered_equations, reordered_states = _reorder_equations(equations,states,jumps,parameters)
         return reordered_equations, reordered_states, shocks
     end
+
 end
 
-function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
+"""
+Reorders the equations of a deteministic model so that the shock processes are at the top.
 
-    #= This function reorders the model's equations so that the equations
-       containing the shock processes appear first. =#
+Internal function; not exposed to users.
+"""
+function _reorder_equations(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
 
      reordered_equations = copy(equations)
      reordered_states = copy(states)
@@ -344,10 +377,12 @@ function reorder_equations_deterministic(equations::Array{Q,1},states::Array{Q,1
 
 end
 
-function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
+"""
+Reorders the equations of a stochastic model so that the shock processes are at the top.
 
-    #= This function reorders the model's equations so that the equations
-       containing the shock processes appear first. =#
+Internal function; not exposed to users.
+"""
+function _reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
 
     reordered_equations = copy(equations)
     reordered_states = copy(states)
@@ -444,10 +479,13 @@ function reorder_equations_stochastic(equations::Array{Q,1},shocks::Array{Q,1},s
 
 end
 
-function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},variables::Array{Q,1}) where {Q<:AbstractString}
+"""
+Replaces lagged variables with pseudo current variables, augmenting the state vector and 
+the model's equations accordingly.
 
-    #= This function replaces lagged variables with pseudo current variables,
-       augmenting the state vector and the model's equations accordingly. =#
+Internal function; not exposed to users.
+"""
+function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},variables::Array{Q,1}) where {Q<:AbstractString}
 
     lag_variables = string.(variables,"(-1)")
 
@@ -466,7 +504,7 @@ function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,
         end
     end
 
-    #= If a model contains lagged variables,then we introduce a pseudo variable
+    #= If a model contains lagged variables, then we introduce a pseudo variable
        in its place and augment the list of state variables and the set of model
        equations. =#
 
@@ -488,11 +526,14 @@ function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,
 
 end
 
-function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractString}
+"""
+Takes the model-array read from the model file for a rational expectations model, 
+extracts the critical model information, does some basic error checking, and 
+returns the model's key information in a structure.
 
-    #= This function takes the model-array read from a model file, extracts the
-       critical model information, does some basic error checking, and returns
-       it in a structure. =#
+Internal function; not exposed to users.
+"""
+function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractString}
 
     states = get_variables(model_array,"states:")
     jumps = get_variables(model_array,"jumps:")
@@ -535,10 +576,13 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractStri
 
 end
 
-function repackage_equations(model::DSGEModelPrimatives)
+"""
+Repackages the model's equations, replaces parameter names with parameter values, and
+determines the order of the variables in the system.
 
-    #= This function is critical for repackaging the model's equations, replacing
-       parameter names with values, and numbering variables. =#
+Internal function; not exposed to users.
+"""
+function repackage_equations(model::DSGEModelPrimatives)
 
     equations = model.equations
     shocks = model.shocks
@@ -644,11 +688,14 @@ function repackage_equations(model::DSGEModelPrimatives)
 
 end
 
-function create_steady_state_equations(model::DSGEModelPrimatives)
+"""
+Make the model static by replacing leads and lags with current variables
+and setting shocks equal to zero.  Also, replaces parameter names with
+their associated value.
 
-    # Make the model static by replacing leads and lags with current variables
-    # and setting shocks equal to zero.  Also, replace parameter names with
-    # their associated value.
+Internal function; not exposed to users.
+"""
+function create_steady_state_equations(model::DSGEModelPrimatives)
 
     equations = model.equations
     variables = model.variables
@@ -755,9 +802,12 @@ function create_steady_state_equations(model::DSGEModelPrimatives)
 
 end
 
-function make_equations_equal_zero(equations::Array{Q,1}) where {Q<:AbstractString}
+"""
+Reexpress the model's equations such that they each equal zero.
 
-    # Reexpress all of the model's equations such that they equal zero.
+Internal function; not exposed to users.
+"""
+function make_equations_equal_zero(equations::Array{Q,1}) where {Q<:AbstractString}
 
     zeroed_equations = similar(equations)
 
@@ -770,6 +820,15 @@ function make_equations_equal_zero(equations::Array{Q,1}) where {Q<:AbstractStri
 
 end
 
+"""
+Specific to projection methods.  This function expresses the equations such that they can be solved 
+using the projection solvers.
+
+Creates an inventory of which variables have functions that need approximating and in which 
+equations they reside.
+
+Internal function; not exposed to users.
+"""
 function create_projection_equations(equations::Array{Q,1},model::DSGEModelPrimatives) where {Q<:AbstractString}
 
     projection_equations = copy(equations)
@@ -822,6 +881,11 @@ function create_projection_equations(equations::Array{Q,1},model::DSGEModelPrima
 
 end
 
+"""
+Creates and saves the file for the processed model.
+
+Internal funtion; not exposed to users.
+"""
 function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where {Q<:AbstractString}
 
     # Takes the model's primatives and turns these into a processed-model file.
@@ -1028,6 +1092,14 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
 
 end
 
+"""
+Opens, and processes the contents of a model file for a rational expectations model.
+
+This functions exists anticipating that models that depart from rational expections 
+will be introduced at some point 
+
+Internal function; not exposed to users
+"""
 function process_re_model(model_array::Array{Q,1},path::Q) where {Q<:AbstractString}
 
     # Creates the processed model structure for rational expectations models
@@ -1045,6 +1117,11 @@ function process_re_model(model_array::Array{Q,1},path::Q) where {Q<:AbstractStr
 
 end
 
+"""
+Opens, and processes the contents of a model file.
+
+Exported function.
+"""
 function process_model(path::Q) where {Q<:AbstractString}
 
     # Main function used to open, read, and process a model file.  The processed model
@@ -1057,6 +1134,11 @@ function process_model(path::Q) where {Q<:AbstractString}
 
 end
 
+"""
+Retrives and stores in a structure the information from a processed model file.
+
+Exported function.
+"""
 function retrieve_processed_model(path::Q) where {Q<:AbstractString}
 
     if !occursin("_processed",path)
@@ -1075,6 +1157,11 @@ function retrieve_processed_model(path::Q) where {Q<:AbstractString}
 
 end
 
+"""
+Assigns values to parameters previously without values.
+
+Exported function.
+"""
 function assign_parameters(model::REModelPartial,param::Array{T,1}) where {T<:Number}
 
     nx = model.number_states
