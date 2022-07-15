@@ -485,12 +485,14 @@ the model's equations accordingly.
 
 Internal function; not exposed to users.
 """
-function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},variables::Array{Q,1}) where {Q<:AbstractString}
+function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1}) where {Q<:AbstractString}
+
+    variables = [states;jumps]
+    var_index = sortperm(length.(variables),rev=true)
 
     lag_variables = string.(variables,"(-1)")
-
+    
     reorganized_equations = copy(equations)
-    reorganized_states = copy(states)
 
     # First we determine if any equation contains a lagged variable.
 
@@ -508,21 +510,33 @@ function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,
        in its place and augment the list of state variables and the set of model
        equations. =#
 
-    if model_has_lags == true
-        for j in eachindex(lag_variables)
-            if sum(occursin.(lag_variables[j],equations)) != 0
-                for i in eachindex(equations)
+    if model_has_lags == false
+        return equations, states, variables
+    else
+        new_states = String[]
+        new_eqns   = String[]
+        #for j in eachindex(lag_variables)
+        for j in var_index
+            flag = false
+            for i in eachindex(equations)
+                if occursin(lag_variables[j],reorganized_equations[i]) == true
                     reorganized_equations[i] = replace(reorganized_equations[i],lag_variables[j] => string(variables[j],"lag"))
+                    flag = true
                 end
-                reorganized_states = [reorganized_states; string(variables[j],"lag")]
-                reorganized_equations = [reorganized_equations; string(variables[j],"lag(+1) = ",variables[j])]
+            end
+            if flag == true
+                push!(new_states,string(variables[j],"lag"))
+                push!(new_eqns,string(variables[j],"lag(+1) = ",variables[j]))
             end
         end
+    
+        reorganized_states    = [states; new_states]
+        reorganized_equations = [reorganized_equations; new_eqns]
+        reorganized_variables = [reorganized_states; jumps]
+
+        return reorganized_equations, reorganized_states, reorganized_variables
+
     end
-
-    reorganized_variables = [reorganized_states; jumps]
-
-    return reorganized_equations, reorganized_states, reorganized_variables
 
 end
 
@@ -568,7 +582,7 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractStri
     end
 
     reordered_equations, states, shocks = reorder_equations(equations,shocks,states,jumps,parameters)
-    reorganized_equations, states, variables = deal_with_lags(reordered_equations,states,jumps,variables)
+    reorganized_equations, states, variables = deal_with_lags(reordered_equations,states,jumps)
 
     re_model_primatives = REModelPrimatives(states,jumps,shocks,variables,parameters,parametervalues,reorganized_equations,unassigned_parameters,solvers)
 
