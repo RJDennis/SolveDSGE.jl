@@ -16,7 +16,7 @@
 %TCIDATA{Codepage=1252}
 %TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
 %TCIDATA{BibliographyScheme=Manual}
-%TCIDATA{LastRevised=Tuesday, July 12, 2022 02:19:50}
+%TCIDATA{LastRevised=Tuesday, August 16, 2022 23:46:01}
 %TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
 %TCIDATA{Language=American English}
 
@@ -75,7 +75,7 @@ approximation, or piecewise linear approximation, with the solution obtained
 from one approximation scheme able to be used as an initialization for the
 others, allowing greater speed and accuracy to be obtained via a form of
 homotopy. \ Model parameters can be varied to facilitate robustness analysis
-and so that the solution routines can be employed to estimate models. 
+and so that the solution routines can be employed to estimate models.
 
 To use SolveDSGE.jl to solve a model, two files must be supplied. \ The
 first file (the model file) summarizes the model to be solved. \ The second
@@ -86,7 +86,7 @@ It is worth repeating that SolveDSGE.jl is a set of functions developed to
 help you solve and analyze nonlinear models, but it is not automatic that it
 will solve any model you feed it at the first attempt. \ Solving nonlinear
 models almost always involves a process of homotopy---the intent of the
-package is to help you with this homotopy process. 
+package is to help you with this homotopy process.
 
 Quite a lot of time and effort has gone into writing SolveDSGE.jl, together
 with the underlying modules: ChebyshevApprox.jl, SmolyakApprox.jl,
@@ -218,7 +218,7 @@ z_{t+1} &=&\rho z_{t}+\sigma z\exp (\sigma _{t})\varepsilon _{t+1}, \\
 \sigma _{t+1} &=&\gamma \sigma _{t}+\epsilon _{t+1,}
 \end{eqnarray*}%
 and all of the solution methods in the package can be applied to such
-processes. 
+processes.
 
 \section{The model file}
 
@@ -247,7 +247,7 @@ k, z
 
 end
 
-\bigskip 
+\bigskip
 
 jumps:
 
@@ -255,7 +255,7 @@ c, ce
 
 end
 
-\bigskip 
+\bigskip
 
 shocks:
 
@@ -263,7 +263,7 @@ $\varepsilon $
 
 end
 
-\bigskip 
+\bigskip
 
 parameters:
 
@@ -281,11 +281,11 @@ $\sigma z$ = 0.01
 
 end
 
-\bigskip 
+\bigskip
 
 solvers: Any
 
-\bigskip 
+\bigskip
 
 equations:
 
@@ -353,7 +353,7 @@ or:
 
 \textit{end}
 
-\bigskip 
+\bigskip
 
 The model file also contains the optional category \textquotedblleft
 solvers:\textquotedblright , which in the example file is designated as
@@ -445,7 +445,7 @@ parser allows you to do that. \ There are some reserved names, however:
 log\textquotedblright , \textquotedblleft x\textquotedblright ,
 \textquotedblleft p\textquotedblright , \textquotedblleft
 deriv\textquotedblright , \textquotedblleft :\textquotedblright , and
-\textquotedblleft ;\textquotedblright . 
+\textquotedblleft ;\textquotedblright .
 
 \section{Solving a model}
 
@@ -511,23 +511,25 @@ different.) \ We can then solve for the model's steady state as follows:
 
 \bigskip
 
-\textit{ss\_obj = compute\_steady\_state(dsge,tol,maxiters)}
+\textit{ss\_obj = compute\_steady\_state(dsge,init,tol,maxiters)}
 
 \textit{ss = ss\_obj.zero}
 
 \bigskip
 
 where \textit{dsge} is the model whose steady state is to be computed, 
-\textit{tol} is a convergence tolerance, and \textit{maxiters} is an integer
-specifying the maximum number of iterations before the function exits. \ The 
-\textit{compute\_steady\_state()} function employs the solvers from
-NLsolve.jl, which allows different solution methods. \ These can be accessed
-via the optional keyword argument: method, where the available methods are 
-\textit{:newton} (the default) and \textit{:trust\_region}. \ So, one could
-solve for the steady state using:
+\textit{init} is a vector of initial values, \textit{tol} is a convergence
+tolerance, and \textit{maxiters} is an integer specifying the maximum number
+of iterations before the function exits. \ The \textit{compute\_steady%
+\_state()} function employs the solvers from NLsolve.jl, which allows
+different solution methods. \ These can be accessed via an optional method
+argument, where the available methods are \textit{:newton} (the default) and 
+\textit{:trust\_region}. \ So, one could solve for the steady state using:
+
+\bigskip 
 
 \textit{ss\_obj =
-compute\_steady\_state(dsge,tol,maxiters,method=:trust\_region)}
+compute\_steady\_state(dsge,init,tol,maxiters,:trust\_region)}
 
 \textit{ss = ss\_obj.zero}
 
@@ -1424,7 +1426,7 @@ h}_{\mathbf{ss}}+\frac{1}{2}\mathbf{h}_{\mathbf{xx}}\left( \mathbf{x}%
 _{t}\otimes \mathbf{x}_{t}\right) +\frac{1}{6}\mathbf{h}_{\mathbf{sss}}+%
 \frac{3}{6}\mathbf{h}_{\mathbf{ssx}}\mathbf{x}_{t}+\frac{1}{6}\mathbf{h}_{%
 \mathbf{xxx}}\left( \mathbf{x}_{t}\otimes \mathbf{x}_{t}\otimes \mathbf{x}%
-_{t}\right)  \\
+_{t}\right) \\
 &&+\frac{1}{24}\mathbf{h}_{\mathbf{ssss}}+\frac{6}{24}\mathbf{h}_{\mathbf{%
 ssxx}}\left( \mathbf{x}_{t}\otimes \mathbf{x}_{t}\right) +\frac{1}{24}%
 \mathbf{h}_{\mathbf{xxxx}}\left( \mathbf{x}_{t}\otimes \mathbf{x}_{t}\otimes 
@@ -1434,7 +1436,7 @@ _{\mathbf{ss}}+\frac{1}{2}\mathbf{g}_{\mathbf{xx}}\left( \mathbf{x}%
 _{t}\otimes \mathbf{x}_{t}\right) +\frac{1}{6}\mathbf{g}_{\mathbf{sss}}+%
 \frac{3}{6}\mathbf{g}_{\mathbf{ssx}}\mathbf{x}_{t}+\frac{1}{6}\mathbf{g}_{%
 \mathbf{xxx}}\left( \mathbf{x}_{t}\otimes \mathbf{x}_{t}\otimes \mathbf{x}%
-_{t}\right)  \\
+_{t}\right) \\
 &&+\frac{1}{24}\mathbf{g}_{\mathbf{ssss}}+\frac{6}{24}\mathbf{g}_{\mathbf{%
 ssxx}}\left( \mathbf{x}_{t}\otimes \mathbf{x}_{t}\right) +\frac{1}{24}%
 \mathbf{g}_{\mathbf{xxxx}}\left( \mathbf{x}_{t}\otimes \mathbf{x}_{t}\otimes 
@@ -1673,10 +1675,10 @@ as idiosyncratic shocks. \ For the \textit{ensemble\_simulate()} function
 the arguments are: a model solution, an initial state, the number of agents,
 and the number of time periods to simulate. \ As previously, there are also
 methods that impose any lower bound and/or upper bound on each variable, and
-methods that specify which shocks are aggregate shocks.   \ Examples of 
+methods that specify which shocks are aggregate shocks. \ Examples of 
 \textit{ensemble\_simulate()} are:
 
-\bigskip 
+\bigskip
 
 \textit{data = ensemble\_simulate(soln,initial\_state,n\_agents,n\_periods)}
 
@@ -1690,7 +1692,7 @@ ensemble\_simulate(soln,initial\_state,agg\_shocks,n\_agents,n\_periods)}
 ensemble\_simulate(soln,initial\_state,agg\_shocks,lb,ub,n\_agents,n%
 \_periods)}
 
-\bigskip 
+\bigskip
 
 The \textit{ensemble\_simulate()} function returns a vector of 2D arrays
 where the vector has length equal to \textit{n\_agents}.
@@ -1726,12 +1728,12 @@ perturbation at a time; this will probably change at some point.
 An alternative method allows an initial state to be specified (in which case
 the initial state is not integrated out):
 
-\bigskip 
+\bigskip
 
 \textit{pos\_responses, neg\_responses =
 impulses(soln,n\_periods,initial\_state,[1,0],mc\_reps)}
 
-\bigskip 
+\bigskip
 
 \subsection{PDFs and CDFs}
 
@@ -1882,13 +1884,13 @@ containing the points in the domain that were randomly chosen to be analyzed.
 The final way of assessing solution accuracy is through a basic Den-Haan and
 Marcet statistic. \ The arguments for the \textit{den\_haan\_marcet()}
 function are:\ a model, the models solution, and the steady state; an
-initial seed is a final optional argument. 
+initial seed is a final optional argument.
 
-\bigskip 
+\bigskip
 
 \textit{dhm = den\_haan\_marcet(dsge,soln,steady\_state)}
 
-\bigskip 
+\bigskip
 
 The \textit{den\_haan\_marcet()} function performs $1000$ simulations of $%
 3000$ observations and returns the $1$\%, the $5$\%, \ and the $10$\%
