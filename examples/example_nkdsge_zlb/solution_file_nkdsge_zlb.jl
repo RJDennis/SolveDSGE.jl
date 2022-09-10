@@ -25,7 +25,7 @@ data = simulate(soln_nla,ss[1:4],100_000)
 
 # Use previous solution as initialization to solve with zlb imposed
 
-COBC = ChebyshevSchemeOBCStoch(ss,chebyshev_nodes,[11,11,11,15],11,6,[0.045 0.2 0.02 0.345; -0.045 -0.21 -0.03 0.31],lb,ub,tol,1e-8,maxiters,:lm)
+COBC = ChebyshevSchemeOBCStoch(ss,chebyshev_nodes,[11,11,11,15],11,6,[0.045 0.2 0.02 0.345; -0.045 -0.21 -0.03 0.31],lb,ub,tol,1e-8,maxiters,:lm_ar)
 soln_nlb = solve_model(dsge_nk_zlb,soln_nla,COBC,2)
 data_obc = simulate(soln_nlb,ss[1:4],lb,ub,100_000)
 

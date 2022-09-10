@@ -18,7 +18,7 @@ function compute_steady_state(model::REModel,x::Array{T,1},tol::T,maxiters::S,me
     #nlsoln = nlsolve(equations, x, xtol = tol, iterations = maxiters, autodiff = :forward, inplace = :false)
     equations = model.nlsolve_static_function
     nlsoln = nlsolve(equations,x,ftol = tol,xtol = tol,iterations = maxiters,autodiff = :forward,inplace = :true,method = method)
-    #nlsoln = nlboxsolve(equations,x,xtol = xtol,ftol = ftol,maxiters = maxiters,method = method)
+    #nlsoln = nlboxsolve(equations,x,xtol = xtol,ftol = ftol,iterations = maxiters,method = method)
 
     return nlsoln
 
@@ -993,7 +993,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
 
             projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
             if typeof(scheme) <: ChebyshevSchemeOBCDet
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters, iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -1107,7 +1107,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
 
                 projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
                 if typeof(scheme) <: ChebyshevSchemeOBCDet
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -1237,7 +1237,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
 
             projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
             if typeof(scheme) <: ChebyshevSchemeOBCStoch
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -1368,7 +1368,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
 
                 projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
                 if typeof(scheme) <: ChebyshevSchemeOBCStoch
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -1500,7 +1500,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
 
             projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
             if typeof(scheme) <: ChebyshevSchemeOBCDet
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -1634,7 +1634,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
 
                 projection_equations = model.closure_function_chebyshev(state,weights,order,domain)
                 if typeof(scheme) <: ChebyshevSchemeOBCDet
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -1795,7 +1795,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
 
             projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
             if typeof(scheme) <: ChebyshevSchemeOBCStoch
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -1963,7 +1963,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
 
                 projection_equations = model.closure_function_chebyshev(state,scaled_weights,order,domain)
                 if typeof(scheme) <: ChebyshevSchemeOBCStoch
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -2053,7 +2053,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSc
 
             projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
             if typeof(scheme) <: SmolyakSchemeOBCDet
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -2141,7 +2141,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSc
 
                 projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
                 if typeof(scheme) <: SmolyakSchemeOBCDet
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -2248,7 +2248,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
 
             projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
             if typeof(scheme) <: SmolyakSchemeOBCStoch
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -2354,7 +2354,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
 
                 projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
                 if typeof(scheme) <: SmolyakSchemeOBCStoch
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -2456,7 +2456,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
 
             projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
             if typeof(scheme) <: SmolyakSchemeOBCDet
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -2559,7 +2559,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
 
                 projection_equations = model.closure_function_smolyak(grid[i,:],weights,multi_ind,domain)
                 if typeof(scheme) <: SmolyakSchemeOBCDet
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -2696,7 +2696,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
 
             projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
             if typeof(scheme) <: SmolyakSchemeOBCStoch
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -2834,7 +2834,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
 
                 projection_equations = model.closure_function_smolyak(grid[i,:],scaled_weights,multi_ind,domain)
                 if typeof(scheme) <: SmolyakSchemeOBCStoch
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -2928,7 +2928,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeDet,P
 
             projection_equations = model.closure_function_piecewise(variables,grid,state)
             if typeof(scheme) <: PiecewiseLinearSchemeOBCDet
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -3020,7 +3020,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeDet,P
 
                 projection_equations = model.closure_function_piecewise(variables,grid,state)
                 if typeof(scheme) <: PiecewiseLinearSchemeOBCDet
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -3129,7 +3129,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch
 
             projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
             if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -3236,7 +3236,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch
 
                 projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
                 if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -3346,7 +3346,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
 
             projection_equations = model.closure_function_piecewise(variables,grid,state)
             if typeof(scheme) <: PiecewiseLinearSchemeOBCDet
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -3457,7 +3457,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
 
                 projection_equations = model.closure_function_piecewise(variables,grid,state)
                 if typeof(scheme) <: PiecewiseLinearSchemeOBCDet
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -3604,7 +3604,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
 
             projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
             if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -3752,7 +3752,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
 
                 projection_equations = model.closure_function_piecewise(variables,grid,state,integrals)
                 if typeof(scheme) <: PiecewiseLinearSchemeOBCStoch
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -3842,7 +3842,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,H
 
             projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
             if typeof(scheme) <: HyperbolicCrossSchemeOBCDet
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -3931,7 +3931,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,H
 
                 projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
                 if typeof(scheme) <: HyperbolicCrossSchemeOBCDet
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -4039,7 +4039,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
 
             projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
             if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -4146,7 +4146,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
 
                 projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
                 if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -4249,7 +4249,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
             projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
             if typeof(scheme) <: HyperbolicCrossSchemeOBCDet
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -4354,7 +4354,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
                 projection_equations = model.closure_function_hcross(grid[i,:],weights,multi_ind,domain)
                 if typeof(scheme) <: HyperbolicCrossSchemeOBCDet
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
@@ -4492,7 +4492,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
             projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
             if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
-                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
             else
                 nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
             end
@@ -4631,7 +4631,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
                 projection_equations = model.closure_function_hcross(grid[i,:],scaled_weights,multi_ind,domain)
                 if typeof(scheme) <: HyperbolicCrossSchemeOBCStoch
-                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,maxiters = scheme.maxiters,method = scheme.method)
+                    nlsoln = nlboxsolve(projection_equations,init,lb,ub,xtol = scheme.xtol,ftol = scheme.ftol,iterations = scheme.maxiters,method = scheme.method)
                 else
                     nlsoln = nlsolve(projection_equations,init,xtol = scheme.ftol,iterations = scheme.maxiters,inplace = :true,method = scheme.method)
                 end
