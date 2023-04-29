@@ -787,9 +787,9 @@ function _compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T
     end
 
     if typeof(order) == S
-        ord = tuple(fill(order,N)...)
+        ord = Tuple(fill(order,N))
     else
-        ord = tuple(order...)
+        ord = Tuple(order)
     end
 
     terms_num = Array{T}(undef,length(eps_nodes))

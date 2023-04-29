@@ -449,8 +449,8 @@ function solve_third_order_det(model::REModel,scheme::PerturbationScheme)
         first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv]
         first_derivs[i,:] .= first_d(point)
 
-        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
-        #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
+        #second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
+        second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
         second_derivs[i,:] .= vec(second_d(point))
 
         third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
@@ -532,8 +532,8 @@ function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewn
         first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv]
         first_derivs[i,:] .= first_d(point)
 
-        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv,1:2*nv]
-        #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
+        #second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{2}()))[1:2*nv,1:2*nv]
+        second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
         second_derivs[i,:] .= vec(second_d(point))
 
         third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{2}()))[:,1:2*nv]
@@ -637,7 +637,7 @@ Solves models to fourth-order accuracy, drawing on Binning (2013) and Levintal (
 
 Exported function.
 """
-function solve_fourth_order(model::REModel,scheme::PerturbationScheme) where {T<:Real}
+function solve_fourth_order(model::REModel,scheme::PerturbationScheme)
 
     if scheme.order != "fourth"
         error("A fourth order perturbation must be supplied")
@@ -684,8 +684,8 @@ function solve_fourth_order_det(model::REModel,scheme::PerturbationScheme)
         first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv]
         first_derivs[i,:] .= first_d(point)
 
-        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
-        #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*n,1:2*n]
+        #second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
+        second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*n,1:2*n]
         second_derivs[i,:] .= vec(second_d(point))
 
         third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
@@ -784,8 +784,8 @@ function solve_fourth_order_stoch(model::REModel,scheme::PerturbationScheme)
         first_d(x) = ForwardDiff.gradient(model_equations[i],x,ForwardDiff.GradientConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv]
         first_derivs[i,:] .= first_d(point)
 
-        second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
-        #second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
+        #second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
+        second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
         second_derivs[i,:] .= vec(second_d(point))
 
         third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
@@ -951,9 +951,9 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
     end
 
     if typeof(order) <: Integer
-        ord = tuple(fill(order,nx)...)
+        ord = Tuple(fill(order,nx))
     else
-        ord = tuple(order...)
+        ord = Tuple(order)
     end
 
     weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
@@ -1065,9 +1065,9 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
     end
 
     if typeof(order) <: Integer
-        ord = tuple(fill(order,nx)...)
+        ord = Tuple(fill(order,nx))
     else
-        ord = tuple(order...)
+        ord = Tuple(order)
     end
 
     weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
@@ -1192,9 +1192,9 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
     end
 
     if typeof(order) <: Integer
-        ord = tuple(fill(order,nx)...)
+        ord = Tuple(fill(order,nx))
     else
-        ord = tuple(order...)
+        ord = Tuple(order)
     end
 
     weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
@@ -1321,9 +1321,9 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
     end
 
     if typeof(order) <: Integer
-        ord = tuple(fill(order,nx)...)
+        ord = Tuple(fill(order,nx))
     else
-        ord = tuple(order...)
+        ord = Tuple(order)
     end
 
     weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
@@ -1461,9 +1461,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
     end
 
     if typeof(order) <: Integer
-        ord = tuple(fill(order,nx)...)
+        ord = Tuple(fill(order,nx))
     else
-        ord = tuple(order...)
+        ord = Tuple(order)
     end
 
     weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
@@ -1594,9 +1594,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
     end
 
     if typeof(order) <: Integer
-        ord = tuple(fill(order,nx)...)
+        ord = Tuple(fill(order,nx))
     else
-        ord = tuple(order...)
+        ord = Tuple(order)
     end
 
     weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
@@ -1753,9 +1753,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
     end
 
     if typeof(order) <: Integer
-        ord = tuple(fill(order,nx)...)
+        ord = Tuple(fill(order,nx))
     else
-        ord = tuple(order...)
+        ord = Tuple(order)
     end
 
     weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
@@ -1918,9 +1918,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
     end
 
     if typeof(order) <: Integer
-        ord = tuple(fill(order,nx)...)
+        ord = Tuple(fill(order,nx))
     else
-        ord = tuple(order...)
+        ord = Tuple(order)
     end
 
     weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
@@ -2484,7 +2484,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,SmolyakSchemeOBCDet},threads) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,SmolyakSchemeOBCDet},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -4278,7 +4278,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeOBCDet},threads) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
+function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeOBCDet},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps

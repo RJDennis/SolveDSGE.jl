@@ -12,7 +12,7 @@ ss = [0.0, 5.5, 1.44, 0.71, 0.0, 0.04, 1.18]
 ub = [Inf,Inf,Inf,Inf,Inf,Inf,Inf]
 lb = [-Inf,0.0,0.0,0.0,-Inf,0.0,0.0]
 
-kbar = 5.4 # Guess for aggregate capital
+kbar = 5.6 # Guess for aggregate capital
 dsge = assign_parameters(dsge_base,Dict("kbar"=>kbar))
 
 COBC = ChebyshevSchemeOBCStoch(ss,chebyshev_nodes,[21,21],15,[5,5],[0.4 22.0;-0.4 0.0],lb,ub,1e-8,1e-8,1000,:lm_ar)
