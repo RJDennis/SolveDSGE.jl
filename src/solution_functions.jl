@@ -685,7 +685,7 @@ function solve_fourth_order_det(model::REModel,scheme::PerturbationScheme)
         first_derivs[i,:] .= first_d(point)
 
         #second_d(x) = ForwardDiff.hessian(model_equations[i],x,ForwardDiff.HessianConfig(model_equations[i],x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
-        second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*n,1:2*n]
+        second_d(x) = ForwardDiff.jacobian(first_d,x,ForwardDiff.JacobianConfig(first_d,x,ForwardDiff.Chunk{1}()))[1:2*nv,1:2*nv]
         second_derivs[i,:] .= vec(second_d(point))
 
         third_d(x) = ForwardDiff.jacobian(second_d,x,ForwardDiff.JacobianConfig(second_d,x,ForwardDiff.Chunk{1}()))[:,1:2*nv]
