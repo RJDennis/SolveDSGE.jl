@@ -365,7 +365,7 @@ function _reorder_equations(equations::Array{Q,1},states::Array{Q,1},jumps::Arra
         for j in 1:number_eqns_with_no_jumps # j tells us which equation we are looking at
             if states_number[j] == k
                 for i in eachindex(reordered_states) # i tells us the index of the state we are looking at
-                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i == true && (i in states_that_have_been_ordered) == false
+                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i && (i in states_that_have_been_ordered) == false
                         reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i] # State i is now associated with equation j.
                         push!(states_that_have_been_ordered,i)
                         break
@@ -480,7 +480,7 @@ function _reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Arr
         for j in 1:number_eqns_with_shocks # j tells us which equation we are looking at
             if states_number[j] == k
                 for i in eachindex(reordered_states) # i tells us the index of the state we are looking at
-                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i == true && (i in states_that_have_been_ordered) == false
+                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i && (i in states_that_have_been_ordered) == false
                         reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i] # State i is now associated with equation j.
                         push!(states_that_have_been_ordered,i)
                         break
