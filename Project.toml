@@ -1,7 +1,7 @@
 name = "SolveDSGE"
 uuid = "00bf1f32-23ad-54cc-bf6e-3216db8a43a2"
 authors = ["Richard Dennis <richard.dennis@glasgow.ac.uk>"]
-version = "0.5.7"
+version = "0.5.8"
 
 [deps]
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -12,11 +12,10 @@ GaussQuadrature = "d54b0c1a-921d-58e0-8e36-89d8069c0969"
 NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
 PiecewiseLinearApprox = "fcfa6960-8e2e-11e9-2cde-29dd09221fb3"
 SmolyakApprox = "6b19cf85-48de-5d9d-bfff-465abea14fab"
-ThreadPools = "b189fb0b-2eb5-4ed4-bc0c-d34c51242431"
-ThreadsX = "ac1d9e8a-700a-412c-b207-f0111f4b6c0d"
 HyperbolicCrossApprox = "db4fe9aa-a353-4142-ac3f-608941c5a4fc"
 NLboxsolve = "57734975-34ee-4662-b82a-2ecfa01d03df"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+Hungarian = "e91730f6-4275-51fb-a7a0-7064cfbd3b39"
 
 [compat]
 ChebyshevApprox = "^0.4"
@@ -26,8 +25,7 @@ ForwardDiff = "^0.10"
 GaussQuadrature = "^0.5"
 NLsolve = "^4.3"
 julia = "^1.6"
-ThreadPools = "^2.0"
-ThreadsX = "^0.1.7"
 HyperbolicCrossApprox = "^0.3"
 NLboxsolve = "^0.4"
 OrderedCollections = "^1.4"
+Hungarian = "^0.7"

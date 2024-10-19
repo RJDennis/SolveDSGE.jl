@@ -9,9 +9,9 @@ function compute_steady_state(model::REModel,x::Array{T,1},tol::T,maxiters::S,me
 #function compute_steady_state(model::REModel,x::Array{T,1},xtol::T,ftol::T,maxiters::S,method::Symbol = :lm_ar) where {T<:Real,S<:Integer}
 
     if length(x) > model.number_equations
-        error("The initialization has too many elements")
+        error("The initialization has too many elements.")
     elseif length(x) < model.number_equations
-        error("The initialization has too few elements")
+        error("The initialization has too few elements.")
     end
 
     #equations = model.static_function
@@ -49,7 +49,7 @@ Exported function.
 function solve_first_order(model::REModel,scheme::PerturbationScheme)
 
     if scheme.order != "first"
-        error("A first order perturbation must be specified")
+        error("A first order perturbation must be specified.")
     end
 
     ns = model.number_shocks
@@ -104,6 +104,10 @@ function solve_first_order_det(model::REModel,scheme::PerturbationScheme)
     @views z21 = z[nx+1:nv,1:nx]
     @views t11 = t[1:nx,1:nx]
     @views s11 = s[1:nx,1:nx]
+
+    if rank(z11) != nx
+        error("The model does not have a stable solution.")
+    end
 
     hx = real((z11/t11)*(s11/z11))
     gx = real(z21/z11)
@@ -171,6 +175,10 @@ function solve_first_order_stoch(model::REModel,scheme::PerturbationScheme)
     @views t11 = t[1:nx,1:nx]
     @views s11 = s[1:nx,1:nx]
 
+    if rank(z11) != nx
+        error("The model does not have a stable solution.")
+    end
+
     hx = real((z11/t11)*(s11/z11))
     gx = real(z21/z11)
 
@@ -205,7 +213,7 @@ Exported function.
 function solve_second_order(model::REModel,scheme::PerturbationScheme)
 
     if scheme.order != "second"
-        error("A second order perturbation must be specified")
+        error("A second order perturbation must be specified.")
     end
 
     ns = model.number_shocks
@@ -406,7 +414,7 @@ Exported function.
 function solve_third_order(model::REModel,scheme::PerturbationScheme,skewness::Union{Array{T,1},Array{T,2}} = zeros(model.number_shocks,model.number_shocks^2)) where {T<:Real}
 
     if scheme.order != "third"
-        error("A third order perturbation must be supplied")
+        error("A third order perturbation must be supplied.")
     end
 
     ns = model.number_shocks
@@ -640,7 +648,7 @@ Exported function.
 function solve_fourth_order(model::REModel,scheme::PerturbationScheme)
 
     if scheme.order != "fourth"
-        error("A fourth order perturbation must be supplied")
+        error("A fourth order perturbation must be supplied.")
     end
 
     ns = model.number_shocks
@@ -1092,7 +1100,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
             weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 sub = ind2sub(i,Tuple(length.(grid)))
@@ -1169,10 +1177,11 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
     T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
-    k = -d[1:ns,2*nv+1:end]
-    RHO = -d[1:ns,1:ns]
+    GAMMA = d[1:ns,nv+1:nv+ns]
+    k   = -GAMMA\d[1:ns,2*nv+1:end]
+    RHO = -GAMMA\d[1:ns,1:ns]
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -1298,10 +1307,11 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
     T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
-    k = -d[1:ns,2*nv+1:end]
-    RHO = -d[1:ns,1:ns]
+    GAMMA = d[1:ns,nv+1:nv+ns]
+    k   = -GAMMA\d[1:ns,2*nv+1:end]
+    RHO = -GAMMA\d[1:ns,1:ns]
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -1351,7 +1361,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
 
         scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 sub = ind2sub(i,Tuple(length.(grid)))
@@ -1571,7 +1581,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
 
     N = prod(length.(grid))
 
-    @sync @qthreads for t = 1:threads
+    @sync Threads.@threads for t = 1:threads
         for j = t:threads:N
             sub = ind2sub(j,Tuple(length.(grid)))
 
@@ -1619,7 +1629,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
             weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
         end
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 sub = ind2sub(i,Tuple(length.(grid)))
@@ -1701,8 +1711,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
         d = compute_linearization(model,initial_guess)
-        k = -d[1:ns,2*nv+1:end]
-        RHO = -d[1:ns,1:ns]
+        GAMMA = d[1:ns,nv+1:nv+ns]
+        k   = -GAMMA\d[1:ns,2*nv+1:end]
+        RHO = -GAMMA\d[1:ns,1:ns]
     end
 
     T = typeof(scheme.ftol)
@@ -1861,12 +1872,13 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
         d = compute_linearization(model,initial_guess)
-        k = -d[1:ns,2*nv+1:end]
-        RHO = -d[1:ns,1:ns]
+        GAMMA = d[1:ns,nv+1:nv+ns]
+        k   = -GAMMA\d[1:ns,2*nv+1:end]
+        RHO = -GAMMA\d[1:ns,1:ns]
     end
 
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
 
     T = typeof(scheme.ftol)
@@ -1946,7 +1958,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
 
         scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 sub = ind2sub(i,Tuple(length.(grid)))
@@ -2131,7 +2143,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSc
             weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
         end
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 init = Array{T}(undef,nv)
@@ -2198,14 +2210,15 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
     T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
-    k = -d[1:ns,2*nv+1:end]
-    RHO = -d[1:ns,1:ns]
+    GAMMA = d[1:ns,nv+1:nv+ns]
+    k   = -GAMMA\d[1:ns,2*nv+1:end]
+    RHO = -GAMMA\d[1:ns,1:ns]
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods.")
         end
     end
 
@@ -2304,14 +2317,15 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
     T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
-    k = -d[1:ns,2*nv+1:end]
-    RHO = -d[1:ns,1:ns]
+    GAMMA = d[1:ns,nv+1:nv+ns]
+    k   = -GAMMA\d[1:ns,2*nv+1:end]
+    RHO = -GAMMA\d[1:ns,1:ns]
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods.")
         end
     end
 
@@ -2344,7 +2358,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 init = Array{T}(undef,nv)
@@ -2519,7 +2533,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
         variables[i] = zeros(N)
     end
 
-    @sync @qthreads for t = 1:threads
+    @sync Threads.@threads for t = 1:threads
         for j = t:threads:N
 
             dr = ss_eqm.g(grid[j,:])
@@ -2549,7 +2563,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
             weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
         end
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 init = Array{T}(undef,nv)
@@ -2621,16 +2635,17 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
         d = compute_linearization(model,initial_guess)
-        k = -d[1:ns,2*nv+1:end]
-        RHO = -d[1:ns,1:ns]
+        GAMMA = d[1:ns,nv+1:nv+ns]
+        k   = -GAMMA\d[1:ns,2*nv+1:end]
+        RHO = -GAMMA\d[1:ns,1:ns]
     end
 
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods.")
         end
     end
 
@@ -2757,16 +2772,17 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
         d = compute_linearization(model,initial_guess)
-        k = -d[1:ns,2*nv+1:end]
-        RHO = -d[1:ns,1:ns]
+        GAMMA = d[1:ns,nv+1:nv+ns]
+        k   = -GAMMA\d[1:ns,2*nv+1:end]
+        RHO = -GAMMA\d[1:ns,1:ns]
     end
 
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods.")
         end
     end
 
@@ -2793,7 +2809,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
         variables[i] = zeros(N)
     end
 
-    @sync @qthreads for t = 1:threads
+    @sync Threads.@threads for t = 1:threads
         for j = t:threads:N
 
             dr = ss_eqm.g(grid[j,:])
@@ -2824,7 +2840,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 init = Array{T}(undef,nv)
@@ -3005,7 +3021,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeDet,P
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
                 sub = ind2sub(i,Tuple(length.(grid)))
 
@@ -3080,10 +3096,11 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch
     T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
-    k = -d[1:ns,2*nv+1:end]
-    RHO = -d[1:ns,1:ns]
+    GAMMA = d[1:ns,nv+1:nv+ns]
+    k   = -GAMMA\d[1:ns,2*nv+1:end]
+    RHO = -GAMMA\d[1:ns,1:ns]
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -3188,10 +3205,11 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch
     T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
-    k = -d[1:ns,2*nv+1:end]
-    RHO = -d[1:ns,1:ns]
+    GAMMA = d[1:ns,nv+1:nv+ns]
+    k   = -GAMMA\d[1:ns,2*nv+1:end]
+    RHO = -GAMMA\d[1:ns,1:ns]
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
 
     grid = Array{Array{T,1},1}(undef,nx)
@@ -3221,7 +3239,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
                 sub = ind2sub(i,Tuple(length.(grid)))
 
@@ -3414,7 +3432,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
         variables[i] = zeros(Tuple(length.(grid)))
     end
 
-    @sync @qthreads for t = 1:threads
+    @sync Threads.@threads for t = 1:threads
         for j = t:threads:N
             sub = ind2sub(j,Tuple(length.(grid)))
 
@@ -3442,7 +3460,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
                 sub = ind2sub(i,Tuple(length.(grid)))
 
@@ -3520,16 +3538,17 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
         d = compute_linearization(model,initial_guess)
-        k = -d[1:ns,2*nv+1:end]
-        RHO = -d[1:ns,1:ns]
+        GAMMA = d[1:ns,nv+1:nv+ns]
+        k   = -GAMMA\d[1:ns,2*nv+1:end]
+        RHO = -GAMMA\d[1:ns,1:ns]
     end
 
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods.")
         end
     end
 
@@ -3666,16 +3685,17 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
         d = compute_linearization(model,initial_guess)
-        k = -d[1:ns,2*nv+1:end]
-        RHO = -d[1:ns,1:ns]
+        GAMMA = d[1:ns,nv+1:nv+ns]
+        k   = -GAMMA\d[1:ns,2*nv+1:end]
+        RHO = -GAMMA\d[1:ns,1:ns]
     end
 
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via Smolyak methods")
+            error("Models with correlated shocks cannot yet be solved via Smolyak methods.")
         end
     end
 
@@ -3709,7 +3729,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
         variables[i] = zeros(Tuple(length.(grid)))
     end
 
-    @sync @qthreads for t = 1:threads
+    @sync Threads.@threads for t = 1:threads
         for j = t:threads:N
             sub = ind2sub(j,Tuple(length.(grid)))
 
@@ -3737,7 +3757,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
                 sub = ind2sub(i,Tuple(length.(grid)))
 
@@ -3921,7 +3941,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,H
             weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
         end
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 init = Array{T}(undef,nv)
@@ -3989,14 +4009,15 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
     T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
-    k = -d[1:ns,2*nv+1:end]
-    RHO = -d[1:ns,1:ns]
+    GAMMA = d[1:ns,nv+1:nv+ns]
+    k   = -GAMMA\d[1:ns,2*nv+1:end]
+    RHO = -GAMMA\d[1:ns,1:ns]
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods")
+            error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods.")
         end
     end
 
@@ -4096,14 +4117,15 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
     T = typeof(scheme.ftol)
 
     d = compute_linearization(model,initial_guess)
-    k = -d[1:ns,2*nv+1:end]
-    RHO = -d[1:ns,1:ns]
+    GAMMA = d[1:ns,nv+1:nv+ns]
+    k   = -GAMMA\d[1:ns,2*nv+1:end]
+    RHO = -GAMMA\d[1:ns,1:ns]
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods")
+            error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods.")
         end
     end
 
@@ -4136,7 +4158,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 init = Array{T}(undef,nv)
@@ -4314,7 +4336,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
         variables[i] = zeros(N)
     end
 
-    @sync @qthreads for t = 1:threads
+    @sync Threads.@threads for t = 1:threads
         for j = t:threads:N
 
             dr = ss_eqm.g(grid[j,:])
@@ -4344,7 +4366,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
             weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
         end
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 init = Array{T}(undef,nv)
@@ -4417,16 +4439,17 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
         d = compute_linearization(model,initial_guess)
-        k = -d[1:ns,2*nv+1:end]
-        RHO = -d[1:ns,1:ns]
+        GAMMA = d[1:ns,nv+1:nv+ns]
+        k   = -GAMMA\d[1:ns,2*nv+1:end]
+        RHO = -GAMMA\d[1:ns,1:ns]
     end
 
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods")
+            error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods.")
         end
     end
 
@@ -4554,16 +4577,17 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
         d = compute_linearization(model,initial_guess)
-        k = -d[1:ns,2*nv+1:end]
-        RHO = -d[1:ns,1:ns]
+        GAMMA = d[1:ns,nv+1:nv+ns]
+        k   = -GAMMA\d[1:ns,2*nv+1:end]
+        RHO = -GAMMA\d[1:ns,1:ns]
     end
 
     if !isdiag(RHO .> sqrt(eps()))
-        error("This solver requires the shocks to be AR(1) processes")
+        error("This solver requires the shocks to be AR(1) processes.")
     end
     for i = 1:ns
         if sum(isless.(abs.(k[i,:]),sqrt(eps()))) != ns - 1 # Make sure there is only one shock per equation
-            error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods")
+            error("Models with correlated shocks cannot yet be solved via Hyperbolic cross methods.")
         end
     end
 
@@ -4590,7 +4614,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
         variables[i] = zeros(N)
     end
 
-    @sync @qthreads for t = 1:threads
+    @sync Threads.@threads for t = 1:threads
         for j = t:threads:N
 
             dr = ss_eqm.g(grid[j,:])
@@ -4621,7 +4645,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
             scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
         end
 
-        @sync @qthreads for t = 1:threads
+        @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
 
                 init = Array{T}(undef,nv)
@@ -4681,7 +4705,7 @@ function solve_model(model::REModel,scheme::PerturbationScheme)
         soln = solve_fourth_order(model, scheme)
         return soln
     else
-        error("The chosen order has not been implemented or the solution scheme conflicts with the solvers specified in the model file")
+        error("The chosen order has not been implemented or the solution scheme conflicts with the solvers specified in the model file.")
     end
 
 end
@@ -4690,15 +4714,15 @@ function solve_model(model::REModel,scheme::P) where {P<:ProjectionScheme}
 
     if model.solvers in ("Any", "Projection")
         if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
-            error("Stochastic model but deterministic SolutionScheme")
+            error("Stochastic model, but deterministic SolutionScheme.")
         elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
-            error("Deterministic model but stochastic SolutionScheme")
+            error("Deterministic model, but stochastic SolutionScheme.")
         end
 
         soln = solve_nonlinear(model,scheme)
         return soln
     else
-        error("The solution scheme conflicts with the solvers specified in the model file")
+        error("The solution scheme conflicts with the solvers specified in the model file.")
     end
 
 end
@@ -4707,13 +4731,13 @@ function solve_model(model::REModel,scheme::P,threads::S) where {P<:ProjectionSc
 
     if model.solvers in ("Any", "Projection")
         if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
-            error("Stochastic model but deterministic SolutionScheme")
+            error("Stochastic model, but deterministic SolutionScheme.")
         elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
-            error("Deterministic model but stochastic SolutionScheme")
+            error("Deterministic model, but stochastic SolutionScheme.")
         end
 
         if threads < 0
-            error("Number of threads cannot be negative")
+            error("Number of threads cannot be negative.")
         elseif threads == 0
             soln = solve_nonlinear(model,scheme)
             return soln
@@ -4722,7 +4746,7 @@ function solve_model(model::REModel,scheme::P,threads::S) where {P<:ProjectionSc
             return soln
         end
     else
-        error("The solution scheme conflicts with the solvers specified in the model file")
+        error("The solution scheme conflicts with the solvers specified in the model file.")
     end
 
 end
@@ -4731,15 +4755,15 @@ function solve_model(model::REModel,soln::ModelSolution,scheme::P) where {P<:Pro
 
     if model.solvers in ("Any", "Projection")
         if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
-            error("Stochastic model but deterministic SolutionScheme")
+            error("Stochastic model, but deterministic SolutionScheme.")
         elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
-            error("Deterministic model but stochastic SolutionScheme")
+            error("Deterministic model, but stochastic SolutionScheme.")
         end
 
         soln = solve_nonlinear(model,soln,scheme)
         return soln
     else
-        error("The solution scheme conflicts with the solvers specified in the model file")
+        error("The solution scheme conflicts with the solvers specified in the model file.")
     end
 
 end
@@ -4748,13 +4772,13 @@ function solve_model(model::REModel,soln::ModelSolution,scheme::P,threads::S) wh
 
     if model.solvers in ("Any", "Projection")
         if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
-            error("Stochastic model but deterministic SolutionScheme")
+            error("Stochastic model, but deterministic SolutionScheme.")
         elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
-            error("Deterministic model but stochastic SolutionScheme")
+            error("Deterministic model, but stochastic SolutionScheme.")
         end
 
         if threads < 0
-            error("Number of threads cannot be negative")
+            error("Number of threads cannot be negative.")
         elseif threads == 0
             soln = solve_nonlinear(model,soln,scheme)
             return soln
@@ -4763,7 +4787,7 @@ function solve_model(model::REModel,soln::ModelSolution,scheme::P,threads::S) wh
             return soln
         end
     else
-        error("The solution scheme conflicts with the solvers specified in the model file")
+        error("The solution scheme conflicts with the solvers specified in the model file.")
     end
 
 end

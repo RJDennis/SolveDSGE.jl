@@ -14,6 +14,7 @@ function open_model_file(path::Q) where {Q<:AbstractString}
     close(model_file)
 
     # Remove lines or parts of lines that have been commented out.
+    # "The fat# hairy# cat." becomes "The fat cat."
 
     for i in eachindex(model_array)
         if occursin("#",model_array[i]) == true
@@ -33,7 +34,7 @@ function open_model_file(path::Q) where {Q<:AbstractString}
 
     # Remove blank lines
 
-    model_array = model_array[model_array.!=""]
+    model_array = model_array[model_array .!= ""]
 
     return model_array
 
@@ -53,7 +54,7 @@ function find_term(model_array::Array{Q,1},term::Q) where {Q<:AbstractString}
     elseif length(locations) == 0
         error("The $term-designation does not appear in the model file.")
     else
-        error("The $term-designation appears multiple times in the model file.")
+        error("The $term-designation appears multiple times in the model file, but should appear only once.")
     end
 
 end
@@ -69,7 +70,7 @@ Internal function; not exposed to users.
 """
 function find_end(model_array::Array{Q,1},startfrom::S) where {Q<:AbstractString,S<:Integer}
 
-    for end_location = startfrom:length(model_array)
+    for end_location in startfrom:length(model_array)
         if startswith(strip(model_array[end_location]),"end") == true
             return end_location
         end
@@ -166,7 +167,7 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q<:Ab
     parametersbegin = find_term(model_array,term) + 1 # Starts the line after the term is located
     parametersend = find_end(model_array,parametersbegin) - 1 # Ends the line before 'end' is located
     if parametersbegin > parametersend
-        error("The model file contains no $(term[1:end-1])")
+        error("The model file contains no $(term[1:end-1]).")
     end
 
     parameterblock = model_array[parametersbegin:parametersend]
@@ -195,7 +196,7 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q<:Ab
         if occursin("=",revised_parameterblock[i]) == false
             parameters[i] = revised_parameterblock[i]
             values[i] = "p[$unassigned_parameter_index]" # p is a reserved name
-            push!(unassigned_parameters,revised_parameterblock[i])
+            push!(unassigned_parameters,parameters[i])
             unassigned_parameter_index += 1
         else
             pair = strip.(split(revised_parameterblock[i],"="))
@@ -204,7 +205,7 @@ function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q<:Ab
         end
     end
 
-    parameter_order = sortperm(length.(parameters),rev = true)
+    parameter_order = sortperm(length.(parameters),rev = true) # sort parameter names from longest to shortest
     sorted_parameters = parameters[parameter_order]
     sorted_values = values[parameter_order]
 
@@ -222,7 +223,7 @@ function get_equations(model_array::Array{Q,1},term::Q) where {Q<:AbstractString
     equationsbegin = find_term(model_array,term) + 1 # Starts the line after the term is located
     equationsend = find_end(model_array,equationsbegin) - 1 # Ends the line before 'end' is located
     if equationsbegin > equationsend
-        error("The model file contains no $(term[1:end-1])")
+        error("The model file contains no $(term[1:end-1]).")
     end
 
     equation_block = model_array[equationsbegin:equationsend]
@@ -256,8 +257,8 @@ function get_equations(model_array::Array{Q,1},term::Q) where {Q<:AbstractString
         end
         if occursin("=",equations[i]) == false # Check that each equation contains an equals sign
             error("Equation line $i does not contain an '=' sign.")
-        elseif length(findall("(",equations[i])) != length(findall(")",equations[i]))
-            error("Equation line $i has unbalanced parentheses")
+        elseif length(findall("(",equations[i])) != length(findall(")",equations[i])) # Check that parentheses are balanced
+            error("Equation line $i has unbalanced parentheses.")
         end
     end
 
@@ -290,7 +291,7 @@ function get_solvers(model_array::Array{Q,1}, term::Q) where {Q<:AbstractString}
     elseif occursin("Any", model_array[solvers_line]) || occursin("any", model_array[solvers_line])
         return "Any"
     else
-        error("The specified solver is unknown")
+        error("The specified solver is unknown.")
     end
 end
 
@@ -302,8 +303,8 @@ Internal function; not exposed to users.
 function reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
 
     if isempty(shocks) == false # Case for stochastic models
-        reordered_equations, reordered_states, reordered_shocks = _reorder_equations(equations,shocks,states,jumps,parameters)
-        return reordered_equations, reordered_states, reordered_shocks
+        reordered_equations, reordered_states = _reorder_equations(equations,shocks,states,jumps,parameters)
+        return reordered_equations, reordered_states
     else # Case for deterministic models
         reordered_equations, reordered_states = _reorder_equations(equations,states,jumps,parameters)
         return reordered_equations, reordered_states, shocks
@@ -325,7 +326,7 @@ function _reorder_equations(equations::Array{Q,1},states::Array{Q,1},jumps::Arra
    
     junk_equations = copy(equations)
     states_left_in_eqns = copy(equations)
-    combined_names = [states; jumps; parameters; ["exp", "log"]]
+    combined_names = [states; jumps; parameters; ["exp", "log", "deriv"]]
     sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
    
     states_number = zeros(Int64,length(equations))
@@ -356,16 +357,17 @@ function _reorder_equations(equations::Array{Q,1},states::Array{Q,1},jumps::Arra
     states_number .= states_number[ind]
     jumps_number  .= jumps_number[ind]
 
-    # Now sort out the order of the states in the system
+    # Now sort out the order of the states in the system.
+    # This ordering would be a lot less complicated if VAR shocks were not allowed!
 
     states_that_have_been_ordered = Int64[]
-    for k in eachindex(states)
-        for j = 1:number_eqns_with_no_jumps
+    for k in 1:length(states) # First look at equations containing one state, then two states, etc.
+        for j in 1:number_eqns_with_no_jumps # j tells us which equation we are looking at
             if states_number[j] == k
-                for i in eachindex(states)
-                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i && (i in states_that_have_been_ordered) == false
-                        reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i]
-                        push!(states_that_have_been_ordered,j)
+                for i in eachindex(reordered_states) # i tells us the index of the state we are looking at
+                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i == true && (i in states_that_have_been_ordered) == false
+                        reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i] # State i is now associated with equation j.
+                        push!(states_that_have_been_ordered,i)
                         break
                     end
                 end
@@ -386,16 +388,17 @@ function _reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Arr
 
     reordered_equations = copy(equations)
     reordered_states = copy(states)
-    reordered_shocks = copy(shocks)
 
-    # Construct summary information about each equation
+    ns = length(shocks)
+
+    # 1. Construct summary information about each equation
 
     junk_equations = copy(equations)
     states_left_in_eqns = copy(equations)
-    combined_names = [states; jumps; parameters; shocks; ["exp", "log"]]
+    combined_names = [states; jumps; parameters; shocks; ["exp", "log", "deriv"]]
     sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
 
-    shocks_number = zeros(Int64,length(equations))
+    shocks_info = zeros(Int64,length(equations),ns)
     states_number = zeros(Int64,length(equations))
     jumps_number  = zeros(Int64,length(equations))
 
@@ -408,7 +411,11 @@ function _reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Arr
                     jumps_number[i] += 1
                     states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
                 elseif j in shocks
-                    shocks_number[i] += 1
+                    for k in eachindex(shocks)
+                        if shocks[k] == j
+                            shocks_info[i,k] = 1
+                        end
+                    end
                     states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
                 else
                     states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
@@ -417,57 +424,65 @@ function _reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Arr
             end
         end
     end
+    shocks_number = sum(shocks_info,dims = 2)[:]
     number_eqns_with_shocks = sum(shocks_number .!= 0)
 
-    # Put the equations with no jumps in them at the top
+    # 2. Check that each of the shocks is in at least one equation
 
-    ind = sortperm(jumps_number)
+    if sum(sum(shocks_info,dims=1) .!=0) != ns
+        error("Not all shocks appear in the model.")
+    end
+
+    # 3. Put the equations with shocks at the top of the system
+
+    ind = sortperm(shocks_number,rev=true)
     reordered_equations .= reordered_equations[ind]
     states_left_in_eqns .= states_left_in_eqns[ind]
     states_number .= states_number[ind]
     jumps_number  .= jumps_number[ind]
+    shocks_info   .= shocks_info[ind,:]
     shocks_number .= shocks_number[ind]
 
-    # Put the shock equations with the fewest shocks at the top
+    # 4. Reorder the stochastic equations so that the assignment matrix has 1's along its leading diagonal.
+    #    Construct the penalty (cost) matrix for the Hungarian method.
 
-    ind = sortperm(shocks_number[1:number_eqns_with_shocks])
-    reordered_equations[1:number_eqns_with_shocks] .= reordered_equations[ind]
-    states_left_in_eqns[1:number_eqns_with_shocks] .= states_left_in_eqns[ind]
-    shocks_number[1:number_eqns_with_shocks] .= shocks_number[ind]
-    states_number[1:number_eqns_with_shocks] .= states_number[ind]
-    jumps_number[1:number_eqns_with_shocks] .= jumps_number[ind]
-
-    # Order the shock processes to try to make shock's variance-covariance matrix have non-zero diagonals.
-
-    shocks_that_have_been_ordered = Int64[]
-    for k in eachindex(shocks)
-        for j = 1:number_eqns_with_shocks
-            if shocks_number[j] == k
-                for i in eachindex(shocks)
-                    if occursin(reordered_shocks[i],reordered_equations[j]) == true && j == i && (i in shocks_that_have_been_ordered) == false
-                        push!(shocks_that_have_been_ordered,i)
-                        break
-                    elseif occursin(reordered_shocks[i],reordered_equations[j]) == true && j != i && (i in shocks_that_have_been_ordered) == false
-                        reordered_shocks[i], reordered_shocks[j]       = reordered_shocks[j], reordered_shocks[i]
-                        states_left_in_eqns[i], states_left_in_eqns[j] = states_left_in_eqns[j], states_left_in_eqns[i]
-                        push!(shocks_that_have_been_ordered,i)
-                        break
-                    end
-                end
+    s = shocks_info[1:number_eqns_with_shocks,:]
+    penalty = ones(number_eqns_with_shocks,ns)
+    for i in 1:number_eqns_with_shocks # Take row i
+        for j in eachindex(shocks) # and suppose it was placed in row j
+            if s[i,j] == 1
+                penalty[i,j] = 0.0
             end
         end
     end
 
-    # Now sort out the order of the states in the system
+    assignment, cost = hungarian(penalty)
+
+    new_assignment = zeros(Int,number_eqns_with_shocks)
+    offset = 1
+    for i in 1:number_eqns_with_shocks
+        if assignment[i] != 0
+           new_assignment[i] = assignment[i]
+        else
+            new_assignment[i] = ns+offset
+            offset += 1
+        end
+    end
+
+    reordered_equations[new_assignment] .= reordered_equations[1:number_eqns_with_shocks]
+    states_left_in_eqns[new_assignment] .= states_left_in_eqns[1:number_eqns_with_shocks]
+    states_number[new_assignment]       .= states_number[1:number_eqns_with_shocks]
+
+    # 5. Sort out the order of the states in the system
 
     states_that_have_been_ordered = Int64[]
-    for k in eachindex(states)
-        for j = 1:number_eqns_with_shocks
+    for k in 1:length(states) # First look at equations containing one state, then two states, etc.
+        for j in 1:number_eqns_with_shocks # j tells us which equation we are looking at
             if states_number[j] == k
-                for i in eachindex(states)
-                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i && (i in states_that_have_been_ordered) == false
-                        reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i]
-                        push!(states_that_have_been_ordered,j)
+                for i in eachindex(reordered_states) # i tells us the index of the state we are looking at
+                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i == true && (i in states_that_have_been_ordered) == false
+                        reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i] # State i is now associated with equation j.
+                        push!(states_that_have_been_ordered,i)
                         break
                     end
                 end
@@ -475,7 +490,7 @@ function _reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Arr
         end
     end
 
-    return reordered_equations, reordered_states, reordered_shocks
+    return reordered_equations, reordered_states
 
 end
 
@@ -515,7 +530,6 @@ function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,
     else
         new_states = String[]
         new_eqns   = String[]
-        #for j in eachindex(lag_variables)
         for j in var_index
             flag = false
             for i in eachindex(equations)
@@ -549,13 +563,13 @@ Internal function; not exposed to users.
 """
 function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractString}
 
-    states = get_variables(model_array,"states:")
-    jumps = get_variables(model_array,"jumps:")
-    shocks = get_variables(model_array,"shocks:")
+    states    = get_variables(model_array,"states:")
+    jumps     = get_variables(model_array,"jumps:")
+    shocks    = get_variables(model_array,"shocks:")
     variables = combine_states_and_jumps(states,jumps)
     equations = get_equations(model_array,"equations:")
     (parameters, parametervalues, unassigned_parameters) = get_parameters_and_values(model_array,"parameters:")
-    solvers = get_solvers(model_array,"solvers:")
+    solvers   = get_solvers(model_array,"solvers:")
 
     for i in [variables; parameters]
         if i in variables
@@ -563,7 +577,7 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractStri
                 error("Variable $i is not in any equation.")
             end
         else
-            if sum(occursin.(i,equations)) + sum(occursin.(i,parametervalues)) == 0
+            if sum(occursin.(i,equations)) + sum(occursin.(i,parametervalues)) == 0 # Recall that at this stage parametervalues can be convolutions of parameters
                 println("Warning: parameter $i is not in any equation.")
             end
         end
@@ -574,14 +588,14 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractStri
         error("Some parameters, variables, or shocks have the same name.")
     end
 
-    reserved_names = ("deriv", "exp", "log", "x", "p", ":", ";")
+    reserved_names = ("deriv", "exp", "log", "x", "p", ":", ";", "&")
     for name in reserved_names
         if name in combined_names
-            error("$name cannot be the name for a variable, a shock, or a parameter.")
+            error("$name is reserved and cannot be the name of a variable, a shock, or a parameter.")
         end
     end
 
-    reordered_equations, states, shocks = reorder_equations(equations,shocks,states,jumps,parameters)
+    reordered_equations, states = reorder_equations(equations,shocks,states,jumps,parameters)
     reorganized_equations, states, variables = deal_with_lags(reordered_equations,states,jumps)
 
     re_model_primatives = REModelPrimatives(states,jumps,shocks,variables,parameters,parametervalues,reorganized_equations,unassigned_parameters,solvers)
@@ -598,43 +612,34 @@ Internal function; not exposed to users.
 """
 function repackage_equations(model::DSGEModelPrimatives)
 
-    equations = model.equations
-    shocks = model.shocks
-    variables = model.variables
-    parameters = model.parameters
+    equations       = model.equations
+    shocks          = model.shocks
+    variables       = model.variables
+    parameters      = model.parameters
     parametervalues = model.parametervalues
 
     repackaged_equations       = copy(equations)
     repackaged_parametervalues = copy(parametervalues)
 
     if length(shocks) != 0
-        combined_names = [variables; parameters; shocks]
+        combined_names = [variables; parameters; shocks; ["deriv", "exp", "log"]]
     else
-        combined_names = [variables; parameters]
+        combined_names = [variables; parameters; ["deriv", "exp", "log"]]
     end
 
     sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
-    sorted_parameters     = parameters[sortperm(length.(parameters),rev = true)]
+    sorted_parameters     = parameters[sortperm(length.(parameters),rev = true)] # not needed --- parameters have already been sorted by length?
 
-    #= First we go through every equation and replace exp with : and log with ;.  
-       This is to guard them during variables and parameter substitution. =#
-
-    for i in eachindex(repackaged_equations)
-        if occursin("exp",equations[i]) == true
-            repackaged_equations[i] = replace(repackaged_equations[i],"exp" => ":")
-        elseif occursin("log",equations[i]) == true
-            repackaged_equations[i] = replace(repackaged_equations[i],"log" => ";")
-        end
-    end
-
-    #= Next we go through every parameter expression and replace exp with : and log with ;.  
-    This is to guard them during variables and parameter substitution. =#
+    #= First we go through every parameter expression and replace exp with : and log with ;.  
+       This is to guard them during variable and parameter substitution. =#
 
     for i in eachindex(parametervalues)
         if occursin("exp",parametervalues[i]) == true
             repackaged_parametervalues[i] = replace(repackaged_parametervalues[i],"exp" => ":")
         elseif occursin("log",parametervalues[i]) == true
             repackaged_parametervalues[i] = replace(repackaged_parametervalues[i],"log" => ";")
+        elseif occursin("deriv",parametervalues[i]) == true
+            repackaged_parametervalues[i] = replace(repackaged_parametervalues[i],"deriv" => "&")
         end
     end
 
@@ -658,12 +663,13 @@ function repackage_equations(model::DSGEModelPrimatives)
             break
         end
         if loops > length(parameters)-1
-            error("There is a circularity in the parameter definitions")
+            error("There is a circularity in the parameter definitions.")
         end
     end
 
     #= Now we go through every equation and replace future variables, variables, and
-       shocks with a numbered element of a vector, "x".  We also replace parameter names 
+       shocks with a numbered element of a vector, "x".  We guard against overwriting 
+       "deriv", "exp", and "log".  We also replace parameter names 
        with parameter values. =#
 
     for j in sorted_combined_names
@@ -684,10 +690,22 @@ function repackage_equations(model::DSGEModelPrimatives)
             for i in eachindex(repackaged_equations)
                 repackaged_equations[i] = replace(repackaged_equations[i],j => "x[$(2*length(variables) + shock_index)]")
             end
+        elseif j == "deriv"
+            for i in eachindex(repackaged_equations)
+                repackaged_equations[i] = replace(repackaged_equations[i],j => "&")
+            end
+        elseif j == "exp"
+            for i in eachindex(repackaged_equations)
+                repackaged_equations[i] = replace(repackaged_equations[i],j => ":")
+            end
+        elseif j == "log"
+            for i in eachindex(repackaged_equations)
+                repackaged_equations[i] = replace(repackaged_equations[i],j => ";")
+            end
         end
     end
 
-    #= Finally, go back through every equation and restore exp and log where necessary =#
+    #= Finally, go back through every equation and restore exp, log, and deriv where necessary =#
 
     for i in eachindex(repackaged_equations)
         if occursin(":",repackaged_equations[i]) == true
@@ -695,6 +713,9 @@ function repackage_equations(model::DSGEModelPrimatives)
         end
         if occursin(";",repackaged_equations[i]) == true
             repackaged_equations[i] = replace(repackaged_equations[i],";" => "log")
+        end
+        if occursin("&",repackaged_equations[i]) == true
+            repackaged_equations[i] = replace(repackaged_equations[i],"&" => "deriv")
         end
     end
 
@@ -711,48 +732,39 @@ Internal function; not exposed to users.
 """
 function create_steady_state_equations(model::DSGEModelPrimatives)
 
-    equations = model.equations
-    variables = model.variables
-    shocks = model.shocks
-    parameters = model.parameters
+    equations       = model.equations
+    variables       = model.variables
+    shocks          = model.shocks
+    parameters      = model.parameters
     parametervalues = model.parametervalues
 
     steady_state_equations       = copy(equations)
     steady_state_parametervalues = copy(parametervalues)
 
     if length(shocks) != 0
-        combined_names = [variables; parameters; shocks]
+        combined_names = [variables; parameters; shocks; ["deriv", "exp", "log"]]
     else
-        combined_names = [variables; parameters]
+        combined_names = [variables; parameters; ["deriv", "exp", "log"]]
     end
 
     sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
     sorted_parameters     = parameters[sortperm(length.(parameters),rev = true)]
 
-    #= First we go through every equation and replace exp with : and log with ;.  
-    This is to guard them during variables and parameter substitution. =#
-
-    for i in eachindex(steady_state_equations)
-        if occursin("exp",equations[i]) == true
-            steady_state_equations[i] = replace(steady_state_equations[i],"exp" => ":")
-        elseif occursin("log",steady_state_equations[i]) == true
-            steady_state_equations[i] = replace(steady_state_equations[i],"log" => ";")
-        end
-    end
-
-    #= Next we go through every parameter expression and replace exp with : and log with ;.  
-    This is to guard them during variables and parameter substitution. =#
+    #= First we go through every parameter expression and replace exp with :, log with ;, and deriv with &.  
+       This is to guard them during variables and parameter substitution. =#
 
     for i in eachindex(parametervalues)
         if occursin("exp",parametervalues[i]) == true
             steady_state_parametervalues[i] = replace(steady_state_parametervalues[i],"exp" => ":")
         elseif occursin("log",parametervalues[i]) == true
             steady_state_parametervalues[i] = replace(steady_state_parametervalues[i],"log" => ";")
+        elseif occursin("deriv",parametervalues[i]) == true
+            steady_state_parametervalues[i] = replace(steady_state_parametervalues[i],"deriv" => "&")
         end
     end
 
     #= Now we take care of the fact that some model parameters may be functions of deeper
-    behavioral parameters =#
+       behavioral parameters =#
 
     loops = 0 # Counts the number of loops over the parameters
     while true
@@ -771,13 +783,13 @@ function create_steady_state_equations(model::DSGEModelPrimatives)
             break
         end
         if loops > length(parameters)-1
-            error("There is a circularity in the parameter definitions")
+            error("There is a circularity in the parameter definitions.")
         end
     end
 
     # Now we go through every equation and replace future variables, variables, and
-    # shocks with a numbered element of a vector, "x".  We also replace parameter
-    # names with parameter values
+    # shocks with a numbered element of a vector, "x".  We guard against overwriting 
+    # "deriv", "exp" and "log".  We also replace parameter names with parameter values.
 
     for j in sorted_combined_names
         if j in variables
@@ -798,10 +810,22 @@ function create_steady_state_equations(model::DSGEModelPrimatives)
             for i in eachindex(equations)
                 steady_state_equations[i] = replace(steady_state_equations[i],j => 0.0)
             end
+        elseif j == "deriv"
+            for i in eachindex(steady_state_equations)
+                steady_state_equations[i] = replace(steady_state_equations[i],j => "&")
+            end
+        elseif j == "exp"
+            for i in eachindex(steady_state_equations)
+                steady_state_equations[i] = replace(steady_state_equations[i],j => ":")
+            end
+        elseif j == "log"
+            for i in eachindex(steady_state_equations)
+                steady_state_equations[i] = replace(steady_state_equations[i],j => ";")
+            end
         end
     end
 
-    #= Finally, go back through every equation and restore exp and log where necessary =#
+    #= Finally, go back through every equation and restore exp, log, and deriv where necessary =#
 
     for i in eachindex(steady_state_equations)
         if occursin(":",steady_state_equations[i]) == true
@@ -809,6 +833,9 @@ function create_steady_state_equations(model::DSGEModelPrimatives)
         end
         if occursin(";",steady_state_equations[i]) == true
             steady_state_equations[i] = replace(steady_state_equations[i],";" => "log")
+        end
+        if occursin("&",steady_state_equations[i]) == true
+            steady_state_equations[i] = replace(steady_state_equations[i],"&" => "deriv")
         end
     end
 
@@ -922,8 +949,6 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
     number_variables = length(model.variables)
     number_equations = length(model.equations)
 
-    #variables = model.variables
-    #variables = sort(Dict(model.variables[i] => i for i = 1:number_variables), byvalue = :true)
     variables = OrderedDict(model.variables[i] => i for i = 1:number_variables)
 
     # Build up the string containing the processed model information that gets saved
@@ -1124,7 +1149,7 @@ function process_re_model(model_array::Array{Q,1},path::Q) where {Q<:AbstractStr
     create_processed_model_file(re_model_primatives,path)
 
     println("The model's variables are now in this order: ",re_model_primatives.variables)
-    println("The model's shocks are now in this order:    ",re_model_primatives.shocks)
+    println("The model's shocks are in this order:        ",re_model_primatives.shocks)
     if length(re_model_primatives.unassigned_parameters) != 0
         println("The following parameters do not have values assigned: $(re_model_primatives.unassigned_parameters)")
     end
