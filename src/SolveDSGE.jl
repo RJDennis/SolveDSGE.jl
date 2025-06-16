@@ -9,10 +9,9 @@ using ChebyshevApprox
 using SmolyakApprox
 using PiecewiseLinearApprox
 using HyperbolicCrossApprox
-using ThreadPools
-using ThreadsX
 using NLboxsolve
 using OrderedCollections
+using Hungarian
 
 include("structures.jl")
 include("parser_functions.jl")

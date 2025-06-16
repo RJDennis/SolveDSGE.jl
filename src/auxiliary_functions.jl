@@ -70,7 +70,7 @@ function kron_prod_times_vector(a::AbstractArray{T,2},b::AbstractArray{T,2},v::A
     n5 = length(v)
 
     if n5 != n2*n4
-        error("a, b, and v do not have the correct sizes")
+        error("a, b, and v do not have the correct sizes.")
     end
 
     p = vec(b*reshape(v,n4,n2)*a')
@@ -104,7 +104,7 @@ function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},v::A
     (n5, n6) = size(v)
 
     if n5 != n2*n4
-        error("a, b, and v do not have the correct sizes")
+        error("a, b, and v do not have the correct sizes.")
     end
 
     p = zeros(n1*n3,n6)
@@ -142,7 +142,7 @@ function kron_prod_times_vector(a::AbstractArray{T,2},b::AbstractArray{T,2},c::A
     n7 = length(v)
 
     if n7 != n2* n4*n6
-        error("a, b, c, and v do not have the correct sizes")
+        error("a, b, c, and v do not have the correct sizes.")
     end
 
     v_tilda = reshape(v,n4*n6,n2)*a'
@@ -179,7 +179,7 @@ function kron_prod_times_matrix(a::AbstractArray{T,2},b::AbstractArray{T,2},c::A
     (n7, n8) = size(v)
 
     if n7 != n2*n4*n6
-        error("a, b, c, and v do not have the correct sizes")
+        error("a, b, c, and v do not have the correct sizes.")
     end
 
     p = zeros(n1*n3*n5,n8)
@@ -218,7 +218,7 @@ function kron_prod_times_matrix(q::Array{Array{T,2},1},v::Array{T,2}) where {T<:
     (vnr, vnc) = size(v)
 
     if vnr != prod(qnc)
-        error("Matrices are not conformable")
+        error("Matrices are not conformable.")
     end
 
     if length(q) == 2
@@ -664,7 +664,7 @@ Internal function; not exposed to users.
 function ind2sub(i::S,dims::Tuple{S,Vararg{S}}) where {S<:Integer}
 
     if i < 1 || i > prod(dims)
-        error("index is out of bounds.")
+        error("Index is out of bounds.")
     end
 
     subs = CartesianIndices(dims)[i]
@@ -874,7 +874,7 @@ Internal function; not exposed to users.
 function compute_chebyshev_integrals(eps_nodes::Array{T,1},eps_weights::Array{T,1},nodes::Array{Array{T,1},1},order::Union{S,Array{S,1}},Ρ::Array{T,2},k::Array{T,2}) where {T<:AbstractFloat,S<:Integer}
 
     if !isdiag(Ρ .> sqrt(eps()))
-        error("The autoregression matrix for the shocks must be diagonal")
+        error("The autoregression matrix for the shocks must be diagonal.")
     end
 
     ns = size(k,2)
@@ -1001,7 +1001,7 @@ Internal function; not exposed to users.
 function smolyak_weight_scale_factors(eps_nodes,eps_weights,multi_index,nx,grid,RHO,sigma)
 
     unique_multi_index = sort(unique(multi_index))
-    unique_orders = SmolyakApprox.m_i.(unique_multi_index) .- 1
+    unique_orders = SmolyakApprox.m_i(unique_multi_index) .- 1
 
     # Here we construct the base integrals
 

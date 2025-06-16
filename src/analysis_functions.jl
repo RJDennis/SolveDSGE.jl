@@ -5,7 +5,7 @@ function decision_rule(soln::R) where {R<:Union{FirstOrderSolutionDet,FirstOrder
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
 
         y = soln.gbar + soln.gx*(state - soln.hbar)
@@ -23,7 +23,7 @@ function decision_rule(soln::R) where {R<:SecondOrderSolutionDet}
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         nx = length(soln.hbar)
         ny = length(soln.gbar)
@@ -47,7 +47,7 @@ function decision_rule(soln::R) where {R<:SecondOrderSolutionStoch}
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         nx = length(soln.hbar)
         ny = length(soln.gbar)
@@ -71,7 +71,7 @@ function decision_rule(soln::R) where {R<:ThirdOrderSolutionDet}
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         nx = length(soln.hbar)
         ny = length(soln.gbar)
@@ -95,7 +95,7 @@ function decision_rule(soln::R) where {R<:ThirdOrderSolutionStoch}
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         nx = length(soln.hbar)
         ny = length(soln.gbar)
@@ -119,7 +119,7 @@ function decision_rule(soln::R) where {R<:FourthOrderSolutionDet}
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         nx = length(soln.hbar)
         ny = length(soln.gbar)
@@ -143,7 +143,7 @@ function decision_rule(soln::R) where {R<:FourthOrderSolutionStoch}
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         nx = length(soln.hbar)
         ny = length(soln.gbar)
@@ -188,7 +188,7 @@ function decision_rule(soln::R) where {R<:Union{ChebyshevSolutionDet,ChebyshevSo
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
 
         y = zeros(ny)
@@ -223,7 +223,7 @@ function decision_rule(soln::R) where {R<:Union{SmolyakSolutionDet,SmolyakSoluti
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
 
         y    = zeros(ny)
@@ -257,7 +257,7 @@ function decision_rule(soln::R) where {R<:Union{HyperbolicCrossSolutionDet,Hyper
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
 
         y    = zeros(ny)
@@ -280,7 +280,7 @@ function decision_rule(soln::R) where {R<:Union{PiecewiseLinearSolutionDet,Piece
     function create_decision_rule(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.nodes)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         nx = length(soln.nodes)
         nv = length(soln.variables)
@@ -305,7 +305,7 @@ function state_transition(soln::R) where {R<:FirstOrderSolutionDet}
     function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
 
         x_update = soln.hbar + soln.hx*(state - soln.hbar)
@@ -323,11 +323,11 @@ function state_transition(soln::R) where {R<:FirstOrderSolutionStoch}
     function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
 
         if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
+            error("Shocks vector has incorrect size.")
         end
 
         x_update = soln.hbar + soln.hx*(state - soln.hbar) + soln.k*shocks
@@ -345,7 +345,7 @@ function state_transition(soln::R) where {R<:SecondOrderSolutionDet}
     function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         nx = length(soln.hbar)
 
@@ -368,10 +368,10 @@ function state_transition(soln::R) where {R<:SecondOrderSolutionStoch}
     function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
+            error("Shocks vector has incorrect size.")
         end
         nx = length(soln.hbar)
 
@@ -394,7 +394,7 @@ function state_transition(soln::R) where {R<:ThirdOrderSolutionDet}
     function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         nx = length(soln.hbar)
 
@@ -417,10 +417,10 @@ function state_transition(soln::R) where {R<:ThirdOrderSolutionStoch}
     function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
+            error("Shocks vector has incorrect size.")
         end
         nx = length(soln.hbar)
 
@@ -443,7 +443,7 @@ function state_transition(soln::R) where {R<:FourthOrderSolutionDet}
     function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         nx = length(soln.hbar)
 
@@ -466,10 +466,10 @@ function state_transition(soln::R) where {R<:FourthOrderSolutionStoch}
     function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != length(soln.hbar)
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
+            error("Shocks vector has incorrect size.")
         end
         nx = length(soln.hbar)
 
@@ -511,7 +511,7 @@ function state_transition(soln::R) where {R<:ChebyshevSolutionDet}
     function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
 
         x_update = zeros(nx)
@@ -553,10 +553,10 @@ function state_transition(soln::R) where {R<:ChebyshevSolutionStoch}
     function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
+            error("Shocks vector has incorrect size.")
         end
 
         x_update = zeros(nx)
@@ -590,7 +590,7 @@ function state_transition(soln::R) where {R<:SmolyakSolutionDet}
     function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
 
         x_update = zeros(nx)
@@ -625,10 +625,10 @@ function state_transition(soln::R) where {R<:SmolyakSolutionStoch}
     function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
+            error("Shocks vector has incorrect size.")
         end
 
         x_update = zeros(nx)
@@ -663,7 +663,7 @@ function state_transition(soln::R) where {R<:HyperbolicCrossSolutionDet}
     function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
 
         x_update = zeros(nx)
@@ -698,10 +698,10 @@ function state_transition(soln::R) where {R<:HyperbolicCrossSolutionStoch}
     function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
+            error("Shocks vector has incorrect size.")
         end
 
         x_update = zeros(nx)
@@ -727,7 +727,7 @@ function state_transition(soln::R) where {R<:PiecewiseLinearSolutionDet}
     function create_state_transition(state::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
 
         x_update = zeros(nx)
@@ -752,10 +752,10 @@ function state_transition(soln::R) where {R<:PiecewiseLinearSolutionStoch}
     function create_state_transition(state::AbstractArray{T,1},shocks::AbstractArray{T,1}) where {T<:AbstractFloat}
 
         if length(state) != nx
-            error("state vector has incorrect size")
+            error("State vector has incorrect size.")
         end
         if length(shocks) != size(soln.k,2)
-            error("shocks vector has incorrect size")
+            error("Shocks vector has incorrect size.")
         end
 
         x_update = zeros(nx)
@@ -1030,7 +1030,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Fir
     ny = length(soln.gbar)
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     simulated_states_f = Array{T,2}(undef,nx,sim_length + 1)
@@ -1055,7 +1055,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S; seed = 123456
     ns = size(soln.sigma,2)
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     simulated_states_f = Array{T,2}(undef,nx,sim_length + 1)
@@ -1077,7 +1077,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Sec
     ny = length(soln.gbar)
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     hxx = (1/2)*soln.hxx
@@ -1111,7 +1111,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S; seed = 123456
     ns = size(soln.sigma,2)
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     hss = (1/2)*soln.hss
@@ -1145,7 +1145,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Thi
     ny = length(soln.gbar)
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     hxx  = (1/2)*soln.hxx
@@ -1165,8 +1165,8 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Thi
     @views for i = 2:sim_length+1
         simulated_states_f[:,i]  = soln.hx*simulated_states_f[:,i-1]
         simulated_states_s[:,i]  = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
-        simulated_states_t[:,i]  = soln.hx*simulated_states_t[:,i-1] + hxx*2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssx*simulated_states_f[:,i-1]
-        simulated_jumps[:,i-1]   = soln.gx*(simulated_states_f[:,i-1] + simulated_states_s[:,i-1] + simulated_states_t[:,i-1]) + gxx*(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_pos_s[:,i-1])) + gxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + gssx*simulated_states_f[:,i-1]
+        simulated_states_t[:,i]  = soln.hx*simulated_states_t[:,i-1] + hxx*2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
+        simulated_jumps[:,i-1]   = soln.gx*(simulated_states_f[:,i-1] + simulated_states_s[:,i-1] + simulated_states_t[:,i-1]) + gxx*(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1])) + gxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
     end
 
     simulated_states = simulated_states_f + simulated_states_s + simulated_states_t
@@ -1184,7 +1184,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S; seed = 123456
     ns = size(soln.sigma,2)
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     hxx = (1/2)*soln.hxx
@@ -1226,7 +1226,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Fou
     ny = length(soln.gbar)
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     hxx   = (1/2)*soln.hxx
@@ -1250,13 +1250,12 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Fou
     @views for i = 2:sim_length+1
         simulated_states_f[:,i]   = soln.hx*simulated_states_f[:,i-1]
         simulated_states_s[:,i]   = soln.hx*simulated_states_s[:,i-1] + hxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
-        simulated_states_t[:,i]   = soln.hx*simulated_states_t[:,i-1] + hxx*2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssx*simulated_states_f[:,i-1]
-        simulated_states_fo[:,i]  = soln.hx*simulated_states_fo[:,i-1] + hxx*(2*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + kron(simulated_states_s[:,i-1],simulated_states_s[:,i-1])) + hxxx*3*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1]) + hssx*simulated_states_f[:,i-1] + hxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + hssxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
-        simulated_jumps[:,i-1] = soln.gx*(simulated_states_f[:,i-1] + simulated_states_s[:,i-1] + simulated_states_t[:,i-1] + simulated_states_fo[:,i-1]) + gxx*(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + kron(simulated_states_s[:,i-1],simulated_states_s[:,i-1])) + gxxx*(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + 3*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1])) + gssx*simulated_states_f[:,i-1] + gxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + gssxx*kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1])
+        simulated_states_t[:,i]   = soln.hx*simulated_states_t[:,i-1] + hxx*2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + hxxx*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
+        simulated_states_fo[:,i]  = soln.hx*simulated_states_fo[:,i-1] + hxx*(2*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + kron(simulated_states_s[:,i-1],simulated_states_s[:,i-1])) + hxxx*3*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1]) + hxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
+        simulated_jumps[:,i-1]    = soln.gx*(simulated_states_f[:,i-1] + simulated_states_s[:,i-1] + simulated_states_t[:,i-1] + simulated_states_fo[:,i-1]) + gxx*(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_s[:,i-1]) + 2*kron(simulated_states_f[:,i-1],simulated_states_t[:,i-1]) + kron(simulated_states_s[:,i-1],simulated_states_s[:,i-1])) + gxxx*(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]) + 3*kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_s[:,i-1])) + gxxxx*kron(kron(kron(simulated_states_f[:,i-1],simulated_states_f[:,i-1]),simulated_states_f[:,i-1]),simulated_states_f[:,i-1])
     end
 
     simulated_states = simulated_states_f + simulated_states_s + simulated_states_t + simulated_states_fo
-    simulated_jumps  = simulated_jumps_f + simulated_jumps_s + simulated_jumps_t + simulated_jumps_fo
 
     return [simulated_states[:,1:sim_length] .+ soln.hbar; simulated_jumps[:,1:end] .+ soln.gbar]
 
@@ -1271,7 +1270,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S; seed = 123456
     ns = size(soln.sigma,2)
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     hxx   = (1/2)*soln.hxx
@@ -1323,7 +1322,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:Pro
     ny = nv - nx
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     simulated_states = Array{T,2}(undef,nx,sim_length + 1)
@@ -1348,7 +1347,7 @@ function simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::Array{T,1
     ny = nv - nx
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     simulated_states = Array{T,2}(undef,nx,sim_length + 1)
@@ -1376,7 +1375,7 @@ function simulate(soln::R,initial_state::Array{T,1},sim_length::S; seed = 123456
     ny = nv - nx
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     simulated_states = Array{T,2}(undef,nx,sim_length + 1)
@@ -1404,7 +1403,7 @@ function simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::Array{T,1
     ny = nv - nx
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     simulated_states = Array{T,2}(undef,nx,sim_length + 1)
@@ -1464,7 +1463,7 @@ function ensemble_simulate(soln::R,initial_state::Array{T,1},aggregate_shocks::A
     ny = nv - nx
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     sim_results = Array{Array{T,2},1}(undef,sim_reps)
@@ -1514,7 +1513,7 @@ function ensemble_simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::
     ny = nv - nx
 
     if length(initial_state) != nx
-        error("The number of inital values for the states must equal the number of states")
+        error("The number of inital values for the states must equal the number of states.")
     end
 
     sim_results = Array{Array{T,2},1}(undef,sim_reps)
@@ -2883,11 +2882,11 @@ end
 function approximate_density(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:Real,S<:Integer}
 
     if a >= b
-        error("'a' must be less than 'b'")
+        error("'a' must be less than 'b'.")
     end
 
     if point < a || point > b
-        error("'point' must be between 'a' and 'b'")
+        error("'point' must be between 'a' and 'b'.")
     end
 
     n = 0
@@ -2915,7 +2914,7 @@ end
 function approximate_density(sample::Array{T,1},order::S,a::T,b::T) where {T<:Real,S<:Integer}
 
     if a >= b
-        error("'a' must be less than 'b'")
+        error("'a' must be less than 'b'.")
     end
 
     n = 0
@@ -2948,11 +2947,11 @@ end
 function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:Real,S<:Integer}
 
     if a >= b
-        error("'a' must be less than 'b'")
+        error("'a' must be less than 'b'.")
     end
 
     if point < a || point > b
-        error("'point' must be between 'a' and 'b'")
+        error("'point' must be between 'a' and 'b'.")
     end
 
     n = 0
@@ -2980,7 +2979,7 @@ end
 function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {T<:Real,S<:Integer}
 
     if a >= b
-        error("'a' must be less than 'b'")
+        error("'a' must be less than 'b'.")
     end
 
     n = 0
@@ -3065,7 +3064,7 @@ end
 function euler_errors(model::REModel,soln::R,domain::Union{Array{T,2},Array{T,1}},npoints::S,seed::S = 123456) where {S<:Integer,T<:AbstractFloat,R<:PerturbationSolutionDet}
 
     if model.solvers == "Perturbation"
-        error("The model hase been restricted to perturbation solvers only")
+        error("The model has been restricted to perturbation solvers only.")
     end
 
     nx = length(soln.hbar)
@@ -3092,7 +3091,7 @@ end
 function euler_errors(model::REModel,soln::R,domain::Union{Array{T,2},Array{T,1}},npoints::S,seed::S = 123456) where {S<:Integer,T<:AbstractFloat,R<:PerturbationSolutionStoch}
 
     if model.solvers == "Perturbation"
-        error("The model hase been restricted to perturbation solvers only")
+        error("The model has been restricted to perturbation solvers only.")
     end
 
     nx = length(soln.hbar)
@@ -3122,7 +3121,7 @@ end
 function euler_errors(model::REModel,soln::R,npoints::S,seed::S = 123456) where {S<:Integer,R<:ProjectionSolutionDet}
 
     if model.solvers == "Perturbation"
-        error("The model hase been restricted to perturbation solvers only")
+        error("The model has been restricted to perturbation solvers only.")
     end
 
     nx = size(soln.domain,2)
@@ -3151,7 +3150,7 @@ end
 function euler_errors(model::REModel,soln::R,npoints::S,seed::S = 123456) where {S<:Integer,R<:ProjectionSolutionStoch}
 
     if model.solvers == "Perturbation"
-        error("The model hase been restricted to perturbation solvers only")
+        error("The model has been restricted to perturbation solvers only.")
     end
 
     nx = size(soln.domain,2)

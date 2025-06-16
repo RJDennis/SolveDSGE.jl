@@ -11,7 +11,7 @@ Parent type for the primative or key components of a DSGEModel.
 abstract type DSGEModelPrimatives end
 
 """
-Struct containing the privatives for a rational expectations model.
+Struct containing the primatives for a rational expectations model.
 """
 struct REModelPrimatives{Q<:AbstractString} <: DSGEModelPrimatives
 
@@ -87,6 +87,7 @@ struct REModelPartial{S<:Integer,Q<:AbstractString} <: DSGEModel
 end
 
 ############### Introduce the solutionscheme structures #######################
+
 abstract type SolutionScheme end
 abstract type ProjectionScheme <: SolutionScheme end
 abstract type ProjectionSchemeDet <: ProjectionScheme end
