@@ -36,7 +36,7 @@ Example
 
 For the stochastic growth model, we can represent the model through the model file (model_sgm.txt, say):
 
-Example --- Stochastic growth model
+#= Example --- Stochastic growth model =#
 
 states:
 k, z
