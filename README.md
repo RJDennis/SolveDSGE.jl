@@ -36,55 +36,39 @@ Example
 
 For the stochastic growth model, we can represent the model through the model file (model_sgm.txt, say):
 
+```txt
 #= Example --- Stochastic growth model =#
 
 states:
-
 k, z
-
 end
 
 jumps:
-
 c, ce
-
 end
 
 shocks:
-
 ϵ
-
 end
 
 parameters:
-
 β = 0.99
-
 σ = 2.0
-
 δ = 0.015
-
 α = 0.30
-
 ρ = 0.95
-
 sd = 0.01
-
 end
 
 solvers: Any
 
 equations:
-
 k(+1) = (1.0 - δ)*k + exp(z)*k^α - c
-
 c^(-σ) = β*ce(+1)
-
 ce = c^(-σ)*(1.0 - δ + α*exp(z)*k^(α - 1.0))
-
 z(+1) = ρ*z + sd*ϵ
-
 end
+```
 
 Then the solution file that gets run to solve the model could be:
 
