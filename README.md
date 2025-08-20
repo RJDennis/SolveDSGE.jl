@@ -40,14 +40,17 @@ For the stochastic growth model, we can represent the model through the model fi
 
 states:
 k, z
+
 end
 
 jumps:
 c, ce
+
 end
 
 shocks:
 ϵ
+
 end
 
 parameters:
@@ -57,6 +60,7 @@ parameters:
 α = 0.30
 ρ = 0.95
 sd = 0.01
+
 end
 
 solvers: Any
