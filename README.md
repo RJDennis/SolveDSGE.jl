@@ -90,9 +90,10 @@ end
 
 #model_processed_path = "your_path_here\\model_sgm_processed.txt"
 
-include(model_processed_path)
+#include(model_processed_path)
 
-dsge_sgm = retrieve_processed_model()
+dsge_sgm = retrieve_processed_model(model_processed_path)
+#dsge_sgm = retrieve_processed_model()
 #dsge_sgm = create_model_structure() # Does the same as the retrieve_processed_model() function
 
 x = [0.0, 34.6, 2.4, 0.2]
@@ -112,29 +113,29 @@ soln_2o = solve_model(dsge_sgm,P2)
 soln_3o = solve_model(dsge_sgm,P3)
 soln_4o = solve_model(dsge_sgm,P4)
 
-C = ChebyshevSchemeStoch(ss,chebyshev_nodes,[21,21],9,3,[0.0960769 26.0; -0.0960769 18.0],tol,1e-6,maxiters,:newton)
+C = ChebyshevSchemeStoch(ss,chebyshev_nodes,[21,21],9,3,[0.15 42.5;-0.15 28.0],tol,1e-6,maxiters,:newton)
 #soln_nl_cheb  = solve_model(dsge_sgm,C)
 soln_nl_cheb = solve_model(dsge_sgm,soln_1o,C)
 
-S = SmolyakSchemeStoch(ss,chebyshev_gauss_lobatto,9,3,[0.0960769 26.0; -0.0960769 18.0],tol,1e-6,maxiters,:newton)
+S = SmolyakSchemeStoch(ss,chebyshev_gauss_lobatto,9,3,[0.15 42.5;-0.15 28.0],tol,1e-6,maxiters,:newton)
 #soln_nl_smol = solve_model(dsge_sgm,S)
 soln_nl_smol = solve_model(dsge_sgm,soln_2o,S)
 
-H = HyperbolicCrossSchemeStoch(ss,chebyshev_nodes,11,5,9,[0.0960769 26.0; -0.0960769 18.0],tol,1e-6,maxiters,:newton)
+H = HyperbolicCrossSchemeStoch(ss,chebyshev_nodes,11,5,9,[0.15 42.5;-0.15 28.0],tol,1e-6,maxiters,:newton)
 #soln_nl_hcross = solve_model(dsge_sgm,H)
 #soln_nl_hcross = solve_model(dsge_sgm,soln_2o,H)
 soln_nl_hcross = solve_model(dsge_sgm,soln_nl_smol,H)
 
-M = PiecewiseLinearSchemeStoch(ss,[21,21],9,[0.0960769 26.0; -0.0960769 18.0],tol,1e-6,maxiters,:newton)
+M = PiecewiseLinearSchemeStoch(ss,[21,21],9,[0.15 42.5;-0.15 28.0],tol,1e-6,maxiters,:newton)
 soln_nl_pwise = solve_model(dsge_sgm,M)
 
 simulated_data     = simulate(soln_nl_cheb,ss[1:2],100000)
 pos_imps, neg_imps = impulses(soln_nl_cheb,50,[1],10000)
 
-ee1, ss1 = euler_errors(dsge_sgm,soln_1o,[0.0960769 26.0; -0.0960769 18.0],1000,123456)
-ee2, ss2 = euler_errors(dsge_sgm,soln_2o,[0.0960769 26.0; -0.0960769 18.0],1000,123456)
-ee3, ss3 = euler_errors(dsge_sgm,soln_3o,[0.0960769 26.0; -0.0960769 18.0],1000,123456)
-ee4, ss4 = euler_errors(dsge_sgm,soln_4o,[0.0960769 26.0; -0.0960769 18.0],1000,123456)
+ee1, ss1 = euler_errors(dsge_sgm,soln_1o,[0.15 42.5;-0.15 28.0],1000,123456)
+ee2, ss2 = euler_errors(dsge_sgm,soln_2o,[0.15 42.5;-0.15 28.0],1000,123456)
+ee3, ss3 = euler_errors(dsge_sgm,soln_3o,[0.15 42.5;-0.15 28.0],1000,123456)
+ee4, ss4 = euler_errors(dsge_sgm,soln_4o,[0.15 42.5;-0.15 28.0],1000,123456)
 
 eec, ssc = euler_errors(dsge_sgm,soln_nl_cheb,1000,123456)
 ees, sss = euler_errors(dsge_sgm,soln_nl_smol,1000,123456)
