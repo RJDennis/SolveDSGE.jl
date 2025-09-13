@@ -1048,7 +1048,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Cheb
     ny = model.number_jumps
     nv = nx + ny
 
-    jumps_approximated = model.jumps_approximated
+    jumps_approximated      = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -1090,7 +1091,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Cheb
         ord = Tuple(order)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
@@ -1166,7 +1167,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Cheb
     ny = model.number_jumps
     nv = nx + ny
 
-    jumps_approximated = model.jumps_approximated
+    jumps_approximated      = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -1217,7 +1219,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Cheb
         ord = Tuple(order)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
@@ -1296,7 +1298,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Cheb
     ny = model.number_jumps
     nv = nx + ny
 
-    jumps_approximated = model.jumps_approximated
+    jumps_approximated      = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -1347,7 +1350,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Cheb
         ord = Tuple(order)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
@@ -1429,6 +1432,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     node_generator = scheme.node_generator
     node_number = scheme.node_number
@@ -1490,7 +1494,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
         ord = Tuple(order)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
@@ -1562,6 +1566,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     node_generator = scheme.node_generator
     node_number = scheme.node_number
@@ -1625,7 +1630,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
         ord = Tuple(order)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
@@ -1700,6 +1705,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -1784,7 +1790,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
         ord = Tuple(order)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
@@ -1861,6 +1867,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -1950,7 +1957,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
         ord = Tuple(order)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
@@ -2030,6 +2037,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Smol
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -2059,7 +2067,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Smol
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights  = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix(grid,multi_ind,domain)
@@ -2120,6 +2128,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Smol
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -2149,7 +2158,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Smol
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights  = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
@@ -2212,6 +2221,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Smol
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -2254,7 +2264,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Smol
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
@@ -2320,6 +2330,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Smol
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -2362,7 +2373,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Smol
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
@@ -2428,6 +2439,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -2470,7 +2482,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
 
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights  = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix(grid,multi_ind,domain)
@@ -2530,6 +2542,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -2575,7 +2588,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
 
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
@@ -2638,6 +2651,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -2710,7 +2724,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
 
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
@@ -2776,6 +2790,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -2850,7 +2865,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
         end
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
@@ -3826,6 +3841,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Hype
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -3856,7 +3872,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Hype
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(grid,multi_ind,domain)
@@ -3917,6 +3933,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Hype
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -3947,7 +3964,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Hype
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
@@ -4010,6 +4027,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Hype
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -4053,7 +4071,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Hype
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
@@ -4119,6 +4137,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Hype
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -4162,7 +4181,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Hype
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
@@ -4228,6 +4247,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -4271,7 +4291,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
 
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(grid,multi_ind,domain)
@@ -4332,6 +4352,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -4378,7 +4399,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
 
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
@@ -4441,6 +4462,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -4514,7 +4536,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
 
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
@@ -4580,6 +4602,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
     nv = nx + ny
 
     jumps_approximated = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -4655,7 +4678,7 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
         end
     end
 
-    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
 
     weights = [zeros(N) for _ in 1:length(variables_approximated)]
     scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
