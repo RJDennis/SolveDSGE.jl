@@ -1149,7 +1149,7 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
     number_variables = length(model.variables)
     number_equations = length(model.equations)
 
-    variables = OrderedDict(model.variables[i] => i for i = 1:number_variables)
+    variables = OrderedCollections.OrderedDict(model.variables[i] => i for i = 1:number_variables)
 
     unassigned_parameters = copy(model.unassigned_parameters)
 
