@@ -1151,7 +1151,7 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
 
     variables = OrderedDict(model.variables[i] => i for i = 1:number_variables)
 
-    unassigned_parameters = copy(model.unassigned_parameters)
+    #unassigned_parameters = copy(model.unassigned_parameters)
 
     # Build up the string containing the processed model information that gets saved
 

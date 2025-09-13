@@ -20,8 +20,6 @@ eqns_with_derivs = Int64[]
  
 variables = OrderedDict("z" => 1, "k" => 2, "c" => 3, "muc" => 4) 
  
-unassigned_parameters = String[] 
- 
 function nlsolve_static_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} 
  
   f[1] = x[1] - ((0.8)*x[1] + (0.01)*0.0)
