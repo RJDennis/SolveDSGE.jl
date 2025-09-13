@@ -11,7 +11,7 @@ end
 
 include(model_processed_path)
 
-dsge = retrieve_processed_model()
+dsge = retrieve_processed_model(model)
 
 x = [0.0, 21.4, 2.0, 0.25]
 
