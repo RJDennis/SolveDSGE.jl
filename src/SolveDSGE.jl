@@ -86,7 +86,7 @@ export chebyshev_nodes,
        chebyshev_gauss_lobatto,
        clenshaw_curtis_equidistant,
        chebyshev_evaluate,
-       chebyshev_derivative
+       chebyshev_derivative,
        smolyak_evaluate,
        smolyak_derivative,
        piecewise_linear_evaluate,
