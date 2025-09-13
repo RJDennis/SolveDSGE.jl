@@ -1,9 +1,15 @@
 ###################### Solution functions #############################
 
 """
-Computes the model's deterministic steady state.
+Computes the model's deterministic steady state using the initialization, `x`, and the 
+algorithm specified by `method` (defaults to :newton).
 
-Exported function.
+Signatures
+==========
+```
+ss_obj = compute_steady_state(model,x,tol,maxiters,method)
+ss_obj = compute_steady_state(model,x,tol,maxiters)
+```
 """
 function compute_steady_state(model::REModel,x::Array{T,1},tol::T,maxiters::S,method::Symbol = :newton) where {T<:Real,S<:Integer}
 #function compute_steady_state(model::REModel,x::Array{T,1},xtol::T,ftol::T,maxiters::S,method::Symbol = :lm_ar) where {T<:Real,S<:Integer}
@@ -25,7 +31,7 @@ function compute_steady_state(model::REModel,x::Array{T,1},tol::T,maxiters::S,me
 end
 
 """
-Computes the Jacobian of the model's equations using automatic derivatives.
+Computes the Jacobian for the model's equations using automatic derivatives.
 
 Internal function; not exposed to users.
 """
@@ -42,11 +48,41 @@ function compute_linearization(model::REModel,steady_state::Array{T,1}) where {T
 end
 
 """
-Implements Klein's (2000) method to solve a model to first-order accuracy.
+Computes the Jacobian for the model's shock processes using automatic derivatives.
 
-Exported function.
+Internal function; not exposed to users.
 """
-function solve_first_order(model::REModel,scheme::PerturbationScheme)
+function compute_shock_processes(model::REModel,steady_state::Array{T,1}) where {T<:Real}
+
+    equations = model.each_eqn_function
+    nv = model.number_variables
+    nx = model.number_states
+    ns = model.number_shocks
+
+    k   = Array{T,2}(undef,ns,ns)
+    rho = Array{T,2}(undef,ns,ns)
+
+    x = [steady_state; steady_state; zeros(ns)]   
+    for i in 1:ns 
+        d = ForwardDiff.gradient(equations[i],x)
+        k[i,:]   .= -d[2*nv+1:end]
+        rho[i,:] .= -d[1:ns]
+    end
+
+    return rho, k
+
+end
+
+"""
+Solve a model to first-order accuracy using the method from Klein (2000)
+
+Signature
+=========
+```
+soln = solve_first_order(model,scheme)
+```
+"""
+function solve_first_order(model::Union{REModelLinear,REModelPert,REModelAny},scheme::PerturbationScheme)
 
     if scheme.order != "first"
         error("A first order perturbation must be specified.")
@@ -63,12 +99,7 @@ function solve_first_order(model::REModel,scheme::PerturbationScheme)
 
 end
 
-"""
-Implements Klein's (2000) method to solve a deterministic model to first-order accuracy.
-
-Internal function; not exposed to users.
-"""
-function solve_first_order_det(model::REModel,scheme::PerturbationScheme)
+function solve_first_order_det(model::Union{REModelLinear,REModelPert,REModelAny},scheme::PerturbationScheme)
 
     nx = model.number_states
     ny = model.number_jumps
@@ -130,12 +161,7 @@ function solve_first_order_det(model::REModel,scheme::PerturbationScheme)
 
 end
 
-"""
-Implements Klein's (2000) method to solve a stochastic model to first-order accuracy.
-
-Internal function; not exposed to users.
-"""
-function solve_first_order_stoch(model::REModel,scheme::PerturbationScheme)
+function solve_first_order_stoch(model::Union{REModelLinear,REModelPert,REModelAny},scheme::PerturbationScheme)
 
     nx = model.number_states
     ny = model.number_jumps
@@ -206,11 +232,15 @@ function solve_first_order_stoch(model::REModel,scheme::PerturbationScheme)
 end
 
 """
-Implements Gomme and Klein's (2011) method to solve a model to second-order accuracy.
+Solve a model to second-order accuracy using the method from Gomme and Klein (2011)
 
-Exported function.
+Signature
+=========
+```
+soln = solve_second_order(model,scheme)
+```
 """
-function solve_second_order(model::REModel,scheme::PerturbationScheme)
+function solve_second_order(model::Union{REModelPert,REModelAny},scheme::PerturbationScheme)
 
     if scheme.order != "second"
         error("A second order perturbation must be specified.")
@@ -227,12 +257,7 @@ function solve_second_order(model::REModel,scheme::PerturbationScheme)
 
 end
 
-"""
-Implements Gomme and Klein's (2011) method to solve a deterministic model to second-order accuracy.
-
-Internal function; not exposed to users.
-"""
-function solve_second_order_det(model::REModel,scheme::PerturbationScheme)
+function solve_second_order_det(model::Union{REModelPert,REModelAny},scheme::PerturbationScheme)
 
     nx = model.number_states
     ny = model.number_jumps
@@ -307,12 +332,7 @@ function solve_second_order_det(model::REModel,scheme::PerturbationScheme)
 
 end
 
-"""
-Implements Gomme and Klein's (2011) method to solve a stochastic model to second-order accuracy.
-
-Internal function; not exposed to users.
-"""
-function solve_second_order_stoch(model::REModel, scheme::PerturbationScheme)
+function solve_second_order_stoch(model::Union{REModelPert,REModelAny},scheme::PerturbationScheme)
 
     nx = model.number_states
     ny = model.number_jumps
@@ -407,11 +427,15 @@ function solve_second_order_stoch(model::REModel, scheme::PerturbationScheme)
 end
 
 """
-Implements Binning's (2013) method to solve a model to third-order accuracy.
+Solve a model to third-order accuracy using the method from Binning (2013)
 
-Exported function.
+Signature
+=========
+```
+soln = solve_third_order(model,scheme)
+```
 """
-function solve_third_order(model::REModel,scheme::PerturbationScheme,skewness::Union{Array{T,1},Array{T,2}} = zeros(model.number_shocks,model.number_shocks^2)) where {T<:Real}
+function solve_third_order(model::Union{REModelPert,REModelAny},scheme::PerturbationScheme,skewness::Union{Array{T,1},Array{T,2}} = zeros(model.number_shocks,model.number_shocks^2)) where {T<:Real}
 
     if scheme.order != "third"
         error("A third order perturbation must be supplied.")
@@ -428,12 +452,7 @@ function solve_third_order(model::REModel,scheme::PerturbationScheme,skewness::U
 
 end
 
-"""
-Implements Binning's (2013) method to solve a deterministic model to third-order accuracy.
-
-Internal function; not exposed to users.
-"""
-function solve_third_order_det(model::REModel,scheme::PerturbationScheme)
+function solve_third_order_det(model::Union{REModelPert,REModelAny},scheme::PerturbationScheme)
 
     nv = model.number_variables
     nx = model.number_states
@@ -510,12 +529,7 @@ function solve_third_order_det(model::REModel,scheme::PerturbationScheme)
 
 end
 
-"""
-Implements Binning's (2013) method to solve a stochastic model to third-order accuracy.
-
-Internal function; not exposed to users.
-"""
-function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewness::Union{Array{T,1},Array{T,2}}) where {T<:Real}
+function solve_third_order_stoch(model::Union{REModelPert,REModelAny},scheme::PerturbationScheme,skewness::Union{Array{T,1},Array{T,2}}) where {T<:Real}
 
     ns = model.number_shocks
     nv = model.number_variables
@@ -641,11 +655,15 @@ function solve_third_order_stoch(model::REModel,scheme::PerturbationScheme,skewn
 end
 
 """
-Solves models to fourth-order accuracy, drawing on Binning (2013) and Levintal (2017).
+Solve a model to fourth-order accuracy drawing on Binning (2013) and Levintal (2017).
 
-Exported function.
+Signature
+=========
+```
+soln = solve_fourth_order(model,scheme)
+```
 """
-function solve_fourth_order(model::REModel,scheme::PerturbationScheme)
+function solve_fourth_order(model::Union{REModelPert,REModelAny},scheme::PerturbationScheme)
 
     if scheme.order != "fourth"
         error("A fourth order perturbation must be supplied.")
@@ -662,12 +680,7 @@ function solve_fourth_order(model::REModel,scheme::PerturbationScheme)
 
 end
 
-"""
-Solves deterministic models to fourth-order accuracy, drawing on Binning (2013) and Levintal (2017).
-
-Internal function; not exposed to users.
-"""
-function solve_fourth_order_det(model::REModel,scheme::PerturbationScheme)
+function solve_fourth_order_det(model::Union{REModelPert,REModelAny},scheme::PerturbationScheme)
 
     nv = model.number_variables
     nx = model.number_states
@@ -761,12 +774,7 @@ function solve_fourth_order_det(model::REModel,scheme::PerturbationScheme)
 
 end
 
-"""
-Solves stochastic models to fourth-order accuracy, drawing on Binning (2013) and Levintal (2017).
-
-Internal function; not exposed to users.
-"""
-function solve_fourth_order_stoch(model::REModel,scheme::PerturbationScheme)
+function solve_fourth_order_stoch(model::Union{REModelPert,REModelAny},scheme::PerturbationScheme)
 
     ns = model.number_shocks
     nv = model.number_variables
@@ -916,13 +924,15 @@ function solve_fourth_order_stoch(model::REModel,scheme::PerturbationScheme)
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeOBCDet})
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeOBCDet})
 
     nx = model.number_states
     ny = model.number_jumps
     nv = nx + ny
 
-    jumps_approximated = model.jumps_approximated
+    jumps_approximated  = model.jumps_approximated
+    derivs_approximated_num = model.derivs_approximated_num
+    derivs_approximated_den = model.derivs_approximated_den
 
     initial_guess = scheme.initial_guess
     node_generator = scheme.node_generator
@@ -964,7 +974,9 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
         ord = Tuple(order)
     end
 
-    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_approximated_num]
+
+    weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -985,8 +997,8 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
+        for i in eachindex(variables_approximated)
+            weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
         end
 
         for i = 1:N
@@ -1030,7 +1042,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeOBCDet},threads::S) where {S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeOBCDet},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -1078,7 +1090,9 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
         ord = Tuple(order)
     end
 
-    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1096,8 +1110,8 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
+        for i in eachindex(variables_approximated)
+            weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
         end
 
         @sync Threads.@threads for t = 1:threads
@@ -1145,7 +1159,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeDet,Chebysh
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch})
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch})
 
     nx = model.number_states
     ns = model.number_shocks
@@ -1176,10 +1190,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
 
     T = typeof(scheme.ftol)
 
-    d = compute_linearization(model,initial_guess)
-    GAMMA = d[1:ns,nv+1:nv+ns]
-    k   = -GAMMA\d[1:ns,2*nv+1:end]
-    RHO = -GAMMA\d[1:ns,1:ns]
+    RHO, k = compute_shock_processes(model,initial_guess)
     if !isdiag(RHO .> sqrt(eps()))
         error("This solver requires the shocks to be AR(1) processes.")
     end
@@ -1206,8 +1217,10 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
         ord = Tuple(order)
     end
 
-    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1228,11 +1241,12 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
+        for i in eachindex(variables_approximated)
+            weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+              scaled_weights[i] .= scale_chebyshev_weights(weights[i],integrals,ns)
+            end
         end
-
-        scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
         for i = 1:N
 
@@ -1275,7 +1289,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch},threads::S) where {S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -1306,10 +1320,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
 
     T = typeof(scheme.ftol)
 
-    d = compute_linearization(model,initial_guess)
-    GAMMA = d[1:ns,nv+1:nv+ns]
-    k   = -GAMMA\d[1:ns,2*nv+1:end]
-    RHO = -GAMMA\d[1:ns,1:ns]
+    RHO, k = compute_shock_processes(model,initial_guess)
     if !isdiag(RHO .> sqrt(eps()))
         error("This solver requires the shocks to be AR(1) processes.")
     end
@@ -1336,8 +1347,10 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
         ord = Tuple(order)
     end
 
-    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1355,11 +1368,12 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
+        for i in eachindex(variables_approximated)
+            weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+              scaled_weights[i] .= scale_chebyshev_weights(weights[i],integrals,ns)
+            end
         end
-
-        scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
         @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
@@ -1408,7 +1422,7 @@ function solve_nonlinear(model::REModel,scheme::Union{ChebyshevSchemeStoch,Cheby
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeOBCDet}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeOBCDet}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -1476,7 +1490,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
         ord = Tuple(order)
     end
 
-    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1494,8 +1510,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
+        for i in eachindex(variables_approximated)
+            weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
         end
 
         for i = 1:N
@@ -1539,7 +1555,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeOBCDet},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{ChebyshevSchemeDet,ChebyshevSchemeOBCDet},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -1609,7 +1625,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
         ord = Tuple(order)
     end
 
-    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1625,8 +1643,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
+        for i in eachindex(variables_approximated)
+            weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
         end
 
         @sync Threads.@threads for t = 1:threads
@@ -1674,7 +1692,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeDet
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -1710,10 +1728,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
     if typeof(soln) <: PerturbationSolution
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
-        d = compute_linearization(model,initial_guess)
-        GAMMA = d[1:ns,nv+1:nv+ns]
-        k   = -GAMMA\d[1:ns,2*nv+1:end]
-        RHO = -GAMMA\d[1:ns,1:ns]
+        RHO, k = compute_shock_processes(model,initial_guess)
     end
 
     T = typeof(scheme.ftol)
@@ -1769,8 +1784,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
         ord = Tuple(order)
     end
 
-    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1788,11 +1805,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
+        for i in eachindex(variables_approximated)
+            weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+              scaled_weights[i] .= scale_chebyshev_weights(weights[i],integrals,ns)
+            end
         end
-
-        scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
         for i = 1:N
 
@@ -1835,7 +1853,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{ChebyshevSchemeStoch,ChebyshevSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -1871,10 +1889,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
     if typeof(soln) <: PerturbationSolution
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
-        d = compute_linearization(model,initial_guess)
-        GAMMA = d[1:ns,nv+1:nv+ns]
-        k   = -GAMMA\d[1:ns,2*nv+1:end]
-        RHO = -GAMMA\d[1:ns,1:ns]
+        RHO, k = compute_shock_processes(model,initial_guess)
     end
 
     if !isdiag(RHO .> sqrt(eps()))
@@ -1935,8 +1950,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
         ord = Tuple(order)
     end
 
-    weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(ord.+1) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(ord.+1) for _ in 1:length(variables_approximated)]
 
     new_variables = [zeros(Tuple(length.(grid))) for _ in 1:nv]
 
@@ -1952,11 +1969,12 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= cheb_weights(variables[jumps_approximated[i]],grid,order,domain)
+        for i in eachindex(variables_approximated)
+            weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+              scaled_weights[i] .= scale_chebyshev_weights(weights[i],integrals,ns)
+            end
         end
-
-        scale_chebyshev_weights!(weights,scaled_weights,integrals,jumps_approximated,ns)
 
         @sync Threads.@threads for t = 1:threads
             for i = t:threads:N
@@ -2001,12 +2019,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{ChebyshevSchemeSto
 
     soln = ChebyshevSolutionStoch([variables[ny+1:end]; variables[1:ny]],weights,integrals,grid,order,domain,k[1:ns,:],iters,scheme.node_generator)
 
-
     return soln
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSchemeOBCDet})
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{SmolyakSchemeDet,SmolyakSchemeOBCDet})
 
     nx = model.number_states
     ny = model.number_jumps
@@ -2042,7 +2059,9 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSc
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights  = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights  = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -2053,8 +2072,8 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSc
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
+        for i in eachindex(variables_approximated)
+            weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim)
         end
 
         for i = 1:N
@@ -2094,7 +2113,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSc
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSchemeOBCDet},threads::S) where {S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{SmolyakSchemeDet,SmolyakSchemeOBCDet},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -2130,7 +2149,9 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSc
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights  = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights  = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -2139,8 +2160,8 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSc
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
+        for i in eachindex(variables_approximated)
+            weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim) # threaded through the interpolation matrix
         end
 
         @sync Threads.@threads for t = 1:threads
@@ -2183,7 +2204,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeDet,SmolyakSc
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch})
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch})
 
     nx = model.number_states
     ns = model.number_shocks
@@ -2209,10 +2230,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
 
     T = typeof(scheme.ftol)
 
-    d = compute_linearization(model,initial_guess)
-    GAMMA = d[1:ns,nv+1:nv+ns]
-    k   = -GAMMA\d[1:ns,2*nv+1:end]
-    RHO = -GAMMA\d[1:ns,1:ns]
+    RHO, k = compute_shock_processes(model,initial_guess)
     if !isdiag(RHO .> sqrt(eps()))
         error("This solver requires the shocks to be AR(1) processes.")
     end
@@ -2236,8 +2254,10 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -2248,9 +2268,11 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
-            scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+        for i in eachindex(variables_approximated)
+            weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+                scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            end
         end
 
         for i = 1:N
@@ -2290,7 +2312,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch},threads::S) where {S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -2316,10 +2338,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
 
     T = typeof(scheme.ftol)
 
-    d = compute_linearization(model,initial_guess)
-    GAMMA = d[1:ns,nv+1:nv+ns]
-    k   = -GAMMA\d[1:ns,2*nv+1:end]
-    RHO = -GAMMA\d[1:ns,1:ns]
+    RHO, k = compute_shock_processes(model,initial_guess)
     if !isdiag(RHO .> sqrt(eps()))
         error("This solver requires the shocks to be AR(1) processes.")
     end
@@ -2343,8 +2362,10 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -2353,9 +2374,11 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix 
-            scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+        for i in eachindex(variables_approximated)
+            weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+                scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            end
         end
 
         @sync Threads.@threads for t = 1:threads
@@ -2398,7 +2421,7 @@ function solve_nonlinear(model::REModel,scheme::Union{SmolyakSchemeStoch,Smolyak
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,SmolyakSchemeOBCDet}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{SmolyakSchemeDet,SmolyakSchemeOBCDet}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -2447,7 +2470,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
 
     end
 
-    weights  = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights  = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -2458,8 +2483,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
+        for i in eachindex(variables_approximated)
+            weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim)
         end
 
         for i = 1:N
@@ -2498,7 +2523,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,SmolyakSchemeOBCDet},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{SmolyakSchemeDet,SmolyakSchemeOBCDet},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -2550,7 +2575,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
 
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -2559,8 +2586,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
+        for i in eachindex(variables_approximated)
+            weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim) # threaded through the interpolation matrix
         end
 
         @sync Threads.@threads for t = 1:threads
@@ -2603,7 +2630,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeDet,S
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -2634,10 +2661,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
     if typeof(soln) <: PerturbationSolution
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
-        d = compute_linearization(model,initial_guess)
-        GAMMA = d[1:ns,nv+1:nv+ns]
-        k   = -GAMMA\d[1:ns,2*nv+1:end]
-        RHO = -GAMMA\d[1:ns,1:ns]
+        RHO, k = compute_shock_processes(model,initial_guess)
     end
 
     if !isdiag(RHO .> sqrt(eps()))
@@ -2686,8 +2710,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
 
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -2698,9 +2724,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim)
-            scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+        for i in eachindex(variables_approximated)
+            weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+                scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            end
         end
 
         for i = 1:N
@@ -2740,7 +2768,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{SmolyakSchemeStoch,SmolyakSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -2771,10 +2799,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
     if typeof(soln) <: PerturbationSolution
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
-        d = compute_linearization(model,initial_guess)
-        GAMMA = d[1:ns,nv+1:nv+ns]
-        k   = -GAMMA\d[1:ns,2*nv+1:end]
-        RHO = -GAMMA\d[1:ns,1:ns]
+        RHO, k = compute_shock_processes(model,initial_guess)
     end
 
     if !isdiag(RHO .> sqrt(eps()))
@@ -2825,8 +2850,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
         end
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
     smol_iim = smolyak_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -2835,9 +2862,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= smolyak_weights(variables[jumps_approximated[i]],smol_iim) # threaded through the interpolation matrix
-            scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+        for i in eachindex(variables_approximated)
+            weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+                scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            end
         end
 
         @sync Threads.@threads for t = 1:threads
@@ -2880,7 +2909,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{SmolyakSchemeStoch
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeOBCDet})
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeOBCDet})
 
     nx = model.number_states
     ny = model.number_jumps
@@ -2973,7 +3002,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeDet,P
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeOBCDet},threads::S) where {S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeOBCDet},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -3066,7 +3095,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeDet,P
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch})
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch})
 
     nx = model.number_states
     ns = model.number_shocks
@@ -3095,10 +3124,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch
 
     T = typeof(scheme.ftol)
 
-    d = compute_linearization(model,initial_guess)
-    GAMMA = d[1:ns,nv+1:nv+ns]
-    k   = -GAMMA\d[1:ns,2*nv+1:end]
-    RHO = -GAMMA\d[1:ns,1:ns]
+    RHO, k = compute_shock_processes(model,initial_guess)
     if !isdiag(RHO .> sqrt(eps()))
         error("This solver requires the shocks to be AR(1) processes.")
     end
@@ -3175,7 +3201,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch},threads::S) where {S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -3204,10 +3230,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch
 
     T = typeof(scheme.ftol)
 
-    d = compute_linearization(model,initial_guess)
-    GAMMA = d[1:ns,nv+1:nv+ns]
-    k   = -GAMMA\d[1:ns,2*nv+1:end]
-    RHO = -GAMMA\d[1:ns,1:ns]
+    RHO, k = compute_shock_processes(model,initial_guess)
     if !isdiag(RHO .> sqrt(eps()))
         error("This solver requires the shocks to be AR(1) processes.")
     end
@@ -3284,7 +3307,7 @@ function solve_nonlinear(model::REModel,scheme::Union{PiecewiseLinearSchemeStoch
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeOBCDet}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeOBCDet}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -3393,7 +3416,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeOBCDet},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{PiecewiseLinearSchemeDet,PiecewiseLinearSchemeOBCDet},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -3505,7 +3528,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -3537,10 +3560,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
     if typeof(soln) <: PerturbationSolution
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
-        d = compute_linearization(model,initial_guess)
-        GAMMA = d[1:ns,nv+1:nv+ns]
-        k   = -GAMMA\d[1:ns,2*nv+1:end]
-        RHO = -GAMMA\d[1:ns,1:ns]
+        RHO, k = compute_shock_processes(model,initial_guess)
     end
 
     if !isdiag(RHO .> sqrt(eps()))
@@ -3652,7 +3672,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{PiecewiseLinearSchemeStoch,PiecewiseLinearSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -3684,10 +3704,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
     if typeof(soln) <: PerturbationSolution
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
-        d = compute_linearization(model,initial_guess)
-        GAMMA = d[1:ns,nv+1:nv+ns]
-        k   = -GAMMA\d[1:ns,2*nv+1:end]
-        RHO = -GAMMA\d[1:ns,1:ns]
+        RHO, k = compute_shock_processes(model,initial_guess)
     end
 
     if !isdiag(RHO .> sqrt(eps()))
@@ -3802,7 +3819,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{PiecewiseLinearSch
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeOBCDet})
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeOBCDet})
 
     nx = model.number_states
     ny = model.number_jumps
@@ -3839,7 +3856,9 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,H
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -3850,8 +3869,8 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,H
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
+        for i in eachindex(variables_approximated)
+            weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim)
         end
 
         for i = 1:N
@@ -3891,7 +3910,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,H
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeOBCDet},threads::S) where {S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeOBCDet},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -3928,7 +3947,9 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,H
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -3937,8 +3958,8 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,H
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
+        for i in eachindex(variables_approximated)
+            weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim) # threaded through the interpolation matrix
         end
 
         @sync Threads.@threads for t = 1:threads
@@ -3981,7 +4002,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeDet,H
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch})
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch})
 
     nx = model.number_states
     ns = model.number_shocks
@@ -4008,10 +4029,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
 
     T = typeof(scheme.ftol)
 
-    d = compute_linearization(model,initial_guess)
-    GAMMA = d[1:ns,nv+1:nv+ns]
-    k   = -GAMMA\d[1:ns,2*nv+1:end]
-    RHO = -GAMMA\d[1:ns,1:ns]
+    RHO, k = compute_shock_processes(model,initial_guess)
     if !isdiag(RHO .> sqrt(eps()))
         error("This solver requires the shocks to be AR(1) processes.")
     end
@@ -4035,8 +4053,10 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -4047,9 +4067,11 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
-            scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+        for i in eachindex(variables_approximated)
+            weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+                scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            end
         end
 
         for i = 1:N
@@ -4089,7 +4111,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
 
 end
 
-function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch},threads::S) where {S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch},threads::S) where {S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -4116,10 +4138,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
 
     T = typeof(scheme.ftol)
 
-    d = compute_linearization(model,initial_guess)
-    GAMMA = d[1:ns,nv+1:nv+ns]
-    k   = -GAMMA\d[1:ns,2*nv+1:end]
-    RHO = -GAMMA\d[1:ns,1:ns]
+    RHO, k = compute_shock_processes(model,initial_guess)
     if !isdiag(RHO .> sqrt(eps()))
         error("This solver requires the shocks to be AR(1) processes.")
     end
@@ -4143,8 +4162,10 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
         variables[ny+i] = fill(initial_guess[i],N)
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -4153,9 +4174,11 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
-            scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+        for i in eachindex(variables_approximated)
+            weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+                scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            end
         end
 
         @sync Threads.@threads for t = 1:threads
@@ -4198,7 +4221,7 @@ function solve_nonlinear(model::REModel,scheme::Union{HyperbolicCrossSchemeStoch
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeOBCDet}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeOBCDet}) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet}}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -4248,7 +4271,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -4259,8 +4284,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
+        for i in eachindex(variables_approximated)
+            weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim)
         end
 
         for i = 1:N
@@ -4300,7 +4325,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeOBCDet},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{HyperbolicCrossSchemeDet,HyperbolicCrossSchemeOBCDet},threads::S) where {R<:Union{PerturbationSolutionDet,ProjectionSolutionDet},S<:Integer}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -4353,7 +4378,9 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -4362,8 +4389,8 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
+        for i in eachindex(variables_approximated)
+            weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim) # threaded through the interpolation matrix
         end
 
         @sync Threads.@threads for t = 1:threads
@@ -4406,7 +4433,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch}) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -4438,10 +4465,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
     if typeof(soln) <: PerturbationSolution
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
-        d = compute_linearization(model,initial_guess)
-        GAMMA = d[1:ns,nv+1:nv+ns]
-        k   = -GAMMA\d[1:ns,2*nv+1:end]
-        RHO = -GAMMA\d[1:ns,1:ns]
+        RHO, k = compute_shock_processes(model,initial_guess)
     end
 
     if !isdiag(RHO .> sqrt(eps()))
@@ -4490,8 +4514,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -4502,9 +4528,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim)
-            scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+        for i in eachindex(variables_approximated)
+            weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+                scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            end
         end
 
         for i = 1:N
@@ -4544,7 +4572,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 
 end
 
-function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
+function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Union{HyperbolicCrossSchemeStoch,HyperbolicCrossSchemeOBCStoch},threads::S) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},S<:Integer}
 
     nx = model.number_states
     ns = model.number_shocks
@@ -4576,10 +4604,7 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
     if typeof(soln) <: PerturbationSolution
         RHO = soln.hx[1:ns,1:ns]
     elseif typeof(soln) <: ProjectionSolution
-        d = compute_linearization(model,initial_guess)
-        GAMMA = d[1:ns,nv+1:nv+ns]
-        k   = -GAMMA\d[1:ns,2*nv+1:end]
-        RHO = -GAMMA\d[1:ns,1:ns]
+        RHO, k = compute_shock_processes(model,initial_guess)
     end
 
     if !isdiag(RHO .> sqrt(eps()))
@@ -4630,8 +4655,10 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
         end
     end
 
-    weights = [zeros(N) for _ in 1:length(jumps_approximated)]
-    scaled_weights = [zeros(N) for _ in 1:length(jumps_approximated)]
+    variables_approximated = [jumps_approximated;derivs_to_approximate_num]
+
+    weights = [zeros(N) for _ in 1:length(variables_approximated)]
+    scaled_weights = [zeros(N) for _ in 1:length(variables_approximated)]
     hcross_iim = hyperbolic_cross_inverse_interpolation_matrix_threaded(grid,multi_ind,domain)
 
     new_variables = [zeros(N) for _ in 1:nv]
@@ -4640,9 +4667,11 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
     len = Inf
     while len > scheme.xtol && iters <= scheme.maxiters
 
-        for i in eachindex(jumps_approximated)
-            weights[i] .= hyperbolic_cross_weights(variables[jumps_approximated[i]],hcross_iim) # threaded through the interpolation matrix
-            scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+        for i in eachindex(variables_approximated)
+            weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim)
+            if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
+                scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            end
         end
 
         @sync Threads.@threads for t = 1:threads
@@ -4686,22 +4715,27 @@ function solve_nonlinear(model::REModel,soln::R,scheme::Union{HyperbolicCrossSch
 end
 
 """
-Solves a model given a solution scheme.
+Solves a model using the given solution scheme and employing any provided initial solution.
 
-Exported function.
+Signature
+=========
+```
+soln = solve_model(model,scheme)
+soln = solve_model(model,initial_soln,scheme)
+```
 """
-function solve_model(model::REModel,scheme::PerturbationScheme)
-
-    if scheme.order == "first" && (model.solvers in ("Any", "Linear", "Perturbation"))
+function solve_model(model::Union{REModelLinear,REModelPert,REModelAny},scheme::PerturbationScheme)
+ 
+    if scheme.order == "first" && (typeof(model) <: Union{REModelLinear,REModelPert,REModelAny})
         soln = solve_first_order(model, scheme)
         return soln
-    elseif scheme.order == "second" && (model.solvers in ("Any", "Perturbation"))
+    elseif scheme.order == "second" && (typeof(model) <: Union{REModelPert,REModelAny})
         soln = solve_second_order(model, scheme)
         return soln
-    elseif scheme.order == "third" && (model.solvers in ("Any", "Perturbation"))
+    elseif scheme.order == "third" && (typeof(model) <: Union{REModelPert,REModelAny})
         soln = solve_third_order(model, scheme)
         return soln
-    elseif scheme.order == "fourth" && (model.solvers in ("Any", "Perturbation"))
+    elseif scheme.order == "fourth" && (typeof(model) <: Union{REModelPert,REModelAny})
         soln = solve_fourth_order(model, scheme)
         return soln
     else
@@ -4710,84 +4744,70 @@ function solve_model(model::REModel,scheme::PerturbationScheme)
 
 end
 
-function solve_model(model::REModel,scheme::P) where {P<:ProjectionScheme}
+function solve_model(model::Union{REModelProj,REModelAny},scheme::P) where {P<:ProjectionScheme}
 
-    if model.solvers in ("Any", "Projection")
-        if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
-            error("Stochastic model, but deterministic SolutionScheme.")
-        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
-            error("Deterministic model, but stochastic SolutionScheme.")
-        end
+    if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
+        error("Stochastic model, but deterministic SolutionScheme.")
+    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
+        error("Deterministic model, but stochastic SolutionScheme.")
+    end
 
+    soln = solve_nonlinear(model,scheme)
+
+    return soln
+
+end
+
+function solve_model(model::Union{REModelProj,REModelAny},scheme::P,threads::S) where {P<:ProjectionScheme,S<:Integer}
+
+    if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
+        error("Stochastic model, but deterministic SolutionScheme.")
+    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
+        error("Deterministic model, but stochastic SolutionScheme.")
+    end
+
+    if threads < 0
+        error("Number of threads cannot be negative.")
+    elseif threads == 0
         soln = solve_nonlinear(model,scheme)
         return soln
     else
-        error("The solution scheme conflicts with the solvers specified in the model file.")
+        soln = solve_nonlinear(model,scheme,threads)
+        return soln
     end
 
 end
 
-function solve_model(model::REModel,scheme::P,threads::S) where {P<:ProjectionScheme,S<:Integer}
+function solve_model(model::Union{REModelProj,REModelAny},soln::ModelSolution,scheme::P) where {P<:ProjectionScheme}
 
-    if model.solvers in ("Any", "Projection")
-        if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
-            error("Stochastic model, but deterministic SolutionScheme.")
-        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
-            error("Deterministic model, but stochastic SolutionScheme.")
-        end
-
-        if threads < 0
-            error("Number of threads cannot be negative.")
-        elseif threads == 0
-            soln = solve_nonlinear(model,scheme)
-            return soln
-        else
-            soln = solve_nonlinear(model,scheme,threads)
-            return soln
-        end
-    else
-        error("The solution scheme conflicts with the solvers specified in the model file.")
+    if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
+        error("Stochastic model, but deterministic SolutionScheme.")
+    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
+        error("Deterministic model, but stochastic SolutionScheme.")
     end
+
+    soln = solve_nonlinear(model,soln,scheme)
+
+    return soln
 
 end
 
-function solve_model(model::REModel,soln::ModelSolution,scheme::P) where {P<:ProjectionScheme}
+function solve_model(model::Union{REModelProj,REModelAny},soln::ModelSolution,scheme::P,threads::S) where {P<:ProjectionScheme,S<:Integer}
 
-    if model.solvers in ("Any", "Projection")
-        if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
-            error("Stochastic model, but deterministic SolutionScheme.")
-        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
-            error("Deterministic model, but stochastic SolutionScheme.")
-        end
+    if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
+        error("Stochastic model, but deterministic SolutionScheme.")
+    elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
+        error("Deterministic model, but stochastic SolutionScheme.")
+    end
 
+    if threads < 0
+        error("Number of threads cannot be negative.")
+    elseif threads == 0
         soln = solve_nonlinear(model,soln,scheme)
         return soln
     else
-        error("The solution scheme conflicts with the solvers specified in the model file.")
-    end
-
-end
-
-function solve_model(model::REModel,soln::ModelSolution,scheme::P,threads::S) where {P<:ProjectionScheme,S<:Integer}
-
-    if model.solvers in ("Any", "Projection")
-        if model.number_shocks != 0 && typeof(scheme) <: Union{ProjectionSchemeDet,ProjectionSchemeOBCDet}
-            error("Stochastic model, but deterministic SolutionScheme.")
-        elseif model.number_shocks == 0 && typeof(scheme) <: Union{ProjectionSchemeStoch,ProjectionSchemeOBCStoch}
-            error("Deterministic model, but stochastic SolutionScheme.")
-        end
-
-        if threads < 0
-            error("Number of threads cannot be negative.")
-        elseif threads == 0
-            soln = solve_nonlinear(model,soln,scheme)
-            return soln
-        else
-            soln = solve_nonlinear(model,soln,scheme,threads)
-            return soln
-        end
-    else
-        error("The solution scheme conflicts with the solvers specified in the model file.")
+        soln = solve_nonlinear(model,soln,scheme,threads)
+        return soln
     end
 
 end

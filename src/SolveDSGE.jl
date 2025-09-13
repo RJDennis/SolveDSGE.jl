@@ -11,7 +11,7 @@ using PiecewiseLinearApprox
 using HyperbolicCrossApprox
 using NLboxsolve
 using OrderedCollections
-using Hungarian
+using Distributions
 
 include("structures.jl")
 include("parser_functions.jl")
@@ -57,6 +57,7 @@ export FirstOrderSolutionStoch,
 
 export process_model,
        retrieve_processed_model,
+       create_model_structure,
        assign_parameters,
        compute_steady_state,
        solve_first_order,
@@ -72,7 +73,10 @@ export process_model,
        compare_solutions,
        state_space_eqm,
        euler_errors,
-       den_haan_marcet
+       den_haan_marcet,
+       prior,
+       prior_analysis,
+       copy_model_struct
 
 export chebyshev_nodes,
        chebyshev_extrema,

@@ -1,11 +1,17 @@
 using SolveDSGE
 
 filename = "model_aiyagari.txt"
-model_path = joinpath(@__DIR__, filename)
+path = joinpath(@__DIR__, filename)
 
-process_model(model_path)
+process_model(path)
 
-dsge_base = retrieve_processed_model(model_path)
+if !occursin("_processed",path)
+    model_processed_path = replace(path,".txt" => "_processed.txt")
+end
+
+include(model_processed_path)
+
+dsge_base = retrieve_processed_model()
 
 ss = [0.0, 5.5, 1.44, 0.71, 0.0, 0.04, 1.18]
 

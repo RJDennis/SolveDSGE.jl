@@ -1,11 +1,17 @@
 using SolveDSGE
 
 filename = "model_nkdsge_zlb.txt"
-model_path = joinpath(@__DIR__, filename)
+path = joinpath(@__DIR__, filename)
 
-process_model(model_path)
+process_model(path)
 
-dsge_nk_zlb = retrieve_processed_model(model_path)
+if !occursin("_processed",path)
+    model_processed_path = replace(path,".txt" => "_processed.txt")
+end
+
+include(model_processed_path)
+
+dsge_nk_zlb = retrieve_processed_model()
 
 x = [0.0, 0.0, -0.005012541823544286, 0.3286717154015939, 0.3286717154015939, 3.2180866812572306, 0.003996156184454205, 0.008793969849268423, 0.3286717154015939, 0.00375000000001823, 0.0]
 

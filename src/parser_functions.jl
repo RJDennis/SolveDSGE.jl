@@ -13,21 +13,77 @@ function open_model_file(path::Q) where {Q<:AbstractString}
     model_array = readlines(model_file)
     close(model_file)
 
-    # Remove lines or parts of lines that have been commented out.
-    # "The fat# hairy# cat." becomes "The fat cat."
+    # Remove sections that have been commented out via #= =#.  Does not allow multiple comment blocks on the same line.
+
+    comment_block_start  = Int[]
+    comment_block_finish = Int[]
+    for i in eachindex(model_array)
+
+        if occursin("#=",model_array[i]) == true
+            push!(comment_block_start,i)
+        end
+
+        if occursin("=#",model_array[i]) == true
+            push!(comment_block_finish,i)
+        end
+
+    end
+
+    if length(comment_block_start) != length(comment_block_finish)
+        error("Your comment blocks are formulated incorrectly")
+    end
+
+    if any(<(0), comment_block_finish-comment_block_start)
+        error("Your comment blocks are formulated incorrectly")
+    end
+
+    for i in eachindex(comment_block_start)
+        if comment_block_start[i] == comment_block_finish[i] # The comment block is contained within one line
+            components_start  = split(model_array[comment_block_start[i]],"#=")
+            components_finish = split(model_array[comment_block_finish[i]],"=#")
+            if components_start[1] == ""
+                model_array[comment_block_start[i]] = components_finish[2]
+            elseif components_finish[2] == ""
+                model_array[comment_block_start[i]] = components_start[1]
+            else
+                model_array[comment_block_start[i]] = prod(string.(components_start[1],components_finish[2]))
+            end
+        else # The comment block is spread over multiple lines.
+            for j in comment_block_start[i]:comment_block_finish[i]
+                if j == comment_block_start[i]
+                    components = split(model_array[comment_block_start[i]],"#=")
+                    if components[1] == ""
+                        model_array[j] = ""
+                    else
+                        model_array[j] = string(components[1])
+                    end
+                elseif j == comment_block_finish[i]
+                    components = split(model_array[comment_block_start[i]],"=#")
+                    if length(components) ==1 || components[2] == "" 
+                        model_array[j] = ""
+                    else
+                        model_array[j] = string(components[2])
+                    end
+                else
+                    model_array[j] = ""
+                end
+            end
+        end
+    end
+
+    # Remove lines that have been commented out via #. "The fat# hairy# cat." becomes "The fat."
 
     for i in eachindex(model_array)
         if occursin("#",model_array[i]) == true
             components = split(model_array[i],"#")
-            keep = prod(components[isodd.(eachindex(components))])
-            model_array[i] = keep
+            model_array[i] = string(components[1])
         end
     end
 
     # Identify lines that contain only spaces
 
     for i in eachindex(model_array)
-        if unique(model_array[i]) == [' '] # line contains only spaces
+        if unique(model_array[i]) == [' '] # line contains only space characters
             model_array[i] = "" # Make it a blank line
         end
     end
@@ -89,69 +145,53 @@ Internal function; not exposed to users.
 """
 function get_variables(model_array::Array{Q,1},term::Q) where {Q<:AbstractString}
 
-    term_begin = find_term(model_array,term) + 1 # Starts the line after the term is located
-    term_end = find_end(model_array,term_begin) - 1 # Ends the line before 'end' is located
+    model_block_begins = find_term(model_array,term) + 1              # Starts the line after the term is located
+    model_block_ends   = find_end(model_array,model_block_begins) - 1 # Ends the line before 'end' is located
 
-    if term_begin > term_end
-        if term in ["shocks:","states:"]
+    if model_block_begins > model_block_ends
+        if term in ("shocks:","states:")
             return String[]
         else
             error("The model file contains no $(term[1:end-1]).")
         end
     end
 
-    term_block = model_array[term_begin:term_end]
+    model_block = model_array[model_block_begins:model_block_ends]
 
     # Remove any trailing variable separators: "," or ";".
 
-    for i in eachindex(term_block)
-        if endswith(term_block[i],union(",",";"))
-            term_block[i] = term_block[i][1:end-1]
+    for i in eachindex(model_block)
+        if endswith(model_block[i],union(",",";"))
+            model_block[i] = model_block[i][1:end-1]
         end
     end
 
     # Extract the names and place them in a vector
 
-    variables = String.(setdiff(strip.(split(term_block[1],union(",",";"))),[""]))
-    for i = 2:length(term_block)
-        variables = [variables; String.(setdiff(strip.(split(term_block[i],union(",",";"))),[""]))]
+    variables = String.(strip.(split(model_block[1],union(",",";"))))
+    variables = [i for i in variables if i != ""]
+    for i = 2:length(model_block)
+        new_variables = String.(strip.(split(model_block[i],union(",",";"))))
+        new_variables = [i for i in new_variables if i != ""]
+        variables     = [variables; new_variables]
     end
 
     # Check whether names are repeated
 
     if length(variables) != length(unique(variables))
-        error("Some $(term[1:end-1]) are repreated.")
+        error("Some $(term[1:end-1]) names are repreated.")
     end
 
     # Check to ensure that variables contains non-empty string elements
 
     if length(variables) == 1 && variables[1] == ""
-        if term in ["shocks:", "states:"]
+        if term in ("shocks:", "states:")
             return String[]
         else
             error("The model file contains no $(term[1:end-1]).")
         end
     else
         return variables
-    end
-
-end
-
-"""
-Combines the states, "x", with the jump variables, "y", into a single vector to
-generate a vector of the model's variables.
-
-Internal function; not exposed to users.
-"""
-function combine_states_and_jumps(x::Array{Q,1},y::Array{Q,1}) where {Q<:AbstractString}
-
-
-    if length(x) == 0 # There are no states
-        return y
-    elseif length(intersect(x,y)) > 0
-        error("Some states and jumps have the same name.")
-    else
-        return [x; y]
     end
 
 end
@@ -164,52 +204,64 @@ Internal function; not exposed to users.
 """
 function get_parameters_and_values(model_array::Array{Q,1},term::Q) where {Q<:AbstractString}
 
-    parametersbegin = find_term(model_array,term) + 1 # Starts the line after the term is located
-    parametersend = find_end(model_array,parametersbegin) - 1 # Ends the line before 'end' is located
-    if parametersbegin > parametersend
-        error("The model file contains no $(term[1:end-1]).")
+    parameter_block_begin = find_term(model_array,term) + 1                 # Starts the line after the term is located
+    parameter_block_end   = find_end(model_array,parameter_block_begin) - 1 # Ends the line before 'end' is located
+    if parameter_block_begin > parameter_block_end
+        error("The model file contains no parameters.")
     end
 
-    parameterblock = model_array[parametersbegin:parametersend]
+    parameter_block = model_array[parameter_block_begin:parameter_block_end]
 
     # Remove any trailing separators: "," or ";".
 
-    for i in eachindex(parameterblock)
-        if endswith(parameterblock[i],union(",",";"))
-            parameterblock[i] = parameterblock[i][1:end-1]
+    for i in eachindex(parameter_block)
+        if endswith(parameter_block[i],union(",",";"))
+            parameter_block[i] = parameter_block[i][1:end-1]
         end
     end
 
-    revised_parameterblock = String.(strip.(split(parameterblock[1],union(",",";"))))
-    for i = 2:length(parameterblock)
-        revised_parameterblock = [revised_parameterblock; String.(strip.(split(parameterblock[i],union(",",";"))))]
+    revised_parameter_block = String.(strip.(split(parameter_block[1],union(",",";"))))
+    revised_parameter_block = [i for i in revised_parameter_block if i != ""]
+    for i = 2:length(parameter_block)
+        new_revised_parameter_block = String.(strip.(split(parameter_block[i],union(",",";"))))
+        new_revised_parameter_block = [i for i in new_revised_parameter_block if i != ""]
+        revised_parameter_block     = [revised_parameter_block; new_revised_parameter_block]
     end
 
     # Extract the parameter names and values, making note of any parameters with unassigned values
 
     unassigned_parameter_index = 1
-    unassigned_parameters = Array{Q}(undef,0)
+    unassigned_parameters      = Array{Q}(undef,0)
 
-    parameters = Array{Q}(undef,length(revised_parameterblock))
-    values = Array{Q}(undef,length(revised_parameterblock))
-    for i in eachindex(revised_parameterblock)
-        if occursin("=",revised_parameterblock[i]) == false
-            parameters[i] = revised_parameterblock[i]
-            values[i] = "p[$unassigned_parameter_index]" # p is a reserved name
+    parameters = Array{Q}(undef,length(revised_parameter_block))
+    values = Array{Q}(undef,length(revised_parameter_block))
+    for i in eachindex(revised_parameter_block)
+        if occursin("=",revised_parameter_block[i]) == false # No value has been assigned to the parameter
+            parameters[i] = revised_parameter_block[i]
+            values[i]     = "p[$unassigned_parameter_index]" # p is a reserved name
             push!(unassigned_parameters,parameters[i])
             unassigned_parameter_index += 1
         else
-            pair = strip.(split(revised_parameterblock[i],"="))
-            parameters[i] = pair[1]
-            values[i]     = pair[2]
+            pair = strip.(split(revised_parameter_block[i],"="))
+            if pair[2] == "" # No value has been assigned to the parameter
+                parameters[i] = pair[1]
+                values[i]     = "p[$unassigned_parameter_index]" # p is a reserved name
+                push!(unassigned_parameters,parameters[i])
+                unassigned_parameter_index += 1
+            else
+              parameters[i] = pair[1]
+              values[i]     = pair[2]
+            end
         end
     end
 
-    parameter_order = sortperm(length.(parameters),rev = true) # sort parameter names from longest to shortest
-    sorted_parameters = parameters[parameter_order]
-    sorted_values = values[parameter_order]
+    # Check whether names are repeated
 
-    return sorted_parameters, sorted_values, unassigned_parameters
+    if length(parameters) != length(unique(parameters))
+        error("Some parameter names are repreated.")
+    end
+
+    return parameters, values, unassigned_parameters
 
 end
 
@@ -220,13 +272,13 @@ Internal function; not exposed to users.
 """
 function get_equations(model_array::Array{Q,1},term::Q) where {Q<:AbstractString}
 
-    equationsbegin = find_term(model_array,term) + 1 # Starts the line after the term is located
-    equationsend = find_end(model_array,equationsbegin) - 1 # Ends the line before 'end' is located
-    if equationsbegin > equationsend
-        error("The model file contains no $(term[1:end-1]).")
+    equation_block_begin = find_term(model_array,term) + 1                # Starts the line after the term is located
+    equation_block_end   = find_end(model_array,equation_block_begin) - 1 # Ends the line before 'end' is located
+    if equation_block_begin > equation_block_end
+        error("The model file contains no equations.")
     end
 
-    equation_block = model_array[equationsbegin:equationsend]
+    equation_block = model_array[equation_block_begin:equation_block_end]
 
     # Remove any trailing separators: "," or ";".
 
@@ -243,23 +295,26 @@ function get_equations(model_array::Array{Q,1},term::Q) where {Q<:AbstractString
         equations = [equations; String.(strip.(split(equation_block[i],union(",",";"))))]
     end
 
-    # For every model equation...
+    # For every model equation: 1) unify the bracketing; 2) check whether the open- close-parentheses are balanced.
 
     for i in eachindex(equation_block)
+
         if occursin("[",equations[i]) == true # Replace open square bracket with open round parenthesis
             equations[i] = replace(equations[i],"[" => "(")
         elseif occursin("]",equations[i]) == true # Replace close square bracket with close round parenthesis
             equations[i] = replace(equations[i],"]" => ")")
-        elseif occursin("{",equations[i]) == true # Replace open curly brace with open round parenthesis
-            equations[i] = replace(equations[i],"{" => "(")
-        elseif occursin("}",equations[i]) == true # Replace close curly brace with close round parenthesis
-            equations[i] = replace(equations[i],"}" => ")")
         end
+
         if occursin("=",equations[i]) == false # Check that each equation contains an equals sign
             error("Equation line $i does not contain an '=' sign.")
-        elseif length(findall("(",equations[i])) != length(findall(")",equations[i])) # Check that parentheses are balanced
-            error("Equation line $i has unbalanced parentheses.")
         end
+
+        n_open_paren   = length(findall("(",equations[i]))
+        n_closed_paren = length(findall(")",equations[i]))
+        if n_open_paren != n_closed_paren # Check whether parentheses are balanced
+            error("Equation line $i has $n_open_paren open parentheses and $n_closed_paren closed parentheses.")
+        end
+
     end
 
     return equations
@@ -295,6 +350,8 @@ function get_solvers(model_array::Array{Q,1}, term::Q) where {Q<:AbstractString}
     end
 end
 
+# At this point all of the model file's contents has been read in, now we need to do some consistency checking on its contents.
+
 """
 Reorders the model's equation so that the shock processes are at the top.
 
@@ -303,12 +360,163 @@ Internal function; not exposed to users.
 function reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
 
     if isempty(shocks) == false # Case for stochastic models
-        reordered_equations, reordered_states = _reorder_equations(equations,shocks,states,jumps,parameters)
-        return reordered_equations, reordered_states
+        reordered_equations, reordered_states, reordered_shocks = _reorder_equations(equations,shocks,states,jumps,parameters)
+        return reordered_equations, reordered_states, reordered_shocks
     else # Case for deterministic models
         reordered_equations, reordered_states = _reorder_equations(equations,states,jumps,parameters)
-        return reordered_equations, reordered_states, shocks
+        reordered_shocks = copy(shocks)
+        return reordered_equations, reordered_states, reordered_shocks
     end
+
+end
+
+function catalogue_equations(equations,states,jumps,parameters) # Deterministic models
+
+    junk_equations = copy(equations)
+
+    if length(states) > 0
+        combined_names = [states;jumps;parameters;["log", "exp", "deriv"]]
+    else
+        combined_names = [jumps;parameters;["log", "exp", "deriv"]]
+    end
+
+    combined_names .= combined_names[sortperm(length.(combined_names),rev=true)] # sort the names according to their length, longest to shortest
+
+    n_eqns = length(equations) # number of equations
+
+    # Initialise containers to store equation information
+
+    states_info = [Array{String}(undef,0) for _ in 1:n_eqns]
+
+    n_states_info = zeros(Int,n_eqns)
+    n_jumps_info  = zeros(Int,n_eqns)
+
+    n_future_states_info = zeros(Int,n_eqns)
+    n_future_jumps_info  = zeros(Int,n_eqns)
+
+    n_lag_states_info = zeros(Int,n_eqns)
+    n_lag_jumps_info  = zeros(Int,n_eqns)
+
+    # Begin equation analysis
+
+    for name in combined_names
+        for i in 1:n_eqns
+            if occursin(name,junk_equations[i]) == true
+                if name in parameters
+                    junk_equations[i] = replace(junk_equations[i],name => ":")
+                elseif name in states
+                    if occursin("$name(-1)",junk_equations[i]) == true
+                        n_lag_states_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i],"$name(-1)" => ":")
+                    end
+                    if occursin("$name(+1)",junk_equations[i]) == true
+                        n_future_states_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i],"$name(+1)" => ":")
+                    end
+                    if occursin(name,junk_equations[i]) == true
+                        n_states_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i], name => ":")
+                        push!(states_info[i],name)
+                    end
+                elseif name in jumps
+                    if occursin("$name(-1)",junk_equations[i]) == true
+                        n_lag_jumps_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i],"$name(-1)" => ":")
+                    end
+                    if occursin("$name(+1)",junk_equations[i]) == true
+                        n_future_jumps_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i],"$name(+1)" => ":")
+                    end
+                    if occursin(name,junk_equations[i]) == true
+                        n_jumps_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i], name => ":")
+                    end
+                else
+                    junk_equations[i] = replace(junk_equations[i], name => ":")
+                end
+            end
+        end
+    end
+
+    return n_lag_states_info, n_states_info, n_future_states_info, n_lag_jumps_info, n_jumps_info, n_future_jumps_info, states_info
+
+end
+
+function catalogue_equations(equations,shocks,states,jumps,parameters) # Stochastic models
+
+    junk_equations = copy(equations)
+
+    if length(states) > 0
+        combined_names = [shocks;states;jumps;parameters;["log", "exp", "deriv"]]
+    else
+        combined_names = [shocks;jumps;parameters;["log", "exp", "deriv"]]
+    end
+
+    combined_names .= combined_names[sortperm(length.(combined_names),rev=true)] # sort the names according to their length, longest to shortest
+
+    n_eqns = length(equations) # number of equations
+
+    # Initialise containers to store equation information
+
+    shocks_info = [Array{String}(undef,0) for _ in 1:n_eqns]
+    states_info = [Array{String}(undef,0) for _ in 1:n_eqns]
+
+    n_shocks_info = zeros(Int,n_eqns)
+    n_states_info = zeros(Int,n_eqns)
+    n_jumps_info  = zeros(Int,n_eqns)
+
+    n_future_states_info = zeros(Int,n_eqns)
+    n_future_jumps_info  = zeros(Int,n_eqns)
+
+    n_lag_states_info = zeros(Int,n_eqns)
+    n_lag_jumps_info  = zeros(Int,n_eqns)
+
+    # Begin equation analysis
+
+    for name in combined_names
+        for i in 1:n_eqns
+            if occursin(name,junk_equations[i]) == true
+                if name in parameters
+                    junk_equations[i] = replace(junk_equations[i],name => ":")
+                elseif name in states
+                    if occursin("$name(-1)",junk_equations[i]) == true
+                        n_lag_states_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i],"$name(-1)" => ":")
+                    end
+                    if occursin("$name(+1)",junk_equations[i]) == true
+                        n_future_states_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i],"$name(+1)" => ":")
+                    end
+                    if occursin(name,junk_equations[i]) == true
+                        n_states_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i], name => ":")
+                        push!(states_info[i],name)
+                    end
+                elseif name in jumps
+                    if occursin("$name(-1)",junk_equations[i]) == true
+                        n_lag_jumps_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i],"$name(-1)" => ":")
+                    end
+                    if occursin("$name(+1)",junk_equations[i]) == true
+                        n_future_jumps_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i],"$name(+1)" => ":")
+                    end
+                    if occursin(name,junk_equations[i]) == true
+                        n_jumps_info[i] += 1
+                        junk_equations[i] = replace(junk_equations[i], name => ":")
+                    end
+                elseif name in shocks
+                    n_shocks_info[i] += 1
+                    junk_equations[i] = replace(junk_equations[i], name => ":")
+                    push!(shocks_info[i],name)
+                else
+                    junk_equations[i] = replace(junk_equations[i], name => ":")
+                end
+            end
+        end
+    end
+
+    return n_lag_states_info, n_states_info, n_future_states_info, n_lag_jumps_info, n_jumps_info, n_future_jumps_info, states_info, n_shocks_info, shocks_info
 
 end
 
@@ -319,59 +527,35 @@ Internal function; not exposed to users.
 """
 function _reorder_equations(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
 
-     reordered_equations = copy(equations)
-     reordered_states = copy(states)
-   
-    # Construct summary information about each equation
-   
-    junk_equations = copy(equations)
-    states_left_in_eqns = copy(equations)
-    combined_names = [states; jumps; parameters; ["exp", "log", "deriv"]]
-    sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
-   
-    states_number = zeros(Int64,length(equations))
-    jumps_number  = zeros(Int64,length(equations))
-   
-    for i in eachindex(junk_equations)
-        for j in sorted_combined_names
-            if occursin(j,junk_equations[i]) == true
-                if j in states
-                    states_number[i] += 1
-                elseif j in jumps
-                    jumps_number[i] += 1
-                    states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
-                else
-                    states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
-                end
-                junk_equations[i] = replace(junk_equations[i],j => ":")
-            end
-        end
-    end
-    number_eqns_with_no_jumps = sum(jumps_number .== 0)
+    n_eqns = length(equations)
 
-    # Put the equations with no jumps in them at the top
+    reordered_equations = copy(equations)
+   
+    # Retrieve summary information about each equation
+   
+    n_lag_states_info, n_states_info, n_future_states_info, n_lag_jumps_info, n_jumps_info, n_future_jumps_info, states_info = catalogue_equations(equations,states,jumps,parameters)
 
-    ind = sortperm(jumps_number)
-    reordered_equations .= reordered_equations[ind]
-    states_left_in_eqns .= states_left_in_eqns[ind]
-    states_number .= states_number[ind]
-    jumps_number  .= jumps_number[ind]
+    # Put the equations for predetermined variables at the top
+
+    jumps_locations = n_jumps_info + n_future_jumps_info
+    ind = sortperm(jumps_locations)
+
+    reordered_equations  .= reordered_equations[ind]
+    n_lag_states_info    .= n_lag_states_info[ind]
+    n_states_info        .= n_states_info[ind]
+    n_future_states_info .= n_future_states_info[ind]
+    n_lag_jumps_info     .= n_lag_jumps_info[ind]
+    n_jumps_info         .= n_jumps_info[ind]
+    n_future_jumps_info  .= n_future_jumps_info[ind]
+    states_info          .= states_info[ind]
 
     # Now sort out the order of the states in the system.
-    # This ordering would be a lot less complicated if VAR shocks were not allowed!
 
-    states_that_have_been_ordered = Int64[]
-    for k in 1:length(states) # First look at equations containing one state, then two states, etc.
-        for j in 1:number_eqns_with_no_jumps # j tells us which equation we are looking at
-            if states_number[j] == k
-                for i in eachindex(reordered_states) # i tells us the index of the state we are looking at
-                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i && (i in states_that_have_been_ordered) == false
-                        reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i] # State i is now associated with equation j.
-                        push!(states_that_have_been_ordered,i)
-                        break
-                    end
-                end
-            end
+    reordered_states = states_info[1]
+    for i in 2:n_eqns
+        if length(states_info[i]) > 0
+            new_states = setdiff(states_info[i],reordered_states)
+            reordered_states = [reordered_states;new_states]
         end
     end
 
@@ -386,111 +570,73 @@ Internal function; not exposed to users.
 """
 function _reorder_equations(equations::Array{Q,1},shocks::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1},parameters::Array{Q,1}) where {Q<:AbstractString}
 
+    n_eqns = length(equations)
+
     reordered_equations = copy(equations)
-    reordered_states = copy(states)
+   
+    # Retrieve summary information about each equation
+   
+    n_lag_states_info, n_states_info, n_future_states_info, n_lag_jumps_info, n_jumps_info, n_future_jumps_info, states_info, n_shocks_info, shocks_info = catalogue_equations(equations,shocks,states,jumps,parameters)
 
-    ns = length(shocks)
+    # Put equations containing shocks at the top
 
-    # 1. Construct summary information about each equation
+    shocks_locations = n_shocks_info .> 0
+    ind = sortperm(shocks_locations,rev=true)
 
-    junk_equations = copy(equations)
-    states_left_in_eqns = copy(equations)
-    combined_names = [states; jumps; parameters; shocks; ["exp", "log", "deriv"]]
-    sorted_combined_names = combined_names[sortperm(length.(combined_names),rev = true)]
+    reordered_equations  .= reordered_equations[ind]
+    n_lag_states_info    .= n_lag_states_info[ind]
+    n_states_info        .= n_states_info[ind]
+    n_future_states_info .= n_future_states_info[ind]
+    n_lag_jumps_info     .= n_lag_jumps_info[ind]
+    n_jumps_info         .= n_jumps_info[ind]
+    n_future_jumps_info  .= n_future_jumps_info[ind]
+    states_info          .= states_info[ind]
 
-    shocks_info = zeros(Int64,length(equations),ns)
-    states_number = zeros(Int64,length(equations))
-    jumps_number  = zeros(Int64,length(equations))
+    n_shocks_info        .= n_shocks_info[ind]
+    shocks_info          .= shocks_info[ind]
 
-    for i in eachindex(junk_equations)
-        for j in sorted_combined_names
-            if occursin(j,junk_equations[i]) == true
-                if j in states
-                    states_number[i] += 1
-                elseif j in jumps
-                    jumps_number[i] += 1
-                    states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
-                elseif j in shocks
-                    for k in eachindex(shocks)
-                        if shocks[k] == j
-                            shocks_info[i,k] = 1
-                        end
-                    end
-                    states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
-                else
-                    states_left_in_eqns[i] = replace(states_left_in_eqns[i],j => ":")
-                end
-                junk_equations[i] = replace(junk_equations[i],j => ":")
-            end
-        end
-    end
-    shocks_number = sum(shocks_info,dims = 2)[:]
-    number_eqns_with_shocks = sum(shocks_number .!= 0)
+    # Wityhin the block that contains shocks, reordered from smallest to largest number of shocks
 
-    # 2. Check that each of the shocks is in at least one equation
+    n_eqns_with_shocks = sum(shocks_locations)
 
-    if sum(sum(shocks_info,dims=1) .!=0) != ns
-        error("Not all shocks appear in the model.")
-    end
+    n_sub_shocks_info = n_shocks_info[1:n_eqns_with_shocks]
+    sub_shocks_info   = shocks_info[1:n_eqns_with_shocks]
+ 
+    ind = sortperm(n_sub_shocks_info)
 
-    # 3. Put the equations with shocks at the top of the system
+    reordered_equations[1:n_eqns_with_shocks]  .= reordered_equations[1:n_eqns_with_shocks][ind]
+    n_lag_states_info[1:n_eqns_with_shocks]    .= n_lag_states_info[1:n_eqns_with_shocks][ind]
+    n_states_info[1:n_eqns_with_shocks]        .= n_states_info[1:n_eqns_with_shocks][ind]
+    n_future_states_info[1:n_eqns_with_shocks] .= n_future_states_info[1:n_eqns_with_shocks][ind]
+    n_lag_jumps_info[1:n_eqns_with_shocks]     .= n_lag_jumps_info[1:n_eqns_with_shocks][ind]
+    n_jumps_info[1:n_eqns_with_shocks]         .= n_jumps_info[1:n_eqns_with_shocks][ind]
+    n_future_jumps_info[1:n_eqns_with_shocks]  .= n_future_jumps_info[1:n_eqns_with_shocks][ind]
+    states_info[1:n_eqns_with_shocks]          .= states_info[1:n_eqns_with_shocks][ind]
 
-    ind = sortperm(shocks_number,rev=true)
-    reordered_equations .= reordered_equations[ind]
-    states_left_in_eqns .= states_left_in_eqns[ind]
-    states_number .= states_number[ind]
-    jumps_number  .= jumps_number[ind]
-    shocks_info   .= shocks_info[ind,:]
-    shocks_number .= shocks_number[ind]
+    n_shocks_info[1:n_eqns_with_shocks]        .= n_shocks_info[1:n_eqns_with_shocks][ind]
+    shocks_info[1:n_eqns_with_shocks]          .= shocks_info[1:n_eqns_with_shocks][ind]
 
-    # 4. Reorder the stochastic equations so that the assignment matrix has 1's along its leading diagonal.
-    #    Construct the penalty (cost) matrix for the Hungarian method.
+    # Sort out the order of the shocks in the system
 
-    s = shocks_info[1:number_eqns_with_shocks,:]
-    penalty = ones(number_eqns_with_shocks,ns)
-    for i in 1:number_eqns_with_shocks # Take row i
-        for j in eachindex(shocks) # and suppose it was placed in row j
-            if s[i,j] == 1
-                penalty[i,j] = 0.0
-            end
+    reordered_shocks = shocks_info[1]
+    for i in 2:n_eqns
+        if length(shocks_info[i]) > 0
+            new_shocks = setdiff(shocks_info[i],reordered_shocks)
+            reordered_shocks = [reordered_shocks;new_shocks]
         end
     end
 
-    assignment, cost = hungarian(penalty)
+    # Now sort out the order of the states in the system.
 
-    new_assignment = zeros(Int,number_eqns_with_shocks)
-    offset = 1
-    for i in 1:number_eqns_with_shocks
-        if assignment[i] != 0
-           new_assignment[i] = assignment[i]
-        else
-            new_assignment[i] = ns+offset
-            offset += 1
+    reordered_states = states_info[1]
+    for i in 2:n_eqns
+        if length(states_info[i]) > 0
+            new_states = setdiff(states_info[i],reordered_states)
+            reordered_states = [reordered_states;new_states]
         end
     end
 
-    reordered_equations[new_assignment] .= reordered_equations[1:number_eqns_with_shocks]
-    states_left_in_eqns[new_assignment] .= states_left_in_eqns[1:number_eqns_with_shocks]
-    states_number[new_assignment]       .= states_number[1:number_eqns_with_shocks]
-
-    # 5. Sort out the order of the states in the system
-
-    states_that_have_been_ordered = Int64[]
-    for k in 1:length(states) # First look at equations containing one state, then two states, etc.
-        for j in 1:number_eqns_with_shocks # j tells us which equation we are looking at
-            if states_number[j] == k
-                for i in eachindex(reordered_states) # i tells us the index of the state we are looking at
-                    if occursin(reordered_states[i],states_left_in_eqns[j]) == true && j != i && (i in states_that_have_been_ordered) == false
-                        reordered_states[i], reordered_states[j] = reordered_states[j], reordered_states[i] # State i is now associated with equation j.
-                        push!(states_that_have_been_ordered,i)
-                        break
-                    end
-                end
-            end
-        end
-    end
-
-    return reordered_equations, reordered_states
+    return reordered_equations, reordered_states, reordered_shocks
 
 end
 
@@ -502,21 +648,26 @@ Internal function; not exposed to users.
 """
 function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,1}) where {Q<:AbstractString}
 
-    variables = [states;jumps]
-    var_index = sortperm(length.(variables),rev=true)
+    if length(states) > 0
+        variables = [states;jumps]
+    else
+        variables = [jumps;]
+    end
+    sorted_variables = variables[sortperm(length.(variables),rev=true)]
 
-    lag_variables = string.(variables,"(-1)")
+    n_variables = length(variables)
+
+    lag_variables = string.(sorted_variables,"(-1)")
     
     reorganized_equations = copy(equations)
 
     # First we determine if any equation contains a lagged variable.
 
     model_has_lags = false
-    for i in eachindex(equations)
+    for i in eachindex(reorganized_equations)
         for j in lag_variables
-            if occursin(j,equations[i]) == true
+            if occursin(j,reorganized_equations[i]) == true
                 model_has_lags = true
-                break
             end
         end
     end
@@ -526,21 +677,21 @@ function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,
        equations. =#
 
     if model_has_lags == false
-        return equations, states, variables
+        return equations, states, jumps, variables
     else
         new_states = String[]
         new_eqns   = String[]
-        for j in var_index
+        for j in 1:n_variables
             flag = false
             for i in eachindex(equations)
                 if occursin(lag_variables[j],reorganized_equations[i]) == true
-                    reorganized_equations[i] = replace(reorganized_equations[i],lag_variables[j] => string(variables[j],"lag"))
+                    reorganized_equations[i] = replace(reorganized_equations[i],lag_variables[j] => string(sorted_variables[j],"lag"))
                     flag = true
                 end
             end
             if flag == true
-                push!(new_states,string(variables[j],"lag"))
-                push!(new_eqns,string(variables[j],"lag(+1) = ",variables[j]))
+                push!(new_states,string(sorted_variables[j],"lag"))
+                push!(new_eqns,string(sorted_variables[j],"lag(+1) = ",sorted_variables[j]))
             end
         end
     
@@ -548,7 +699,7 @@ function deal_with_lags(equations::Array{Q,1},states::Array{Q,1},jumps::Array{Q,
         reorganized_equations = [reorganized_equations; new_eqns]
         reorganized_variables = [reorganized_states; jumps]
 
-        return reorganized_equations, reorganized_states, reorganized_variables
+        return reorganized_equations, reorganized_states, jumps, reorganized_variables
 
     end
 
@@ -563,30 +714,52 @@ Internal function; not exposed to users.
 """
 function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractString}
 
-    states    = get_variables(model_array,"states:")
-    jumps     = get_variables(model_array,"jumps:")
-    shocks    = get_variables(model_array,"shocks:")
-    variables = combine_states_and_jumps(states,jumps)
-    equations = get_equations(model_array,"equations:")
-    (parameters, parametervalues, unassigned_parameters) = get_parameters_and_values(model_array,"parameters:")
     solvers   = get_solvers(model_array,"solvers:")
 
-    for i in [variables; parameters]
-        if i in variables
-            if sum(occursin.(i,equations)) == false
-                error("Variable $i is not in any equation.")
-            end
-        else
-            if sum(occursin.(i,equations)) + sum(occursin.(i,parametervalues)) == 0 # Recall that at this stage parametervalues can be convolutions of parameters
-                println("Warning: parameter $i is not in any equation.")
-            end
+    states    = get_variables(model_array,"states:") # Repeated state names will error at this function call
+    jumps     = get_variables(model_array,"jumps:")  # Repeated jump names will error at this function call
+    shocks    = get_variables(model_array,"shocks:") # Repeated shock names will error at this function call; will be empty array for deterministic models
+
+    equations = get_equations(model_array,"equations:")
+
+    parameters, parametervalues, unassigned_parameters = get_parameters_and_values(model_array,"parameters:") # Repeated parameter names will error at this function call
+    
+    # Check that every state variable enters at least one equation
+
+    for i in states
+        if sum(occursin.(i,equations)) == false
+            error("The state variable $i is not in any equation.")
         end
     end
 
-    combined_names = [parameters; variables; shocks]
-    if length(unique(combined_names)) != length(combined_names)
-        error("Some parameters, variables, or shocks have the same name.")
+    # Check that every jump variable enters at least one equation
+
+    for i in jumps
+        if sum(occursin.(i,equations)) == false
+            error("The jump variable $i is not in any equation.")
+        end
     end
+
+    # Check that every parameter enters at least one equation or is used to define another parameter
+
+    for i in parameters
+        if sum(occursin.(i,equations)) + sum(occursin.(i,parametervalues)) == 0 # Recall that at this stage parametervalues can be convolutions of parameters
+            println("Warning: The parameter $i is not in any equation.")
+        end
+    end
+
+    # Check whether there are name overlaps across shocks, states, jumps, parameters
+
+    if length(shocks) > 0
+        combined_names = [parameters; states; jumps; shocks]
+    else
+        combined_names = [parameters; states; jumps]
+    end
+    if length(unique(combined_names)) != length(combined_names)
+        error("Some parameters, states, jumps, or shocks have the same name.")
+    end
+
+    # Check whether names conflict with reserved names
 
     reserved_names = ("deriv", "exp", "log", "x", "p", ":", ";", "&")
     for name in reserved_names
@@ -595,18 +768,17 @@ function get_re_model_primatives(model_array::Array{Q,1}) where {Q<:AbstractStri
         end
     end
 
-    reordered_equations, states = reorder_equations(equations,shocks,states,jumps,parameters)
-    reorganized_equations, states, variables = deal_with_lags(reordered_equations,states,jumps)
+    reordered_equations, reordered_states, reordered_shocks           = reorder_equations(equations,shocks,states,jumps,parameters)
+    reorganized_equations, expanded_states, jumps, expanded_variables = deal_with_lags(reordered_equations,reordered_states,jumps)
 
-    re_model_primatives = REModelPrimatives(states,jumps,shocks,variables,parameters,parametervalues,reorganized_equations,unassigned_parameters,solvers)
+    re_model_primatives = REModelPrimatives(expanded_states,jumps,reordered_shocks,expanded_variables,parameters,parametervalues,reorganized_equations,unassigned_parameters,solvers)
 
     return re_model_primatives
 
 end
 
 """
-Repackages the model's equations, replaces parameter names with parameter values, and
-determines the order of the variables in the system.
+Repackages the model's equations, replaces parameter names with parameter values.
 
 Internal function; not exposed to users.
 """
@@ -643,8 +815,7 @@ function repackage_equations(model::DSGEModelPrimatives)
         end
     end
 
-    #= Here we go through all parameters and deal with parameters depending on other
-       parameters =#
+    #= Go through all parameters and deal with parameters depending on other parameters =#
 
     loops = 0 # Counts the number of loops over the parameters
     while true
@@ -905,20 +1076,48 @@ function create_projection_equations(equations::Array{Q,1},model::DSGEModelPrima
     end
 
     jumps_to_be_approximated = Int64[]
-    eqns_to_be_approximated = Int64[]
+    eqns_with_jumps          = Int64[]
     for i = 1:ny
         for j = 1:ne
             if occursin("approx$i",projection_equations[j]) == true
                 push!(jumps_to_be_approximated,i)
-                push!(eqns_to_be_approximated,j)
+                push!(eqns_with_jumps,j)
             end
         end
     end
 
     jumps_to_be_approximated = unique(jumps_to_be_approximated)
-    eqns_to_be_approximated = sort(unique(eqns_to_be_approximated))
 
-    return projection_equations, jumps_to_be_approximated, eqns_to_be_approximated
+    eqns_with_derivs              = Int64[]
+    derivs_to_be_approximated_num = Int64[]
+    derivs_to_be_approximated_den = Int64[]
+    for j = 1:ne
+        if occursin("deriv{",projection_equations[j]) == true
+            push!(eqns_with_derivs,j)
+            s = findall("{",projection_equations[j])
+            f = findall("}",projection_equations[j])
+            n_derivs = length(s)
+            for jj = 1:n_derivs
+                snippet = projection_equations[j][s[jj][1]:f[jj][1]]
+                snippet1,snippet2 = split(snippet,"|")
+                for i in 1:nv
+                    if occursin("x[$(nx+i)]",snippet1) == true
+                        push!(derivs_to_be_approximated_num,nx+i)
+                        projection_equations[j] = replace(projection_equations[j],"deriv$snippet" => "deriv$(nx+i)")
+                    end
+                end
+                for i in 1:nx
+                    if occursin("state[$i]",snippet2) == true
+                        push!(derivs_to_be_approximated_den,i)
+                    end
+                end
+            end
+        end
+    end
+
+    eqns_with_jumps = sort(unique(eqns_with_jumps))
+
+    return projection_equations, jumps_to_be_approximated, eqns_with_jumps, derivs_to_be_approximated_num, derivs_to_be_approximated_den, eqns_with_derivs
 
 end
 
@@ -936,7 +1135,8 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
 
     repackaged_equations = repackage_equations(model)
 
-    nonlinear_equations, jumps_to_be_approximated, eqns_to_be_approximated = create_projection_equations(repackaged_equations, model)
+    nonlinear_equations, jumps_to_be_approximated, eqns_with_jumps, derivs_to_be_approximated_num, derivs_to_be_approximated_den, eqns_with_derivs = create_projection_equations(repackaged_equations, model)
+    
     projection_equations = make_equations_equal_zero(nonlinear_equations)
 
     steady_state_equations = create_steady_state_equations(model)
@@ -951,6 +1151,8 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
 
     variables = OrderedDict(model.variables[i] => i for i = 1:number_variables)
 
+    unassigned_parameters = copy(model.unassigned_parameters)
+
     # Build up the string containing the processed model information that gets saved
 
     # First, add the model's summary information
@@ -962,7 +1164,10 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
     model_string = string(model_string, "ne = $number_equations \n \n")
 
     model_string = string(model_string, "jumps_to_approximate = $jumps_to_be_approximated \n \n")
-    model_string = string(model_string, "eqns_to_approximate = $eqns_to_be_approximated \n \n")
+    model_string = string(model_string, "eqns_to_approximate = $eqns_with_jumps \n \n")
+    model_string = string(model_string, "derivs_to_approximate_num = $derivs_to_be_approximated_num \n \n")
+    model_string = string(model_string, "derivs_to_approximate_den = $derivs_to_be_approximated_den \n \n")
+    model_string = string(model_string, "eqns_with_derivs = $eqns_with_derivs \n \n")
     model_string = string(model_string, "variables = $variables \n \n")
 
     # Second, add the model's static information
@@ -1032,11 +1237,18 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
         closure_cheb_string = "function closure_chebyshev_equations(state,scaled_weights,order,domain) \n \n"
     end
     closure_cheb_string = string(closure_cheb_string, "  function chebyshev_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} \n \n")
+    
     weight_number = 1
     for i in jumps_to_be_approximated
         closure_cheb_string = string(closure_cheb_string, "    approx$i = chebyshev_evaluate(scaled_weights[$weight_number],x[$number_jumps+1:end],order,domain)", "\n")
         weight_number += 1
     end
+
+    for i in 1:length(derivs_to_be_approximated_num)
+       closure_cheb_string = string(closure_cheb_string, "    deriv$(derivs_to_be_approximated_num[i])  = chebyshev_derivative(scaled_weights[$weight_number],x[$number_jumps+1:end],$(derivs_to_be_approximated_den[i]),order,domain)", "\n")
+       weight_number += 1
+    end
+
     closure_cheb_string = string(closure_cheb_string, "\n", "    #f = Array{T,1}(undef,$number_equations) \n \n")
     for i in eachindex(projection_equations)
         closure_cheb_string = string(closure_cheb_string, "    f[$i] = ", projection_equations[i], "\n")
@@ -1058,6 +1270,12 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
         closure_smol_string = string(closure_smol_string, "    approx$i = smolyak_evaluate(scaled_weights[$weight_number],poly)", "\n")
         weight_number += 1
     end
+
+    for i in 1:length(derivs_to_be_approximated_num)
+        closure_smol_string = string(closure_smol_string, "    deriv$(derivs_to_be_approximated_num[i])  = smolyak_derivative(scaled_weights[$weight_number],x[$number_jumps+1:end],order,domain,$(derivs_to_be_approximated_den[i]))", "\n")
+        weight_number += 1
+    end
+
     closure_smol_string = string(closure_smol_string, "\n", "    #f = Array{T,1}(undef,$number_equations) \n \n")
     for i in eachindex(projection_equations)
         closure_smol_string = string(closure_smol_string, "    f[$i] = ", projection_equations[i], "\n")
@@ -1079,6 +1297,12 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
         closure_hcross_string = string(closure_hcross_string, "    approx$i = hyperbolic_cross_evaluate(scaled_weights[$weight_number],poly)", "\n")
         weight_number += 1
     end
+
+    for i in 1:length(derivs_to_be_approximated_num)
+        closure_hcross_string = string(closure_hcross_string, "    deriv$(derivs_to_be_approximated_num[i])  = hyperbolic_cross_derivative(scaled_weights[$weight_number],x[$number_jumps+1:end],order,domain,$(derivs_to_be_approximated_den[i]))", "\n")
+        weight_number += 1
+    end
+
     closure_hcross_string = string(closure_hcross_string, "\n", "    #f = Array{T,1}(undef,$number_equations) \n \n")
     for i in eachindex(projection_equations)
         closure_hcross_string = string(closure_hcross_string, "    f[$i] = ", projection_equations[i], "\n")
@@ -1089,7 +1313,7 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
 
     if length(model.unassigned_parameters) != 0
         if number_shocks == 0  # We need to separate the function generated for the stochastic and deterministic cases
-            closure_pl_string = "function closure_piecewise_equations(variables,grid,state,p) \n \n"
+            closure_pl_string = "function closure_piecewise_equations(variables,grid,statearams) \n \n"
         else
             closure_pl_string = "function closure_piecewise_equations(variables,grid,state,integrals,p) \n \n"
         end
@@ -1110,6 +1334,15 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
         end
     end
 
+    for i in 1:length(derivs_to_be_approximated_num)
+        if number_shocks == 0 || derivs_to_be_approximated_num[i] <= number_jumps
+            closure_pl_string = string(closure_pl_string, "    deriv$(derivs_to_be_approximated_num[i])  = piecewise_linear_derivative(variables[$(derivs_to_be_approximated_num[i])],grid,x[$number_jumps+1:end],$(derivs_to_be_approximated_den[i]))", "\n")
+        else
+            closure_pl_string = string(closure_pl_string, "    deriv$(derivs_to_be_approximated_num[i])  = piecewise_linear_derivative(variables[$(derivs_to_be_approximated_num[i])],grid,x[$number_jumps+1:end],integrals,$(derivs_to_be_approximated_den[i]))", "\n")
+        end
+        weight_number += 1
+    end
+
     closure_pl_string = string(closure_pl_string, "\n", "    #f = Array{T,1}(undef,$number_equations) \n \n")
     for i in eachindex(projection_equations)
         closure_pl_string = string(closure_pl_string, "    f[$i] = ", projection_equations[i], "\n")
@@ -1123,7 +1356,7 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
     model_string = string(model_string, "\n", closure_pl_string)
     model_string = string(model_string, "\n", "unassigned_parameters = $(model.unassigned_parameters) \n")
     model_string = string(model_string, "\n", """solvers = "$(model.solvers)" """)
-
+    
     model_path = replace(path, ".txt" => "_processed.txt")
     open(model_path, "w") do io
         write(io, model_string)
@@ -1132,17 +1365,23 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
 end
 
 """
-Opens, and processes the contents of a model file for a rational expectations model.
+Opens, and processes the contents of a model file, creating the processed model file.
 
-This functions exists anticipating that models that depart from rational expections 
-will be introduced at some point 
-
-Internal function; not exposed to users
+Signature
+=========
+```
+process_model(path)
+```
 """
-function process_re_model(model_array::Array{Q,1},path::Q) where {Q<:AbstractString}
+function process_model(path::Q) where {Q<:AbstractString}
+
+    # Main function used to open, read, and process a model file.  The processed model
+    # in written to a file that contains all the information needed for the model
+    # solvers.
+
+    model_array = open_model_file(path)
 
     # Creates the processed model structure for rational expectations models
-    # (anticipating that other types of models may come later).
 
     re_model_primatives = get_re_model_primatives(model_array)
 
@@ -1157,51 +1396,99 @@ function process_re_model(model_array::Array{Q,1},path::Q) where {Q<:AbstractStr
 end
 
 """
-Opens, and processes the contents of a model file.
+Retrives and stores in a model structure the information extracted from a processed model file.
 
-Exported function.
+Signature
+=========
+```
+model = retrieve_processed_model()
+```
 """
-function process_model(path::Q) where {Q<:AbstractString}
-
-    # Main function used to open, read, and process a model file.  The processed model
-    # in written to a file that contains all the information needed for the model
-    # solvers.
-
-    model_array = open_model_file(path)
-
-    process_re_model(model_array,path)
-
-end
-
-"""
-Retrives and stores in a structure the information from a processed model file.
-
-Exported function.
-"""
-function retrieve_processed_model(path::Q) where {Q<:AbstractString}
-
-    if !occursin("_processed",path)
-        path = replace(path,".txt" => "_processed.txt")
-    end
-
-    include(path) # The information included is placed in the global scope, but then put in a struct
+function retrieve_processed_model()
 
     if length(unassigned_parameters) != 0
-        dsge_model = REModelPartial(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,unassigned_parameters,solvers)
+      if solvers == "Any"
+        dsge_model = REModelPartialAny(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,unassigned_parameters)
+      elseif solvers == "Projection"
+        dsge_model = REModelPartialProj(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,unassigned_parameters)
+      elseif solvers == "Perturbation"
+        dsge_model = REModelPartialPert(nx,ny,ns,nv,ne,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,unassigned_parameters)
+      elseif solvers == "Linear"
+        dsge_model = REModelPartialLinear(nx,ny,ns,nv,ne,variables,nlsolve_static_equations,static_equations,dynamic_equations,unassigned_parameters)
+      end
     else
-        dsge_model = REModel(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,solvers)
+      if solvers == "Any"
+        dsge_model = REModelAny(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations)
+      elseif solvers == "Projection"
+        dsge_model = REModelProj(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations)
+      elseif solvers == "Perturbation"
+        dsge_model = REModelPert(nx,ny,ns,nv,ne,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations)
+      elseif solvers == "Linear"
+        dsge_model = REModelLinear(nx,ny,ns,nv,ne,variables,nlsolve_static_equations,static_equations,dynamic_equations)
+      end
     end
 
     return dsge_model
 
 end
 
-"""
-Assigns values to parameters previously without values.
+create_model_structure = retrieve_processed_model
 
-Exported function.
 """
-function assign_parameters(model::REModelPartial,param::Array{T,1}) where {T<:Number}
+Assigns values to parameters in a partially specified model.  `param` can be 
+either a vector or a dictionary.
+
+Signature
+=========
+```
+new_mod = assign_parameters(model,param)
+```
+"""
+function assign_parameters(model::REModelPartialLinear,param::Array{T,1}) where {T<:Number}
+
+    nx = model.number_states
+    ny = model.number_jumps
+    ns = model.number_shocks
+    nv = model.number_variables
+    ne = model.number_equations
+    vars = model.variables
+
+    nlsse(f,x) = model.nlsolve_static_function(f,x,param)
+    sf(x) = model.static_function(x,param)
+    df(x) = model.dynamic_function(x,param)
+
+    newmod = REModelLinear(nx,ny,ns,nv,ne,vars,nlsse,sf,df)
+
+    return newmod
+
+end
+
+function assign_parameters(model::REModelPartialPert,param::Array{T,1}) where {T<:Number}
+
+    nx = model.number_states
+    ny = model.number_jumps
+    ns = model.number_shocks
+    nv = model.number_variables
+    ne = model.number_equations
+    vars = model.variables
+
+    nlsse(f,x) = model.nlsolve_static_function(f,x,param)
+    sf(x) = model.static_function(x,param)
+    df(x) = model.dynamic_function(x,param)
+
+    ief = Array{Function}(undef,ne)
+    for i = 1:ne
+        ffie(x) = model.each_eqn_function[i](x,param)
+        ief[i] = ffie
+    end
+
+    newmod = REModelPert(nx,ny,ns,nv,ne,vars,nlsse,sf,df,ief)
+
+    return newmod
+
+end
+
+function assign_parameters(model::REModelPartialProj,param::Array{T,1}) where {T<:Number}
 
     nx = model.number_states
     ny = model.number_jumps
@@ -1211,7 +1498,9 @@ function assign_parameters(model::REModelPartial,param::Array{T,1}) where {T<:Nu
     jumps_approx = model.jumps_approximated
     eqns_approx = model.eqns_approximated
     vars = model.variables
-    solvers = model.solvers
+    derivs_approx_num = model.derivs_approximated_num
+    derivs_approx_den = model.derivs_approximated_den
+    eqns_derivs = model.eqns_with_derivs
 
     nlsse(f,x) = model.nlsolve_static_function(f,x,param)
     sf(x) = model.static_function(x,param)
@@ -1230,16 +1519,56 @@ function assign_parameters(model::REModelPartial,param::Array{T,1}) where {T<:Nu
     cfpl_det(variables,grid,state) = model.closure_function_piecewise(variables,grid,state,param)
 
     if ns != 0
-        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,vars,nlsse,sf,df,ief,cf_cheb,cf_smol,cf_hcross,cfpl_stoch,solvers)
+        newmod = REModelProj(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,derivs_approx_num,derivs_approx_den,eqns_derivs,vars,nlsse,sf,df,ief,cf_cheb,cf_smol,cf_hcross,cfpl_stoch)
         return newmod
     else
-        newmod = REModel(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,vars,nlsse,sf,df,ief,cf_cheb,cf_smol,cf_hcross,cfpl_det,solvers)
+        newmod = REModelProj(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,derivs_approx_den,eqns_derivs,vars,nlsse,sf,df,cf_cheb,cf_smol,cf_hcross,cfpl_det)
         return newmod
     end
 
 end
 
-function assign_parameters(model::REModelPartial,paramdict::Dict{Q,T}) where {T<:Number,Q<:AbstractString}
+function assign_parameters(model::REModelPartialAny,param::Array{T,1}) where {T<:Number}
+
+    nx = model.number_states
+    ny = model.number_jumps
+    ns = model.number_shocks
+    nv = model.number_variables
+    ne = model.number_equations
+    jumps_approx = model.jumps_approximated
+    eqns_approx = model.eqns_approximated
+    vars = model.variables
+    derivs_approx_num = model.derivs_approximated_num
+    derivs_approx_den = model.derivs_approximated_den
+    eqns_derivs = model.eqns_with_derivs
+
+    nlsse(f,x) = model.nlsolve_static_function(f,x,param)
+    sf(x) = model.static_function(x,param)
+    df(x) = model.dynamic_function(x,param)
+
+    ief = Array{Function}(undef,ne)
+    for i = 1:ne
+        ffie(x) = model.each_eqn_function[i](x,param)
+        ief[i] = ffie
+    end
+
+    cf_cheb(state,scaled_weights,order,domain) = model.closure_function_chebyshev(state,scaled_weights,order,domain,param)
+    cf_smol(state,scaled_weights,order,domain) = model.closure_function_smolyak(state,scaled_weights,order,domain,param)
+    cf_hcross(state,scaled_weights,order,domain) = model.closure_function_hcross(state,scaled_weights,order,domain,param)
+    cfpl_stoch(variables,grid,state,integrals) = model.closure_function_piecewise(variables,grid,state,integrals,param)
+    cfpl_det(variables,grid,state) = model.closure_function_piecewise(variables,grid,state,param)
+
+    if ns != 0
+        newmod = REModelAny(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,derivs_approx_num,derivs_approx_den,eqns_derivs,vars,nlsse,sf,df,ief,cf_cheb,cf_smol,cf_hcross,cfpl_stoch)
+        return newmod
+    else
+        newmod = REModelAny(nx,ny,ns,nv,ne,jumps_approx,eqns_approx,derivs_approx_num,derivs_approx_den,eqns_derivs,vars,nlsse,sf,df,ief,cf_cheb,cf_smol,cf_hcross,cfpl_det)
+        return newmod
+    end
+
+end
+
+function assign_parameters(model::M,paramdict::Dict{Q,T}) where {M<:REModelPartial,T<:Number,Q<:AbstractString}
 
     param = zeros(length(paramdict))
 

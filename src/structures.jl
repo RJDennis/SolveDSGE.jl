@@ -5,6 +5,9 @@ Parent model type.
 """
 abstract type DSGEModel end
 
+abstract type REModel <: DSGEModel end
+abstract type REModelPartial <: DSGEModel end
+
 """
 Parent type for the primative or key components of a DSGEModel.
 """
@@ -31,11 +34,50 @@ struct REModelPrimatives{Q<:AbstractString} <: DSGEModelPrimatives
 end
 
 """
-Struct for a fully specified rational expectations model, a subtype of DSGEModel.
+Struct for a fully specified linear rational expectations model, a subtype of REModel.
     
 Contains the model information in a form that the solvers can work with.
 """
-struct REModel{S<:Integer,Q<:AbstractString} <: DSGEModel
+struct REModelLinear{S<:Integer,Q<:AbstractString} <: REModel
+
+    number_states::S
+    number_jumps::S
+    number_shocks::S
+    number_variables::S
+    number_equations::S
+    variables::OrderedDict{Q,S}
+    nlsolve_static_function::Function
+    static_function::Function
+    dynamic_function::Function
+
+end
+
+"""
+Struct for a fully specified rational expectations model, a subtype of REModel.
+    
+Contains the model information in a form that the solvers can work with.
+"""
+struct REModelPert{S<:Integer,Q<:AbstractString} <: REModel
+
+    number_states::S
+    number_jumps::S
+    number_shocks::S
+    number_variables::S
+    number_equations::S
+    variables::OrderedDict{Q,S}
+    nlsolve_static_function::Function
+    static_function::Function
+    dynamic_function::Function
+    each_eqn_function::Array{Function,1}
+
+end
+
+"""
+Struct for a fully specified rational expectations model, a subtype of REModel.
+    
+Contains the model information in a form that the solvers can work with.
+"""
+struct REModelProj{S<:Integer,Q<:AbstractString} <: REModel
 
     number_states::S
     number_jumps::S
@@ -44,6 +86,9 @@ struct REModel{S<:Integer,Q<:AbstractString} <: DSGEModel
     number_equations::S
     jumps_approximated::Array{S,1}
     eqns_approximated::Array{S,1}
+    derivs_approximated_num::Array{S,1}
+    derivs_approximated_den::Array{S,1}
+    eqns_with_derivs::Array{S,1}
     variables::OrderedDict{Q,S}
     nlsolve_static_function::Function
     static_function::Function
@@ -53,17 +98,15 @@ struct REModel{S<:Integer,Q<:AbstractString} <: DSGEModel
     closure_function_smolyak::Function
     closure_function_hcross::Function
     closure_function_piecewise::Function
-    solvers::Q
 
 end
 
 """
-Struct for a partially specified rational expectations model, a subtype of DSGEModel.
-
-The model is partially specified in that one or more parameters lack values.  These values must be
-assigned using the assign_parameters() function in order for the model to become fully specified.
+Struct for a fully specified rational expectations model, a subtype of REModel.
+    
+Contains the model information in a form that the solvers can work with.
 """
-struct REModelPartial{S<:Integer,Q<:AbstractString} <: DSGEModel
+struct REModelAny{S<:Integer,Q<:AbstractString} <: REModel
 
     number_states::S
     number_jumps::S
@@ -72,6 +115,82 @@ struct REModelPartial{S<:Integer,Q<:AbstractString} <: DSGEModel
     number_equations::S
     jumps_approximated::Array{S,1}
     eqns_approximated::Array{S,1}
+    derivs_approximated_num::Array{S,1}
+    derivs_approximated_den::Array{S,1}
+    eqns_with_derivs::Array{S,1}
+    variables::OrderedDict{Q,S}
+    nlsolve_static_function::Function
+    static_function::Function
+    dynamic_function::Function
+    each_eqn_function::Array{Function,1}
+    closure_function_chebyshev::Function
+    closure_function_smolyak::Function
+    closure_function_hcross::Function
+    closure_function_piecewise::Function
+
+end
+
+"""
+Struct for a partially specified linear rational expectations model, a subtype of REModel.
+
+The model is partially specified in that one or more parameters lack values.  These values must be
+assigned using the assign_parameters() function in order for the model to become fully specified.
+"""
+struct REModelPartialLinear{S<:Integer,Q<:AbstractString} <: REModelPartial
+
+    number_states::S
+    number_jumps::S
+    number_shocks::S
+    number_variables::S
+    number_equations::S
+    variables::OrderedDict{Q,S}
+    nlsolve_static_function::Function
+    static_function::Function
+    dynamic_function::Function
+    unassigned_parameters::Array{Q,1}
+
+end
+
+"""
+Struct for a partially specified rational expectations model, a subtype of REModel.
+
+The model is partially specified in that one or more parameters lack values.  These values must be
+assigned using the assign_parameters() function in order for the model to become fully specified.
+"""
+struct REModelPartialPert{S<:Integer,Q<:AbstractString} <: REModelPartial
+
+    number_states::S
+    number_jumps::S
+    number_shocks::S
+    number_variables::S
+    number_equations::S
+    variables::OrderedDict{Q,S}
+    nlsolve_static_function::Function
+    static_function::Function
+    dynamic_function::Function
+    each_eqn_function::Array{Function,1}
+    unassigned_parameters::Array{Q,1}
+    
+end
+
+"""
+Struct for a partially specified rational expectations model, a subtype of REModel.
+
+The model is partially specified in that one or more parameters lack values.  These values must be
+assigned using the assign_parameters() function in order for the model to become fully specified.
+"""
+struct REModelPartialProj{S<:Integer,Q<:AbstractString} <: REModelPartial
+
+    number_states::S
+    number_jumps::S
+    number_shocks::S
+    number_variables::S
+    number_equations::S
+    jumps_approximated::Array{S,1}
+    eqns_approximated::Array{S,1}
+    derivs_approximated_num::Array{S,1}
+    derivs_approximated_den::Array{S,1}
+    eqns_with_derivs::Array{S,1}
     variables::OrderedDict{Q,S}
     nlsolve_static_function::Function
     static_function::Function
@@ -82,7 +201,117 @@ struct REModelPartial{S<:Integer,Q<:AbstractString} <: DSGEModel
     closure_function_hcross::Function
     closure_function_piecewise::Function
     unassigned_parameters::Array{Q,1}
-    solvers::Q
+
+end
+
+"""
+Struct for a partially specified rational expectations model, a subtype of REModel.
+
+The model is partially specified in that one or more parameters lack values.  These values must be
+assigned using the assign_parameters() function in order for the model to become fully specified.
+"""
+struct REModelPartialAny{S<:Integer,Q<:AbstractString} <: REModelPartial
+
+    number_states::S
+    number_jumps::S
+    number_shocks::S
+    number_variables::S
+    number_equations::S
+    jumps_approximated::Array{S,1}
+    eqns_approximated::Array{S,1}
+    derivs_approximated_num::Array{S,1}
+    derivs_approximated_den::Array{S,1}
+    eqns_with_derivs::Array{S,1}
+    variables::OrderedDict{Q,S}
+    nlsolve_static_function::Function
+    static_function::Function
+    dynamic_function::Function
+    each_eqn_function::Array{Function,1}
+    closure_function_chebyshev::Function
+    closure_function_smolyak::Function
+    closure_function_hcross::Function
+    closure_function_piecewise::Function
+    unassigned_parameters::Array{Q,1}
+
+end
+
+"""
+Makes a copy of any DSGEModel sub-type (REModel and REModelPartial).
+
+```
+new_model = copy_model_struct(model)
+```
+"""
+function copy_model_struct(mod::REModelLinear)
+
+    new_model = REModelLinear(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.variables,mod.nlsolve_static_function,
+                        mod.static_function,mod.dynamic_function)
+
+    return new_model
+
+end
+
+function copy_model_struct(mod::REModelPartialLinear)
+
+    new_model = REModelPartialLinear(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.variables,mod.nlsolve_static_function,
+                               mod.static_function,mod.dynamic_function,mod.unassigned_parameters)
+
+    return new_model
+
+end
+
+function copy_model_struct(mod::REModelPert)
+
+    new_model = REModelPert(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.variables,mod.nlsolve_static_function,
+                        mod.static_function,mod.dynamic_function,mod.each_eqn_function)
+
+    return new_model
+
+end
+
+function copy_model_struct(mod::REModelPartialPert)
+
+    new_model = REModelPartialPert(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.variables,mod.nlsolve_static_function,
+                               mod.static_function,mod.dynamic_function,mod.each_eqn_function,mod.unassigned_parameters)
+
+    return new_model
+
+end
+
+function copy_model_struct(mod::REModelProj)
+
+    new_model = REModelProj(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.jumps_approximated,mod.eqns_approximated,mod.derivs_approximated_num,mod.derivs_approximated_den,mod.eqns_with_derivs,mod.variables,mod.nlsolve_static_function,
+                        mod.static_function,mod.dynamic_function,mod.each_eqn_function,mod.closure_function_chebyshev,mod.closure_function_smolyak,mod.closure_function_hcross,mod.closure_function_piecewise)
+
+    return new_model
+
+end
+
+function copy_model_struct(mod::REModelPartialProj)
+
+    new_model = REModelPartialProj(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.jumps_approximated,mod.eqns_approximated,mod.derivs_approximated_num,mod.derivs_approximated_den,mod.eqns_with_derivs,mod.variables,mod.nlsolve_static_function,
+                               mod.static_function,mod.dynamic_function,mod.each_eqn_function,mod.closure_function_chebyshev,mod.closure_function_smolyak,mod.closure_function_hcross,mod.closure_function_piecewise,mod.unassigned_parameters)
+
+    return new_model
+
+end
+
+function copy_model_struct(mod::REModelAny)
+
+    new_model = REModelAny(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.jumps_approximated,mod.eqns_approximated,mod.derivs_approximated_num,mod.derivs_approximated_den,mod.eqns_with_derivs,mod.variables,mod.nlsolve_static_function,
+                        mod.static_function,mod.dynamic_function,mod.each_eqn_function,mod.closure_function_chebyshev,mod.closure_function_smolyak,mod.closure_function_hcross,mod.closure_function_piecewise)
+
+    return new_model
+
+end
+
+function copy_model_struct(mod::REModelPartialAny)
+
+    new_model = REModelPartialAny(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.jumps_approximated,mod.eqns_approximated,mod.derivs_approximated_num,mod.derivs_approximated_den,mod.eqns_with_derivs,mod.variables,mod.nlsolve_static_function,
+                               mod.static_function,mod.dynamic_function,mod.each_eqn_function,mod.closure_function_chebyshev,mod.closure_function_smolyak,mod.closure_function_hcross,mod.closure_function_piecewise,
+                               mod.unassigned_parameters)
+
+    return new_model
 
 end
 
@@ -657,5 +886,19 @@ struct DenHaanMarcetStatistic{T<:Real,S<:Integer}
     five_percent::T
     ten_percent::T
     degrees_of_freedom::S
+
+end
+
+################# Struct for prior analysis ########################
+
+struct Prior{N}
+
+    dists::NTuple{N,UnivariateDistribution}
+
+end
+
+function prior(args...)
+
+    prior = Prior(args)
 
 end

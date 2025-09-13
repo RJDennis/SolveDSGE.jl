@@ -958,9 +958,14 @@ function expected_jumps(soln::R) where {R<:PiecewiseLinearSolutionStoch}
 end
 
 """
-Constructs the terms in a state space equilibrium from a Solution
+Takes a solution and constructs the terms in a state space representation
+of the equilibrium dynamics.
 
-Exported function.
+Signature
+=========
+```
+eqm_dynamics = state_space_eqm(soln)
+```
 """
 function state_space_eqm(soln::R) where {R<:ModelSolution}
 
@@ -977,7 +982,11 @@ end
 """
 Computes the unconditional means of the state variables and the jump variables from a perturbation solution.
 
-Exported function.
+Signature
+=========
+```
+zbar = cumpute_mean(soln)
+```
 """
 function compute_mean(soln::R) where {R<:PerturbationSolution}
 
@@ -1024,6 +1033,20 @@ function compute_mean(soln::R) where {R<:PerturbationSolution}
 
 end
 
+"""
+Simulates data from a solved model, `soln`.  The simulation begins from `initial_state`
+and extends for `sim_length` time periods.  The simulated data can be constrained to a
+box specified by `lb` and `ub`.  Pruning is applied to the perturbation solutions.
+
+Signatures
+==========
+```
+data = simulate(soln,initial_state,sim_length,seed)
+data = simulate(soln,initial_state,sim_length)
+data = simulate(soln,initial_state,lb,ub,sim_length,seed)
+data = simulate(soln,initial_state,lb,ub,sim_length)
+```
+"""
 function simulate(soln::R,initial_state::Array{T,1},sim_length::S) where {R<:FirstOrderSolutionDet,T<:Real,S<:Integer}
 
     nx = length(soln.hbar)
@@ -1419,7 +1442,22 @@ function simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::Array{T,1
 
 end
 
-function ensemble_simulate(soln::R,initial_state::Array{T,1},sim_reps::S,sim_length::S;seed=123456) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},T<:Real,S<:Integer}
+"""
+Performs repeated simulations (sim_reps) of a solved model, `soln`.  Each simulation begins
+from `initial_state` and extends for `sim_length` time periods.  The simulated data can be
+constrained to a box specified by `lb` and `ub`.  Pruning is applied to the perturbation
+solutions.
+
+Signatures
+==========
+```
+data = ensemble_simulate(soln,initial_state,sim_reps,sim_length,seed)
+data = ensemble_simulate(soln,initial_state,sim_reps,sim_length)
+data = ensemble_simulate(soln,initial_state,lb,ub,sim_reps,sim_length,seed)
+data = ensemble_simulate(soln,initial_state,lb,ub,sim_reps,sim_length)
+```
+"""
+function ensemble_simulate(soln::R,initial_state::Array{T,1},sim_reps::S,sim_length::S,seed=123456) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},T<:Real,S<:Integer}
 
     Random.seed!(seed)
     sim_results = Array{Array{T,2},1}(undef,sim_reps)
@@ -1435,7 +1473,7 @@ function ensemble_simulate(soln::R,initial_state::Array{T,1},sim_reps::S,sim_len
 
 end
 
-function ensemble_simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::Array{T,1},sim_reps::S,sim_length::S;seed=123456) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},T<:Real,S<:Integer}
+function ensemble_simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::Array{T,1},sim_reps::S,sim_length::S,seed=123456) where {R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch},T<:Real,S<:Integer}
 
     Random.seed!(seed)
     sim_results = Array{Array{T,2},1}(undef,sim_reps)
@@ -1450,6 +1488,8 @@ function ensemble_simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::
     return sim_results
 
 end
+
+#=
 
 function ensemble_simulate(soln::R,initial_state::Array{T,1},aggregate_shocks::Array{S,1},sim_reps::S,sim_length::S;seed = 123456) where {R<:ProjectionSolutionStoch,T<:Real,S<:Integer}
 
@@ -1551,6 +1591,22 @@ function ensemble_simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::
 
 end
 
+=#
+
+"""
+Computes impulse responses for the shock given in `innovation_vector`, from a solution, `soln`, over time horizon: `n`.
+The initial state is either given, if provided, or integrated out, if not provided.  A Monte Carlo integration (reps) is used
+to integrate out the future shocks.  Pruning is applied to the perturbation solutions.
+
+Signatures
+==========
+```
+pos_resp, neg_resp = impulses(soln,n,innovation_vector,reps,seed)
+pos_resp, neg_resp = impulses(soln,n,innovation_vector,reps)
+pos_resp, neg_resp = impulses(soln,n,initial_state,innovation_vector,reps,seed)
+pos_resp, neg_resp = impulses(soln,n,initial_state,innovation_vector,reps)
+```
+"""
 function impulses(soln::R,n::S,innovation_vector::Array{T,1},seed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}
 
     if length(innovation_vector) > size(soln.k,2)
@@ -2879,6 +2935,17 @@ function impulses(soln::R,n::S,initial_state::Array{T,1},innovation_vector::Arra
 
 end
 
+"""
+Applies Fourier methods to a sample to approximate a marginal probability density function
+at 'point', or the entire marginal density if 'point' is not provided.
+
+Signatures
+==========
+```
+p = approximate_density(sample,point,order,a,b)
+p = approximate_density(sample,order,a,b)
+```
+"""
 function approximate_density(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:Real,S<:Integer}
 
     if a >= b
@@ -2944,6 +3011,17 @@ function approximate_density(sample::Array{T,1},order::S,a::T,b::T) where {T<:Re
 
 end
 
+"""
+Applies Fourier methods to a sample to approximate a marginal distrubution function
+at 'point', or the entire marginal distribution if 'point' is not provided.
+
+Signatures
+==========
+```
+F = approximate_distribution(sample,point,order,a,b)
+F = approximate_dinstrbution(sample,order,a,b)
+```
+"""
 function approximate_distribution(sample::Array{T,1},point::T,order::S,a::T,b::T) where {T<:Real,S<:Integer}
 
     if a >= b
@@ -3009,6 +3087,19 @@ function approximate_distribution(sample::Array{T,1},order::S,a::T,b::T) where {
 
 end
 
+##################### Checking accuracy ####################
+
+"""
+Computes the predicted outcomes from two solutions at a set of random states and reports the largest
+absolute difference for each jump variable.
+
+Signature
+=========
+```
+model_diff = compare_solutions(solna,solnb,domain,n,seed)
+model_diff = compare_solutions(solna,solnb,domain,n)
+```
+"""
 function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},n::S,seed::S = 123456) where {T<:Real,S<:Integer,R1<:ModelSolution,R2<:ModelSolution}
 
     if typeof(solna) <: PerturbationSolution && typeof(solnb) <: PerturbationSolution
@@ -3061,14 +3152,27 @@ function compare_solutions(solna::R1,solnb::R2,domain::Array{T,2},n::S,seed::S =
 
 end
 
-function euler_errors(model::REModel,soln::R,domain::Union{Array{T,2},Array{T,1}},npoints::S,seed::S = 123456) where {S<:Integer,T<:AbstractFloat,R<:PerturbationSolutionDet}
+"""
+Computes the Euler-equation errors associated with each approximated equation in the model.
 
-    if model.solvers == "Perturbation"
-        error("The model has been restricted to perturbation solvers only.")
-    end
+The function returns the Euler errors and the states in which those errors were computed.
 
-    nx = length(soln.hbar)
-    ny = length(soln.gbar)
+Signatures
+==========
+```
+errors, states = euler_errors(model,soln,domain,npoints,seed)
+errors, states = euler_errors(model,soln,domain,npoints)
+errors, states = euler_errors(model,soln,npoints,seed)
+errors, states = euler_errors(model,soln,npoints)
+```
+
+The first two signatures areused for perturbation solutions, the third and fourth for projection solutions.
+"""
+function euler_errors(model::Union{REModelLinear,REModelPert,REModelAny},soln::R,domain::Union{Array{T,2},Array{T,1}},npoints::S,seed::S = 123456) where {S<:Integer,T<:AbstractFloat,R<:PerturbationSolutionDet}
+
+    nx = model.number_states
+    ny = model.number_jumps
+
     f = zeros(nx+ny)
 
     dynamics = state_space_eqm(soln)
@@ -3088,17 +3192,14 @@ function euler_errors(model::REModel,soln::R,domain::Union{Array{T,2},Array{T,1}
 
 end
 
-function euler_errors(model::REModel,soln::R,domain::Union{Array{T,2},Array{T,1}},npoints::S,seed::S = 123456) where {S<:Integer,T<:AbstractFloat,R<:PerturbationSolutionStoch}
+function euler_errors(model::Union{REModelLinear,REModelPert,REModelAny},soln::R,domain::Union{Array{T,2},Array{T,1}},npoints::S,seed::S = 123456) where {S<:Integer,T<:AbstractFloat,R<:PerturbationSolutionStoch}
 
-    if model.solvers == "Perturbation"
-        error("The model has been restricted to perturbation solvers only.")
-    end
-
-    nx = length(soln.hbar)
-    ny = length(soln.gbar)
-    ns = size(soln.k,2)
+    nx = model.number_states
+    ny = model.number_jumps
+    ns = model.number_shocks
 
     shocks = zeros(ns)
+    
     f = zeros(nx+ny)
 
     dynamics = state_space_eqm(soln)
@@ -3118,24 +3219,19 @@ function euler_errors(model::REModel,soln::R,domain::Union{Array{T,2},Array{T,1}
 
 end
 
-function euler_errors(model::REModel,soln::R,npoints::S,seed::S = 123456) where {S<:Integer,R<:ProjectionSolutionDet}
+function euler_errors(model::Union{REModelProj,REModelAny},soln::R,npoints::S,seed::S = 123456) where {S<:Integer,R<:ProjectionSolutionDet}
 
-    if model.solvers == "Perturbation"
-        error("The model has been restricted to perturbation solvers only.")
-    end
+    nx = model.number_states
+    ny = model.number_jumps
 
-    nx = size(soln.domain,2)
-    nv = length(soln.variables)
-    ny = nv - nx
-
-    f = zeros(nv)
+    f = zeros(nx+ny)
 
     dynamics = state_space_eqm(soln)
 
     euler_errors = zeros(length(model.eqns_approximated),npoints)
 
     Random.seed!(seed)
-    states = soln.domain[2,:] .+ rand(nx,npoints) .* (soln.domain[1,:] - soln.domain[2,:])
+    states = soln.domain[2,:] .+ rand(nx,npoints).*(soln.domain[1,:] - soln.domain[2,:])
 
     @views for i = 1:npoints
         point = [states[:,i]; dynamics.g(states[:,i]); dynamics.h(states[:,i]); dynamics.gh(states[:,i])]
@@ -3147,18 +3243,15 @@ function euler_errors(model::REModel,soln::R,npoints::S,seed::S = 123456) where 
 
 end
 
-function euler_errors(model::REModel,soln::R,npoints::S,seed::S = 123456) where {S<:Integer,R<:ProjectionSolutionStoch}
+function euler_errors(model::Union{REModelProj,REModelAny},soln::R,npoints::S,seed::S = 123456) where {S<:Integer,R<:ProjectionSolutionStoch}
 
-    if model.solvers == "Perturbation"
-        error("The model has been restricted to perturbation solvers only.")
-    end
-
-    nx = size(soln.domain,2)
-    nv = length(soln.variables)
-    ny = nv - nx
+    nx = model.number_states
+    ny = model.number_jumps
+    ns = model.number_shocks
 
     shocks = zeros(ns)
-    f = zeros(nv)
+    
+    f = zeros(nx+ny)
 
     dynamics = state_space_eqm(soln)
 
@@ -3180,11 +3273,16 @@ end
 """
 Implements a simple version of the Den Haan and Marcet (1994) test of numerical accuracy.
 
-The implementation here is based on the mean residual.
+The implementation is based on the mean residual.
 
 Performs 1000 tests and returns the 1%, 5%, 10% test statistics and the number of degrees of freedom.
 
-Exported function.
+Signature
+=========
+```
+dhm = den_haan_marcet(model,soln,steady_state,seed)
+dhm = den_haan_marcet(model,soln,steady_state)
+```
 """
 function den_haan_marcet(model::REModel,soln::R,steady_state::Array{T,1},seed::S = 123456) where {T<:AbstractFloat,S<:Integer,R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
@@ -3225,5 +3323,65 @@ function den_haan_marcet(model::REModel,soln::R,steady_state::Array{T,1},seed::S
     dhm_stat = DenHaanMarcetStatistic(dhm_statistics[11],dhm_statistics[51],dhm_statistics[101],num_approx_eqns)
 
     return dhm_stat
+
+end
+
+###################### Functions for prior analysis ############################
+
+"""
+Prior analysis solves a model multiple times, seting model parameters by sampling from a prior.
+
+Signatures
+==========
+```
+solutions = prior_analysis(prior,model,scheme,Ndraws,seed)
+solutions = prior_analysis(prior,model,scheme,Ndraws)
+solutions = prior_analysis(prior,model,soln,scheme,Ndraws,seed)
+solutions = prior_analysis(prior,model,soln,scheme,Ndraws)
+```
+"""
+function prior_analysis(prior::Prior,mod::REModelPartial,scheme::SolutionScheme,Ndraws::S,seed::S = 123456) where {S <: Integer}
+
+    if PerturbationScheme <: typeof(scheme)
+        solutions = Array{PerturbationSolution,1}(undef,Ndraws)
+    else
+        solutions = Array{ProjectionSolution,1}(undef,Ndraws)
+    end
+
+    param_draws = zeros(Ndraws,length(prior.dists))
+
+    Random.seed!(seed)
+
+    for i in 1:Ndraws
+
+        param_draw        = [rand.(prior.dists)...]
+        new_mod           = assign_parameters(mod,param_draw)
+        solutions[i]      = solve_model(new_mod,scheme)
+        param_draws[i,:] .= param_draw
+
+    end
+
+    return solutions, param_draws
+
+end
+
+function prior_analysis(prior::Prior,mod::REModelPartial,soln::R,scheme::SolutionScheme,Ndraws::S,seed::S = 123456) where {S <: Integer, R <: ModelSolution}
+
+    solutions = Array{R,1}(undef,Ndraws)
+
+    param_draws = zeros(Ndraws,length(prior.dists))
+    
+    Random.seed!(seed)
+
+    for i in 1:Ndraws
+
+        param_draw        = [rand.(prior.dists)...]
+        new_mod           = assign_parameters(mod,param_draw)
+        solutions[i]      = solve_model(new_mod,soln,scheme)
+        param_draws[i,:] .= param_draw
+
+    end
+
+    return solutions, param_draws
 
 end

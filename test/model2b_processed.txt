@@ -12,6 +12,12 @@ jumps_to_approximate = [2]
  
 eqns_to_approximate = [3] 
  
+derivs_to_approximate_num = Int64[] 
+ 
+derivs_to_approximate_den = Int64[] 
+ 
+eqns_with_derivs = Int64[] 
+ 
 variables = OrderedDict("z" => 1, "k" => 2, "c" => 3, "muc" => 4) 
  
 function nlsolve_static_equations(f::Array{T,1},x::Array{T,1},p::Array{T1,1}) where {T<:Number,T1<:Real} 
@@ -152,7 +158,7 @@ function closure_hcross_equations(state,scaled_weights,order,domain,p)
  
 end 
 
-function closure_piecewise_equations(variables,grid,state,p) 
+function closure_piecewise_equations(variables,grid,statearams) 
  
   function piecewise_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} 
  

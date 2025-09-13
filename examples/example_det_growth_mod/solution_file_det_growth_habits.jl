@@ -5,7 +5,13 @@ path = joinpath(@__DIR__,filename)
 
 process_model(path)
 
-dsge = retrieve_processed_model(path)
+if !occursin("_processed",path)
+    model_processed_path = replace(path,".txt" => "_processed.txt")
+end
+
+include(model_processed_path)
+
+dsge = retrieve_processed_model()
 
 x = [0.05, 3.05, 0.7, 0.7, 2.8]
 

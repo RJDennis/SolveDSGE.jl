@@ -12,6 +12,12 @@ jumps_to_approximate = [2]
  
 eqns_to_approximate = [3] 
  
+derivs_to_approximate_num = Int64[] 
+ 
+derivs_to_approximate_den = Int64[] 
+ 
+eqns_with_derivs = Int64[] 
+ 
 variables = OrderedDict("z" => 1, "k" => 2, "clag" => 3, "c" => 4, "ce" => 5) 
  
 function nlsolve_static_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} 

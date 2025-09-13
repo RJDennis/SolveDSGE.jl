@@ -903,25 +903,17 @@ Uses the precomputed integrals to scale the Chebyshev weights.
 
 Internal function; not exposed to users.
 """
-function scale_chebyshev_weights!(weights::Array{Array{T,N},1},scaled_weights::Array{Array{T,N},1},integrals::Array{Array{T,1},1},j_approx::Union{S,Array{S,1}},ns::S) where {T<:AbstractFloat,N,S<:Integer}
+function scale_chebyshev_weights(weights::Array{T,N},integrals::Array{Array{T,1},1},ns::S) where {T<:AbstractFloat,N,S<:Integer}
 
-    for i in eachindex(j_approx)
-        for j = 1:ns
-            index = [1:ndims(weights[i]);]
-            index[1],index[j] = index[j],index[1]
-            scaled_weights[i] .= permutedims(integrals[j].*permutedims(weights[i],index),index)
-        end
+    scaled_weights = copy(weights)
+
+    for j = 1:ns
+        index = [1:ndims(weights);]
+        index[1],index[j] = index[j],index[1]
+        scaled_weights = permutedims(integrals[j].*permutedims(scaled_weights,index),index)
     end
 
-end
-
-function scale_chebyshev_weights!(weights::Array{Array{T,N},1},scaled_weights::Array{Array{T,N},1},integrals::Array{T,N2},j_approx::Union{S,Array{S,1}},ns::S) where {T<:AbstractFloat,N,N2,S<:Integer}
-
-    for i in eachindex(j_approx)
-        for j = 1:ns
-            scaled_weights[i] .= integrals.*weights[i]
-        end
-    end
+    return scaled_weights
 
 end
 
