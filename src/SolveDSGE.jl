@@ -19,6 +19,8 @@ include("auxiliary_functions.jl")
 include("solution_functions.jl")
 include("analysis_functions.jl")
 
+export REModelFullDetail
+
 export PerturbationScheme,
        ChebyshevSchemeStoch,
        ChebyshevSchemeDet,
