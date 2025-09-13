@@ -1356,7 +1356,8 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
     model_string = string(model_string, "\n", closure_smol_string)
     model_string = string(model_string, "\n", closure_hcross_string)
     model_string = string(model_string, "\n", closure_pl_string)
-    
+    model_string = string(model_string, "\n", "model = REModelFullDetail(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,unassigned_parameters,solvers)")
+
     model_path = replace(path, ".txt" => "_processed.txt")
     open(model_path, "w") do io
         write(io, model_string)
@@ -1401,13 +1402,32 @@ Retrives and stores in a model structure the information extracted from a proces
 Signature
 =========
 ```
-model = retrieve_processed_model()
+model = retrieve_processed_model(model)
 ```
 """
-function retrieve_processed_model(ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,unassigned_parameters,solvers)
+function retrieve_processed_model(fully_detailed_model)
 
-    global nx
-    println(nx)
+    nx                          = fully_detailed_model.number_states
+    ny                          = fully_detailed_model.number_jumps
+    ns                          = fully_detailed_model.number_shocks
+    nv                          = fully_detailed_model.number_variables
+    ne                          = fully_detailed_model.number_equations
+    jumps_to_approximate        = fully_detailed_model.jumps_approximated
+    eqns_to_approximate         = fully_detailed_model.eqns_approximated
+    derivs_to_approximate_num   = fully_detailed_model.derivs_approximated_num
+    derivs_to_approximate_den   = fully_detailed_model.derivs_approximated_den
+    eqns_with_derivs            = fully_detailed_model.eqns_with_derivs
+    variables                   = fully_detailed_model.variables
+    nlsolve_static_equations    = fully_detailed_model.nlsolve_static_function
+    static_equations            = fully_detailed_model.static_function
+    dynamic_equations           = fully_detailed_model.dynamic_function
+    individual_equations        = fully_detailed_model.each_eqn_function
+    closure_chebyshev_equations = fully_detailed_model.closure_function_chebyshev
+    closure_smolyak_equations   = fully_detailed_model.closure_function_smolyak
+    closure_hcross_equations    = fully_detailed_model.closure_function_hcross
+    closure_piecewise_equations = fully_detailed_model.closure_function_piecewise
+    unassigned_parameters       = fully_detailed_model.unassigned_parameters
+    solvers                     = fully_detailed_model.solvers
 
     if length(unassigned_parameters) != 0
       if solvers == "Any"
