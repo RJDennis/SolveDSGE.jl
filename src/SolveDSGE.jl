@@ -89,6 +89,7 @@ export chebyshev_nodes,
        hyperbolic_cross_evaluate,
        chebyshev_weights,
        smolyak_weights,
-       hyperbolic_cross_weights
+       hyperbolic_cross_weights,
+       OrderedDict
 
 end
