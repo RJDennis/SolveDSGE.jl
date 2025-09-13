@@ -1406,7 +1406,7 @@ model = retrieve_processed_model()
 """
 function retrieve_processed_model()
 
-    if length(unassigned_parameters) != 0
+    #if length(unassigned_parameters) != 0
       if solvers == "Any"
         dsge_model = REModelPartialAny(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,unassigned_parameters)
       elseif solvers == "Projection"
@@ -1416,17 +1416,17 @@ function retrieve_processed_model()
       elseif solvers == "Linear"
         dsge_model = REModelPartialLinear(nx,ny,ns,nv,ne,variables,nlsolve_static_equations,static_equations,dynamic_equations,unassigned_parameters)
       end
-    else
-      if solvers == "Any"
-        dsge_model = REModelAny(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations)
-      elseif solvers == "Projection"
-        dsge_model = REModelProj(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations)
-      elseif solvers == "Perturbation"
-        dsge_model = REModelPert(nx,ny,ns,nv,ne,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations)
-      elseif solvers == "Linear"
-        dsge_model = REModelLinear(nx,ny,ns,nv,ne,variables,nlsolve_static_equations,static_equations,dynamic_equations)
-      end
-    end
+    #else
+    #  if solvers == "Any"
+    #    dsge_model = REModelAny(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations)
+    #  elseif solvers == "Projection"
+    #    dsge_model = REModelProj(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations)
+    # elseif solvers == "Perturbation"
+    #    dsge_model = REModelPert(nx,ny,ns,nv,ne,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations)
+    #  elseif solvers == "Linear"
+    #    dsge_model = REModelLinear(nx,ny,ns,nv,ne,variables,nlsolve_static_equations,static_equations,dynamic_equations)
+    #  end
+    #end
 
     return dsge_model
 
