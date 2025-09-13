@@ -1404,7 +1404,7 @@ Signature
 model = retrieve_processed_model()
 ```
 """
-function retrieve_processed_model()
+function retrieve_processed_model(unassigned_parameters,solvers)
 
     if length(unassigned_parameters) != 0
       if solvers == "Any"
