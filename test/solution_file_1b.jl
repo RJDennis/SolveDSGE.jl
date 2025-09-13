@@ -10,7 +10,7 @@ end
 
 include(model_processed_path)
 
-dsge = retrieve_processed_model()
+dsge = retrieve_processed_model(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,unassigned_parameters,solvers)
 
 x = [0.05, 21.4, 1.97, 2.8]
 
