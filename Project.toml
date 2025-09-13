@@ -14,7 +14,7 @@ PiecewiseLinearApprox = "fcfa6960-8e2e-11e9-2cde-29dd09221fb3"
 SmolyakApprox = "6b19cf85-48de-5d9d-bfff-465abea14fab"
 HyperbolicCrossApprox = "db4fe9aa-a353-4142-ac3f-608941c5a4fc"
 NLboxsolve = "57734975-34ee-4662-b82a-2ecfa01d03df"
-OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d" 
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 
 [compat]

@@ -10,7 +10,7 @@ using SmolyakApprox
 using PiecewiseLinearApprox
 using HyperbolicCrossApprox
 using NLboxsolve
-import OrderedCollections
+import OrderedCollections: OrderedDict
 using Distributions
 
 include("structures.jl")
