@@ -1404,8 +1404,30 @@ Signature
 model = retrieve_processed_model()
 ```
 """
-function retrieve_processed_model(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,unassigned_parameters,solvers)
+function retrieve_processed_model()
 
+    nx                          = global nx
+    ny                          = global ny
+    ns                          = global ns
+    nv                          = global nv
+    ne                          = global ne
+    jumps_to_approximate        = global jumps_to_approximate
+    eqns_to_approximate         = global eqns_to_approximate
+    derivs_to_approximate_num   = global derivs_to_approximate_num
+    derivs_to_approximate_den   = global derivs_to_approximate_den
+    eqns_with_derivs            = global eqns_with_derivs
+    variables                   = global variables
+    nlsolve_static_equations    = global nlsolve_static_equations
+    static_equations            = global static_equations
+    dynamic_equations           = global dynamic_equations
+    individual_equations        = global individual_equations
+    closure_chebyshev_equations = global closure_chebyshev_equations
+    closure_smolyak_equations   = global closure_smolyak_equations
+    closure_hcross_equations    = global closure_hcross_equations
+    closure_piecewise_equations = global closure_piecewise_equations
+    unassigned_parameters       = global unassigned_parameters
+    solvers                     = global solvers
+   
     if length(unassigned_parameters) != 0
       if solvers == "Any"
         dsge_model = REModelPartialAny(nx,ny,ns,nv,ne,jumps_to_approximate,eqns_to_approximate,derivs_to_approximate_num,derivs_to_approximate_den,eqns_with_derivs,variables,nlsolve_static_equations,static_equations,dynamic_equations,individual_equations,closure_chebyshev_equations,closure_smolyak_equations,closure_hcross_equations,closure_piecewise_equations,unassigned_parameters)
