@@ -235,6 +235,32 @@ struct REModelPartialAny{S<:Integer,Q<:AbstractString} <: REModelPartial
 
 end
 
+struct REModelFullDetail{S<:Integer,Q<:AbstractString} <: DSGEModelPrimatives
+
+    number_states::S
+    number_jumps::S
+    number_shocks::S
+    number_variables::S
+    number_equations::S
+    jumps_approximated::Array{S,1}
+    eqns_approximated::Array{S,1}
+    derivs_approximated_num::Array{S,1}
+    derivs_approximated_den::Array{S,1}
+    eqns_with_derivs::Array{S,1}
+    variables::OrderedDict{Q,S}
+    nlsolve_static_function::Function
+    static_function::Function
+    dynamic_function::Function
+    each_eqn_function::Array{Function,1}
+    closure_function_chebyshev::Function
+    closure_function_smolyak::Function
+    closure_function_hcross::Function
+    closure_function_piecewise::Function
+    unassigned_parameters::Array{Q,1}
+    solvers::Q
+
+end
+
 """
 Makes a copy of any DSGEModel sub-type (REModel and REModelPartial).
 
