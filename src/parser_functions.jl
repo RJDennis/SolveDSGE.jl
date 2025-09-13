@@ -1169,7 +1169,6 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
     model_string = string(model_string, "derivs_to_approximate_den = $derivs_to_be_approximated_den \n \n")
     model_string = string(model_string, "eqns_with_derivs = $eqns_with_derivs \n \n")
     model_string = string(model_string, "variables = $variables \n \n")
-    model_string = string(model_string, "unassigned_parameters = $unassigned_parameters \n \n")
 
     # Second, add the model's static information
 
