@@ -51,13 +51,12 @@ soln_nli = solve_model(dsge,soln_nlh,S3)
 soln_nlj = solve_model(dsge,soln_nlf,S2,2)
 
 M1 = PiecewiseLinearSchemeStoch(ss,[21,21],9,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters,:newton)
-M2 = PiecewiseLinearSchemeStoch(ss,[31,31],9,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters,:newton)
 
 soln_nlk = solve_model(dsge,M1)
-soln_nll = solve_model(dsge,soln_3o,M2)
-soln_nlm = solve_model(dsge,soln_nlf,M2)
-soln_nln = solve_model(dsge,soln_nlj,M2)
-soln_nlo = solve_model(dsge,soln_nln,M2,2)
+soln_nll = solve_model(dsge,soln_3o,M1)
+soln_nlm = solve_model(dsge,soln_nlf,M1)
+soln_nln = solve_model(dsge,soln_nlj,M1)
+soln_nlo = solve_model(dsge,soln_nln,M1,2)
 
 H1 = HyperbolicCrossSchemeStoch(ss,chebyshev_nodes,11,5,9,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters,:newton)
 H2 = HyperbolicCrossSchemeStoch(ss,chebyshev_nodes,11,6,11,[0.0960769 26.0; -0.0960769 8.0],tol,1e-6,maxiters,:newton)
