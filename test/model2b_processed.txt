@@ -162,7 +162,7 @@ function closure_hcross_equations(state,scaled_weights,order,domain,p)
  
 end 
 
-function closure_piecewise_equations(variables,grid,statearams) 
+function closure_piecewise_equations(variables,grid,state,p) 
  
   function piecewise_equations(f::Array{T,1},x::Array{T,1}) where {T<:Number} 
  

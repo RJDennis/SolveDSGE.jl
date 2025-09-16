@@ -1315,7 +1315,7 @@ function create_processed_model_file(model::DSGEModelPrimatives, path::Q) where 
 
     if length(model.unassigned_parameters) != 0
         if number_shocks == 0  # We need to separate the function generated for the stochastic and deterministic cases
-            closure_pl_string = "function closure_piecewise_equations(variables,grid,statearams) \n \n"
+            closure_pl_string = "function closure_piecewise_equations(variables,grid,state,p) \n \n"
         else
             closure_pl_string = "function closure_piecewise_equations(variables,grid,state,integrals,p) \n \n"
         end
