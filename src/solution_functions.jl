@@ -1247,6 +1247,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Cheb
             weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
               scaled_weights[i] .= scale_chebyshev_weights(weights[i],integrals,ns)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 
@@ -1375,6 +1377,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Cheb
             weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
               scaled_weights[i] .= scale_chebyshev_weights(weights[i],integrals,ns)
+            else
+              scaled_weights[i] .= weights[i]
             end
         end
 
@@ -1815,6 +1819,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
             weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
               scaled_weights[i] .= scale_chebyshev_weights(weights[i],integrals,ns)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 
@@ -1979,7 +1985,9 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
         for i in eachindex(variables_approximated)
             weights[i] .= cheb_weights(variables[variables_approximated[i]],grid,order,domain)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
-              scaled_weights[i] .= scale_chebyshev_weights(weights[i],integrals,ns)
+                scaled_weights[i] .= scale_chebyshev_weights(weights[i],integrals,ns)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 
@@ -2282,6 +2290,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Smol
             weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
                 scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 
@@ -2389,6 +2399,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Smol
             weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
                 scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 
@@ -2742,6 +2754,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
             weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
                 scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 
@@ -2881,6 +2895,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
             weights[i] .= smolyak_weights(variables[variables_approximated[i]],smol_iim)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
                 scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 
@@ -4089,6 +4105,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Hype
             weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
                 scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 
@@ -4197,6 +4215,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},scheme::Union{Hype
             weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
                 scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 
@@ -4554,6 +4574,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
             weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
                 scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 
@@ -4694,6 +4716,8 @@ function solve_nonlinear(model::Union{REModelProj,REModelAny},soln::R,scheme::Un
             weights[i] .= hyperbolic_cross_weights(variables[variables_approximated[i]],hcross_iim)
             if i <= length(jumps_approximated) || variables_approximated[i] > ny # either approximating a jump variable or the derivative of a future state variable
                 scaled_weights[i] .= scale_sparse_weights(weights[i],weight_scale_factor)
+            else
+                scaled_weights[i] .= weights[i]
             end
         end
 

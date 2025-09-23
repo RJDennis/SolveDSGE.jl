@@ -1101,9 +1101,9 @@ function create_projection_equations(equations::Array{Q,1},model::DSGEModelPrima
                 snippet = projection_equations[j][s[jj][1]:f[jj][1]]
                 snippet1,snippet2 = split(snippet,"|")
                 for i in 1:nv
-                    if occursin("x[$(nx+i)]",snippet1) == true
-                        push!(derivs_to_be_approximated_num,nx+i)
-                        projection_equations[j] = replace(projection_equations[j],"deriv$snippet" => "deriv$(nx+i)")
+                    if occursin("x[$(i)]",snippet1) == true
+                        push!(derivs_to_be_approximated_num,i)
+                        projection_equations[j] = replace(projection_equations[j],"deriv$snippet" => "deriv$(i)")
                     end
                 end
                 for i in 1:nx
