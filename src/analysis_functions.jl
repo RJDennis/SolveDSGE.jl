@@ -3329,15 +3329,17 @@ end
 ###################### Functions for prior analysis ############################
 
 """
-Prior analysis solves a model multiple times, seting model parameters by sampling from a prior.
+Prior analysis solves a model multiple times, seting model parameters either by sampling from a prior or by taking parameters from a supplied matrix.
 
 Signatures
 ==========
 ```
 solutions = prior_analysis(prior,model,scheme,Ndraws,seed)
 solutions = prior_analysis(prior,model,scheme,Ndraws)
+solutions = prior_analysis(params,model,scheme)
 solutions = prior_analysis(prior,model,soln,scheme,Ndraws,seed)
 solutions = prior_analysis(prior,model,soln,scheme,Ndraws)
+solutions = prior_analysis(params,model,soln,scheme)
 ```
 """
 function prior_analysis(prior::Prior,mod::REModelPartial,scheme::SolutionScheme,Ndraws::S,seed::S = 123456) where {S <: Integer}
@@ -3383,5 +3385,46 @@ function prior_analysis(prior::Prior,mod::REModelPartial,soln::R,scheme::Solutio
     end
 
     return solutions, param_draws
+
+end
+
+function prior_analysis(params::Array{T,2},mod::REModelPartial,scheme::SolutionScheme) where {T <: AbstractFloat}
+
+    Ndraws = size(params,1)
+
+    if PerturbationScheme <: typeof(scheme)
+        solutions = Array{PerturbationSolution,1}(undef,Ndraws)
+    else
+        solutions = Array{ProjectionSolution,1}(undef,Ndraws)
+    end
+
+    for i in 1:Ndraws
+
+        param_draw   = params[i,:]
+        new_mod      = assign_parameters(mod,param_draw)
+        solutions[i] = solve_model(new_mod,scheme)
+
+    end
+
+    return solutions, params
+
+end
+
+function prior_analysis(params::Array{T,2},mod::REModelPartial,soln::R,scheme::SolutionScheme) where {T <: AbstractFloat, R <: ModelSolution}
+
+    Ndraws = size(params,1)
+    solutions = Array{R,1}(undef,Ndraws)
+
+    Random.seed!(seed)
+
+    for i in 1:Ndraws
+
+        param_draw   = params[i,:]
+        new_mod      = assign_parameters(mod,param_draw)
+        solutions[i] = solve_model(new_mod,soln,scheme)
+
+    end
+
+    return solutions, params
 
 end
