@@ -90,11 +90,10 @@ end
 
 #model_processed_path = "your_path_here\\model_sgm_processed.txt"
 
-#include(model_processed_path)
+include(model_processed_path)
 
-dsge_sgm = retrieve_processed_model(model_processed_path)
-#dsge_sgm = retrieve_processed_model()
-#dsge_sgm = create_model_structure() # Does the same as the retrieve_processed_model() function
+dsge_sgm = retrieve_processed_model(model)
+#dsge_sgm = create_model_structure(model) # Does the same as the retrieve_processed_model() function
 
 x = [0.0, 34.6, 2.4, 0.2]
 
