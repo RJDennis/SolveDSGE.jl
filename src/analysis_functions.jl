@@ -3287,12 +3287,13 @@ dhm = den_haan_marcet(model,soln,steady_state)
 function den_haan_marcet(model::REModel,soln::R,steady_state::Array{T,1},seed::S = 123456) where {T<:AbstractFloat,S<:Integer,R<:Union{PerturbationSolutionStoch,ProjectionSolutionStoch}}
 
     nv = model.number_variables
+    nx = model.number_states
     ns = model.number_shocks
 
     num_approx_eqns = length(model.eqns_approximated)
 
-    shocks         = zeros(ns)
-    f              = Array{T,1}(undef,nv)
+    shocks = zeros(ns)
+    f      = Array{T,1}(undef,nv)
 
     sim_length       = 3_500
     retained_length  = 3_000
