@@ -1097,7 +1097,7 @@ function create_projection_equations(equations::Array{Q,1},model::DSGEModelPrima
             s = findall("{",projection_equations[j])
             f = findall("}",projection_equations[j])
             n_derivs = length(s)
-            for jj = 1:n_derivs
+            for jj = n_derivs:-1:1
                 snippet = projection_equations[j][s[jj][1]:f[jj][1]]
                 snippet1,snippet2 = split(snippet,"|")
                 for i in 1:nv
