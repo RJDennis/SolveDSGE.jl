@@ -112,36 +112,27 @@ function solve_first_order_det(model::Union{REModelLinear,REModelPert,REModelAny
 
     d = compute_linearization(model,steady_state)
 
-    @views a = d[1:nv,1:nv]
-    @views b = -d[1:nv,nv+1:2*nv]
+    a = d[1:nv,1:nv]
+    b = -d[1:nv,nv+1:2*nv]
 
-    r = schur(complex(a),complex(b))
-
-    # Reorder the generalized eigenvalues so that those with modulus greater
+    # Construct QZ decomposition and reorder the generalized eigenvalues so that those with modulus greater
     # than "cutoff" reside at the bottom.
 
-    sel = (abs.(diag(r.S)./diag(r.T)) .< cutoff)
-    ordschur!(r,sel)
-
-    s = r.S
-    t = r.T
-    #q = r.Q'  # So now q*a*z = s and q*b*z = t
-    z = r.Z
-
-    # Construct the rational expectations equilibrium by eliminating the
-    # unstable dynamics
+    q, z, sel = ordered_generalized_Schur!(a,b,cutoff) # Note a and b get over-written
+    
+    # Construct the rational expectations equilibrium by eliminating the unstable dynamics
 
     @views z11 = z[1:nx,1:nx]
     @views z21 = z[nx+1:nv,1:nx]
-    @views t11 = t[1:nx,1:nx]
-    @views s11 = s[1:nx,1:nx]
+    @views t11 = b[1:nx,1:nx]
+    @views s11 = a[1:nx,1:nx]
 
     if rank(z11) != nx
         error("The model does not have a stable solution.")
     end
 
-    hx = real((z11/t11)*(s11/z11))
-    gx = real(z21/z11)
+    hx = (z11/t11)*(s11/z11)
+    gx = z21/z11
 
     # Calculate the number of unstable eigenvalues
 
@@ -177,36 +168,27 @@ function solve_first_order_stoch(model::Union{REModelLinear,REModelPert,REModelA
 
     d = compute_linearization(model,steady_state)
 
-    @views a = d[1:nv,1:nv]
-    @views b = -d[1:nv,nv+1:2*nv]
+    a = d[1:nv,1:nv]
+    b = -d[1:nv,nv+1:2*nv]
 
-    r = schur(complex(a),complex(b))
-
-    # Reorder the generalized eigenvalues so that those with modulus greater
+    # Construct QZ decomposition and reorder the generalized eigenvalues so that those with modulus greater
     # than "cutoff" reside at the bottom.
 
-    sel = (abs.(diag(r.S)./diag(r.T)) .< cutoff)
-    ordschur!(r,sel)
-
-    s = r.S
-    t = r.T
-    #q = r.Q'  # So now q*a*z = s and q*b*z = t
-    z = r.Z
-
-    # Construct the rational expectations equilibrium by eliminating the
-    # unstable dynamics
+    q, z, sel = ordered_generalized_Schur!(a,b,cutoff) # Note a and b get over-written
+    
+    # Construct the rational expectations equilibrium by eliminating the unstable dynamics
 
     @views z11 = z[1:nx,1:nx]
     @views z21 = z[nx+1:nv,1:nx]
-    @views t11 = t[1:nx,1:nx]
-    @views s11 = s[1:nx,1:nx]
+    @views t11 = b[1:nx,1:nx]
+    @views s11 = a[1:nx,1:nx]
 
     if rank(z11) != nx
         error("The model does not have a stable solution.")
     end
 
-    hx = real((z11/t11)*(s11/z11))
-    gx = real(z21/z11)
+    hx = (z11/t11)*(s11/z11)
+    gx = z21/z11
 
     # Compute the first-order stochastic terms
 

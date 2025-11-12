@@ -1125,3 +1125,36 @@ function mylen(len::T,a::Array{T,N},b::Array{T,N}) where {T<:AbstractFloat,N}
     return len
 
 end
+
+"""
+Performs the generalized QZ decomposition (in-place) and orders it according to cutoff.
+
+Internal function; not exposed to users.
+"""
+function ordered_generalized_Schur!(A::Array{N,2},B::Array{N,2},cutoff::M) where {N <: Number, M <: AbstractFloat}
+
+  A, B, alpha, beta, Q, Z = LinearAlgebra.LAPACK.gges!('V', 'V', A, B)
+  select = Int64.(abs.(alpha./beta) .< 1.0)
+  A, B, alpha, beta, Q, Z = LinearAlgebra.LAPACK.tgsen!(select, A, B, Q, Z)
+  
+  return Q', Z, select
+
+end
+
+"""
+Performs the generalized QZ decomposition and orders it according to cutoff.
+
+Internal function; not exposed to users.
+"""
+function ordered_generalized_Schur(A::Array{N,2},B::Array{N,2},cutoff::M) where {N <: Number, M <: AbstractFloat}
+
+  S = copy(A)
+  T = copy(B)
+
+  S, T, alpha, beta, Q, Z = LinearAlgebra.LAPACK.gges!('V', 'V', S, T)
+  select = Int64.(abs.(alpha./beta) .< 1.0)
+  S, T, alpha, beta, Q, Z = LinearAlgebra.LAPACK.tgsen!(select, S, T, Q, Z)
+  
+  return S, T, Q', Z, select
+
+end
