@@ -35,7 +35,7 @@ export PerturbationScheme,
        PiecewiseLinearSchemeOBCStoch,
        PiecewiseLinearSchemeOBCDet,
        HyperbolicCrossSchemeStoch,
-       HyperbolicCrossSchemeDet
+       HyperbolicCrossSchemeDet,
        HyperbolicCrossSchemeOBCStoch,
        HyperbolicCrossSchemeOBCDet
 

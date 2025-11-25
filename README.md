@@ -165,7 +165,9 @@ Andreasen, M., Fernández-Villaverde, J., and J. Rubio-Ramirez, (2017), "The Pru
 
 Binning, A., (2013), "Third-Order Approximation of Dynamic Models Without the Use of Tensors", Norges Bank Working Paper 2013---13.
 
-Dennis R., (2021), "Using a hyperbolic cross to solve non-linear macroeconomic models", CAMA Working Paper No. 93/2021
+Dennis R., (2022), "Computing Time-Consistent Equilibria: A Perturbation Approach", Journal of Economic Dynamics and Control, 137, article 104349.
+
+Dennis R., (2024), "Using a Hyperbolic Cross to Solve Non-Linear Macroeconomic Models", Journal of Economic Dynamics and Control, 163, article 104860.
 
 Gomme, P., and P. Klein, (2011), "Second-Order Approximation of Dynamic Models Without the Use of Tensors", Journal of Economic Dynamics and Control, 35, pp. 604---615.
 
