@@ -1489,6 +1489,119 @@ function ensemble_simulate(soln::R,initial_state::Array{T,1},lb::Array{T,1},ub::
 
 end
 
+"""
+Generates forecasts for each variable in the model, given a solution or vector of solutions.
+If a single solution is provided the forecasts will acount for any shock uncertainty; if a vector
+is provided then the forecasts will acount for shock and parameter uncertainty.  Each Forecast
+begins from a specified initial state and extends over a specified forecast horizon. Forecasts are
+provided for specified percentiles. For deterministic models the number of forecasts_reps is not 
+needed and nor is the optional seed for the random number generator. The returned forecasts is a 
+vector of matrices, with each matrix containing the forecast for each variable over the forecast 
+horizon at a specific percentile.
+
+Signatures
+==========
+```
+forecasts = forecast(soln,initial_state,forecast_length)
+forecasts = forecast(solns,initial_state,forecast_length,percentiles)
+forecasts = forecast(soln,initial_state,forecast_reps,forecast_length,percentiles)
+forecasts = forecast(soln,initial_state,forecast_reps,forecast_length,percentiles,seed)
+forecasts = forecast(solns,initial_state,forecast_reps,forecast_length,percentiles)
+forecasts = forecast(solns,initial_state,forecast_reps,forecast_length,percentiles,seed)
+```
+"""
+function forecast(soln::R,state::Array{T,1},forecast_length::S) where {R <: Union{PerturbationSolutionDet,ProjectionSolutionDet}, T <: Real, S <: Integer}
+
+    y = simulate(soln,state,forecast_length)
+
+    return y
+
+end
+
+function forecast(solns::Array{R,1},state::Array{T,1},forecast_length::S,p::Union{T,Array{T,1}}) where {R <: Union{PerturbationSolutionDet,ProjectionSolutionDet}, T <: Real, S <: Integer}
+
+    P = length(p)
+    N = length(solns)
+
+    forecast_data = Array{Array{T,2},1}(undef,N)
+    for i in 1:N
+      forecast_data[i] = forecast(solns[i],state,forecast_length)
+    end
+
+    n = size(forecast_data[1],1)
+
+    store_forecasts = Array{T,2}(undef,N,forecast_length)
+    y = [Array{T,2}(undef,n,forecast_length) for l = 1:P]
+
+    for j = 1:n
+      for i in 1:N
+        store_forecasts[i,:] .= forecast_data[i][j,:]
+      end
+      for k in 1:forecast_length
+        for l = 1:P
+          y[l][j,k] = quantile(store_forecasts[:,k],p[l])
+        end
+      end
+    end
+
+    return y
+
+end
+
+function forecast(soln::R,state::Array{T,1},reps::S,forecast_length::S,p::Union{T,Array{T,1}},seed=123456) where {R <: Union{PerturbationSolutionStoch,ProjectionSolutionStoch}, T <: Real, S <: Integer}
+
+    forecast_data = ensemble_simulate(soln,state,reps,forecast_length,seed)
+
+    P = length(p)
+    n = size(forecast_data[1],1)
+
+    store_forecasts = Array{T,2}(undef,reps,forecast_length)
+    y = [Array{T,2}(undef,n,forecast_length) for l = 1:P]
+
+    for j = 1:n
+      for i in 1:reps
+        store_forecasts[i,:] = forecast_data[i][j,:]
+      end
+      for k in 1:forecast_length
+        for l = 1:P
+          y[l][j,k] = quantile(store_forecasts[:,k],p[l])
+        end
+      end
+    end
+
+    return y
+
+end
+
+function forecast(solns::Array{R,1},state::Array{T,1},reps::S,forecast_length::S,p::Union{T,Array{T,1}},seed=123456) where {R <: Union{PerturbationSolutionStoch,ProjectionSolutionStoch}, T <: Real, S <: Integer}
+
+    P = length(p)
+    N = length(solns)
+    forecast_data = Array{Array{Array{T,2},1},1}(undef,N)
+
+    for i in 1:N
+      forecast_data[i] = forecast(solns[i],state,reps,forecast_length,p,seed)
+    end
+
+    n = size(forecast_data[1][1],1) # number of variables
+    store_forecasts = Array{T,2}(undef,N,forecast_length)
+    y = [Array{T,2}(undef,n,forecast_length) for l = 1:P]
+
+    for l = 1:P
+      for j = 1:n
+        for i in 1:N
+          store_forecasts[i,:] .= forecast_data[i][l][j,:]
+        end
+        for k in 1:forecast_length
+          y[l][j,k] = quantile(store_forecasts[:,k],0.5) # median of the p'percentiles
+        end
+      end
+    end
+
+    return y
+
+end
+
 #=
 
 function ensemble_simulate(soln::R,initial_state::Array{T,1},aggregate_shocks::Array{S,1},sim_reps::S,sim_length::S;seed = 123456) where {R<:ProjectionSolutionStoch,T<:Real,S<:Integer}

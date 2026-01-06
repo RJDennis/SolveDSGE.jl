@@ -12,7 +12,7 @@ include(model_processed_path)
 
 dsge = retrieve_processed_model(model)
 
-x = [0.05, 21.4, 1.97, 2.8]
+x = [0.05, 21.4, 1.97, 0.47]
 
 tol = 1e-8
 maxiters = 1000

@@ -1134,7 +1134,7 @@ Internal function; not exposed to users.
 function ordered_generalized_Schur!(A::Array{N,2},B::Array{N,2},cutoff::M) where {N <: Number, M <: AbstractFloat}
 
   A, B, alpha, beta, Q, Z = LinearAlgebra.LAPACK.gges!('V', 'V', A, B)
-  select = Int64.(abs.(alpha./beta) .< 1.0)
+  select = Int64.(abs.(alpha./beta) .< cutoff)
   A, B, alpha, beta, Q, Z = LinearAlgebra.LAPACK.tgsen!(select, A, B, Q, Z)
   
   return Q', Z, select
@@ -1152,7 +1152,7 @@ function ordered_generalized_Schur(A::Array{N,2},B::Array{N,2},cutoff::M) where 
   T = copy(B)
 
   S, T, alpha, beta, Q, Z = LinearAlgebra.LAPACK.gges!('V', 'V', S, T)
-  select = Int64.(abs.(alpha./beta) .< 1.0)
+  select = Int64.(abs.(alpha./beta) .< cutoff)
   S, T, alpha, beta, Q, Z = LinearAlgebra.LAPACK.tgsen!(select, S, T, Q, Z)
   
   return S, T, Q', Z, select
