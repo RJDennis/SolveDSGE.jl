@@ -1708,7 +1708,7 @@ end
 
 """
 Computes impulse responses for the shock given in `innovation_vector`, from a solution, `soln`, over time horizon: `n`.
-The initial state is either given, if provided, or integrated out, if not provided.  A Monte Carlo integration (reps) is used
+The initial state is either given, is provided, or integrated out, if not provided.  A Monte Carlo integration (reps) is used
 to integrate out the future shocks.  Pruning is applied to the perturbation solutions.
 
 Signatures
@@ -3279,7 +3279,7 @@ errors, states = euler_errors(model,soln,npoints,seed)
 errors, states = euler_errors(model,soln,npoints)
 ```
 
-The first two signatures areused for perturbation solutions, the third and fourth for projection solutions.
+The first two signatures are used for perturbation solutions, the third and fourth for projection solutions.
 """
 function euler_errors(model::Union{REModelLinear,REModelPert,REModelAny},soln::R,domain::Union{Array{T,2},Array{T,1}},npoints::S,seed::S = 123456) where {S<:Integer,T<:AbstractFloat,R<:PerturbationSolutionDet}
 
@@ -3318,6 +3318,42 @@ function euler_errors(model::Union{REModelLinear,REModelPert,REModelAny},soln::R
     dynamics = state_space_eqm(soln)
 
     euler_errors = zeros(length(model.eqns_approximated),npoints)
+
+    Random.seed!(seed)
+    states = domain[2,:] .+ rand(nx,npoints) .* (domain[1,:] - domain[2,:])
+
+    @views for i = 1:npoints
+        point = [states[:,i]; dynamics.g(states[:,i]); dynamics.h(states[:,i],shocks); dynamics.gh(states[:,i]); shocks]
+        f .= model.dynamic_function(point)
+        euler_errors[:,i] .= f[model.eqns_approximated]
+    end
+
+    return euler_errors, states
+
+end
+
+function euler_errors(model::Union{REModelLinear,REModelPert,REModelAny},soln::R,npoints::S,seed::S = 123456) where {S<:Integer,R<:PerturbationSolutionStoch}
+
+    nx = model.number_states
+    ny = model.number_jumps
+    ns = model.number_shocks
+
+    shocks = zeros(ns)
+    
+    f = zeros(nx+ny)
+
+    dynamics = state_space_eqm(soln)
+
+    euler_errors = zeros(length(model.eqns_approximated),npoints)
+
+    if typeof(soln) <: FirstOrderSolutionStoch
+        state_vars,jump_vars = compute_variances(soln)
+        domain = Matrix([soln.hbar + 3*sqrt.(diag(state_vars)) soln.hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
+    else
+        soln_fo = FirstOrderSolutionStoch(soln.hbar,soln.hx,soln.k,soln.gbar,soln.gx,soln.sigma,soln.grc,soln.soln_type)
+        state_vars,jump_vars = compute_variances(soln_fo)
+        domain = Matrix([soln.hbar + 3*sqrt.(diag(state_vars)) soln.hbar - 3*sqrt.(diag(state_vars))]')   # dimension are 2*nx
+    end
 
     Random.seed!(seed)
     states = domain[2,:] .+ rand(nx,npoints) .* (domain[1,:] - domain[2,:])
@@ -3405,8 +3441,8 @@ function den_haan_marcet(model::REModel,soln::R,steady_state::Array{T,1},seed::S
 
     num_approx_eqns = length(model.eqns_approximated)
 
-    shocks = zeros(ns)
-    f      = Array{T,1}(undef,nv)
+    shocks         = zeros(ns)
+    f              = Array{T,1}(undef,nv)
 
     sim_length       = 3_500
     retained_length  = 3_000
@@ -3458,17 +3494,25 @@ solutions = prior_analysis(params,model,soln,scheme)
 """
 function prior_analysis(prior::Prior,mod::REModelPartial,scheme::SolutionScheme,Ndraws::S,seed::S = 123456) where {S <: Integer}
 
-    if PerturbationScheme <: typeof(scheme)
-        solutions = Array{PerturbationSolution,1}(undef,Ndraws)
-    else
-        solutions = Array{ProjectionSolution,1}(undef,Ndraws)
-    end
+    #if  typeof(scheme) <: PerturbationScheme
+    #    solutions = Array{PerturbationSolution,1}(undef,Ndraws)
+    #else
+    #    solutions = Array{ProjectionSolution,1}(undef,Ndraws)
+    #end
 
     param_draws = zeros(Ndraws,length(prior.dists))
 
     Random.seed!(seed)
+    
+    param_draw        = [rand.(prior.dists)...]
+    new_mod           = assign_parameters(mod,param_draw)
+    soln              = solve_model(new_mod,scheme)
+    param_draws[1,:] .= param_draw
 
-    for i in 1:Ndraws
+    solutions    = Array{typeof(soln),1}(undef,Ndraws)
+    solutions[1] = soln
+
+    for i in 2:Ndraws
 
         param_draw        = [rand.(prior.dists)...]
         new_mod           = assign_parameters(mod,param_draw)
@@ -3506,16 +3550,21 @@ function prior_analysis(params::Array{T,2},mod::REModelPartial,scheme::SolutionS
 
     Ndraws = size(params,1)
 
-    if PerturbationScheme <: typeof(scheme)
-        solutions = Array{PerturbationSolution,1}(undef,Ndraws)
-    else
-        solutions = Array{ProjectionSolution,1}(undef,Ndraws)
-    end
+    #if typeof(scheme) <: PerturbationScheme
+    #    solutions = Array{PerturbationSolution,1}(undef,Ndraws)
+    #else
+    #    solutions = Array{ProjectionSolution,1}(undef,Ndraws)
+    #end
 
-    for i in 1:Ndraws
+    new_mod           = assign_parameters(mod,params[1,:])
+    soln              = solve_model(new_mod,scheme)
 
-        param_draw   = params[i,:]
-        new_mod      = assign_parameters(mod,param_draw)
+    solutions    = Array{typeof(soln),1}(undef,Ndraws)
+    solutions[1] = soln
+
+    for i in 2:Ndraws
+
+        new_mod      = assign_parameters(mod,params[i,:])
         solutions[i] = solve_model(new_mod,scheme)
 
     end
@@ -3533,8 +3582,7 @@ function prior_analysis(params::Array{T,2},mod::REModelPartial,soln::R,scheme::S
 
     for i in 1:Ndraws
 
-        param_draw   = params[i,:]
-        new_mod      = assign_parameters(mod,param_draw)
+        new_mod      = assign_parameters(mod,params[i,:])
         solutions[i] = solve_model(new_mod,soln,scheme)
 
     end
