@@ -129,7 +129,7 @@ M = PiecewiseLinearSchemeStoch(ss,[21,21],9,[0.15 42.5;-0.15 28.0],tol,1e-6,maxi
 soln_nl_pwise = solve_model(dsge_sgm,M)
 
 simulated_data     = simulate(soln_nl_cheb,ss[1:2],100000)
-pos_imps, neg_imps = impulses(soln_nl_cheb,50,[1],10000)
+pos_imps = impulses(soln_nl_cheb,50,[1.0],10000)
 
 ee1, ss1 = euler_errors(dsge_sgm,soln_1o,[0.15 42.5;-0.15 28.0],1000,123456)
 ee2, ss2 = euler_errors(dsge_sgm,soln_2o,[0.15 42.5;-0.15 28.0],1000,123456)
