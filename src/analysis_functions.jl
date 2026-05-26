@@ -1768,10 +1768,10 @@ to integrate out the future shocks.  Pruning is applied to the perturbation solu
 Signatures
 ==========
 ```
-pos_resp, neg_resp = impulses(soln,n,innovation_vector,reps,seed)
-pos_resp, neg_resp = impulses(soln,n,innovation_vector,reps)
-pos_resp, neg_resp = impulses(soln,n,initial_state,innovation_vector,reps,seed)
-pos_resp, neg_resp = impulses(soln,n,initial_state,innovation_vector,reps)
+resp = impulses(soln,n,innovation_vector,reps,seed)
+resp = impulses(soln,n,innovation_vector,reps)
+resp = impulses(soln,n,initial_state,innovation_vector,reps,seed)
+resp = impulses(soln,n,initial_state,innovation_vector,reps)
 ```
 """
 function impulses(soln::R,n::S,innovation_vector::Array{T,1},seed = 123456) where {R<:FirstOrderSolutionStoch,S<:Integer,T<:Real}

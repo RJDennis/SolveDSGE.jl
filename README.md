@@ -128,8 +128,8 @@ soln_nl_hcross = solve_model(dsge_sgm,soln_nl_smol,H)
 M = PiecewiseLinearSchemeStoch(ss,[21,21],9,[0.15 42.5;-0.15 28.0],tol,1e-6,maxiters,:newton)
 soln_nl_pwise = solve_model(dsge_sgm,M)
 
-simulated_data     = simulate(soln_nl_cheb,ss[1:2],100000)
-pos_imps = impulses(soln_nl_cheb,50,[1.0],10000)
+simulated_data = simulate(soln_nl_cheb,ss[1:2],100000)
+pos_imps       = impulses(soln_nl_cheb,50,[1.0],10000)
 
 ee1, ss1 = euler_errors(dsge_sgm,soln_1o,[0.15 42.5;-0.15 28.0],1000,123456)
 ee2, ss2 = euler_errors(dsge_sgm,soln_2o,[0.15 42.5;-0.15 28.0],1000,123456)
@@ -178,8 +178,6 @@ Judd, K., Maliar, L., Maliar, S., and R. Valero, (2014), "Smolyak Method for Sol
 Judd, K., Maliar, L., Maliar, S., and I. Tsener, (2017), "How to Solve Dynamic Stochastic Models Computing Expectations just Once", Quantitative Economics, 8, pp. 851---893.
 
 Klein, P., (2000), "Using the Generalized Schur Form to Solve a Multivariate Linear Rational Expectations Model", Journal of Economic Dynamics and Control, 24, pp. 1405---1423.
-
-Kronmal, R., and M. Tarter, (1968), "The Estimation of Probability Densities and Cumulatives by Fourier Series Methods", Journal of the American Statistical Association, 63, 323, pp. 925--952.
 
 Levintal, O., (2017), "Fifth-Order Perturbation Solution to DSGE models", Journal of Economic Dynamics and Control, 80, pp. 1---16.
 
