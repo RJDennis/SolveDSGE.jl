@@ -45,7 +45,6 @@ struct REModelLinear{S<:Integer,Q<:AbstractString} <: REModel
     number_shocks::S
     number_variables::S
     number_equations::S
-    eqns_approximated::Array{S,1}
     variables::OrderedDict{Q,S}
     nlsolve_static_function::Function
     static_function::Function
@@ -65,7 +64,6 @@ struct REModelPert{S<:Integer,Q<:AbstractString} <: REModel
     number_shocks::S
     number_variables::S
     number_equations::S
-    eqns_approximated::Array{S,1}
     variables::OrderedDict{Q,S}
     nlsolve_static_function::Function
     static_function::Function
@@ -272,7 +270,7 @@ new_model = copy_model_struct(model)
 """
 function copy_model_struct(mod::REModelLinear)
 
-    new_model = REModelLinear(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.eqns_approximated,mod.variables,mod.nlsolve_static_function,
+    new_model = REModelLinear(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.variables,mod.nlsolve_static_function,
                         mod.static_function,mod.dynamic_function)
 
     return new_model
@@ -281,7 +279,7 @@ end
 
 function copy_model_struct(mod::REModelPartialLinear)
 
-    new_model = REModelPartialLinear(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.eqns_approximated,mod.variables,mod.nlsolve_static_function,
+    new_model = REModelPartialLinear(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.variables,mod.nlsolve_static_function,
                                mod.static_function,mod.dynamic_function,mod.unassigned_parameters)
 
     return new_model
@@ -290,7 +288,7 @@ end
 
 function copy_model_struct(mod::REModelPert)
 
-    new_model = REModelPert(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.eqns_approximated,mod.variables,mod.nlsolve_static_function,
+    new_model = REModelPert(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.variables,mod.nlsolve_static_function,
                         mod.static_function,mod.dynamic_function,mod.each_eqn_function)
 
     return new_model
@@ -299,7 +297,7 @@ end
 
 function copy_model_struct(mod::REModelPartialPert)
 
-    new_model = REModelPartialPert(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.eqns_approximated,mod.variables,mod.nlsolve_static_function,
+    new_model = REModelPartialPert(mod.number_states,mod.number_jumps,mod.number_shocks,mod.number_variables,mod.number_equations,mod.variables,mod.nlsolve_static_function,
                                mod.static_function,mod.dynamic_function,mod.each_eqn_function,mod.unassigned_parameters)
 
     return new_model
