@@ -12,6 +12,7 @@ using HyperbolicCrossApprox
 using NLboxsolve
 using OrderedCollections
 using Distributions
+using ADTypes
 
 include("structures.jl")
 include("parser_functions.jl")
