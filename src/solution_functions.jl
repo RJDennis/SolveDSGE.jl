@@ -21,9 +21,9 @@ function compute_steady_state(model::REModel,x::Array{T,1},tol::T,maxiters::S,me
     end
 
     #equations = model.static_function
-    #nlsoln = nlsolve(equations, x, xtol = tol, iterations = maxiters, autodiff = :forward, inplace = :false)
+    #nlsoln = nlsolve(equations, x, xtol = tol, iterations = maxiters, autodiff = AutoForwardDiff(), inplace = :false)
     equations = model.nlsolve_static_function
-    nlsoln = nlsolve(equations,x,ftol = tol,xtol = tol,iterations = maxiters,autodiff = :forward,inplace = :true,method = method)
+    nlsoln = nlsolve(equations,x,ftol = tol,xtol = tol,iterations = maxiters,autodiff = AutoForwardDiff(),inplace = :true,method = method)
     #nlsoln = nlboxsolve(equations,x,xtol = xtol,ftol = ftol,iterations = maxiters,method = method)
 
     return nlsoln
