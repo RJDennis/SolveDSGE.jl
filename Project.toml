@@ -21,8 +21,6 @@ ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 [compat]
 ADTypes = "1.11"
 NLsolve = "5"
-
-[compat]
 ChebyshevApprox = "^0.4"
 SmolyakApprox = "^0.3"
 PiecewiseLinearApprox = "^0.1"
